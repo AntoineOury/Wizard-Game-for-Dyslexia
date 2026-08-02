@@ -26,7 +26,7 @@ RenderSettings:
   m_AmbientIntensity: 1
   m_AmbientMode: 0
   m_SubtractiveShadowColor: {r: 0.42, g: 0.478, b: 0.627, a: 1}
-  m_SkyboxMaterial: {fileID: 2100000, guid: 18a18be315858d64c9a8ce50ccd52e64, type: 2}
+  m_SkyboxMaterial: {fileID: 2100000, guid: bbe9494f815f3c340956427c884b72a0, type: 2}
   m_HaloStrength: 0.5
   m_FlareStrength: 1
   m_FlareFadeSpeed: 3
@@ -97,7 +97,8 @@ LightmapSettings:
     m_TrainingDataDestination: TrainingData
     m_LightProbeSampleCountMultiplier: 4
   m_LightingDataAsset: {fileID: 0}
-  m_LightingSettings: {fileID: 0}
+  m_LightingSettings: {fileID: 4890085278179872738, guid: 8048472067019654c8eacc258a913f01,
+    type: 2}
 --- !u!196 &4
 NavMeshSettings:
   serializedVersion: 2
@@ -3117,8 +3118,8 @@ MonoBehaviour:
   assetDistanceInChunks: 2
   colliderDistanceInChunks: 1
   chunksBuiltPerFrame: 1
-  seed: 12345
-  scatterSeed: 54321
+  seed: 553575
+  scatterSeed: 58247
   noiseScale: 90
   octaves: 4
   persistence: 0.5
@@ -3185,84 +3186,308 @@ MonoBehaviour:
     shoreLevel: 0.42
     grassLevel: 0.68
     rockLevel: 0.86
-  environmentAssets:
-  - prefab: {fileID: 7944522665443213417, guid: e9ce9aaec542ef14bb2fdf3a66c7921a,
-      type: 3}
-    displayName: Cedar_Tree_03
-    instanceTag: 
-    density: 0.5
-    maxInstances: 40
-    minScale: 0.85
-    maxScale: 1.2
-    randomYRotation: 1
-    alignToNormal: 0.15
-    embedDepth: 0.2
-    restrictToZones: 1
-    allowedZones: 6
-    useZoneWeights: 1
-    zoneWeights:
-      water: 0
-      shore: 0.35
-      grass: 1
-      rock: 0
-      snow: 0
-    maxSlopeAngle: 32
-    minHeight: 0
-    maxHeight: 1
-    minSpacing: 4
-    footprintRadius: 0
-  - prefab: {fileID: 1251518964109166263, guid: b9c68650d3c754b419610dc2b00d1bde,
-      type: 3}
-    displayName: Pine_Tree
-    instanceTag: 
-    density: 0.5
-    maxInstances: 40
-    minScale: 0.85
-    maxScale: 1.2
-    randomYRotation: 1
-    alignToNormal: 0.15
-    embedDepth: 0.2
-    restrictToZones: 1
-    allowedZones: 6
-    useZoneWeights: 1
-    zoneWeights:
-      water: 0
-      shore: 0.35
-      grass: 1
-      rock: 0
-      snow: 0
-    maxSlopeAngle: 32
-    minHeight: 0
-    maxHeight: 1
-    minSpacing: 4
-    footprintRadius: 0
-  - prefab: {fileID: 6409811024308930356, guid: 953646203ab111b499c6f9a038ebc56e,
-      type: 3}
-    displayName: Larch_Tree
-    instanceTag: 
-    density: 0.5
-    maxInstances: 40
-    minScale: 0.85
-    maxScale: 1.2
-    randomYRotation: 1
-    alignToNormal: 0.15
-    embedDepth: 0.2
-    restrictToZones: 1
-    allowedZones: 6
-    useZoneWeights: 1
-    zoneWeights:
-      water: 0
-      shore: 0.35
-      grass: 1
-      rock: 0
-      snow: 0
-    maxSlopeAngle: 32
-    minHeight: 0
-    maxHeight: 1
-    minSpacing: 4
-    footprintRadius: 0
+  environmentAssets: []
   preventAssetOverlap: 1
+  biomes:
+  - name: Forest
+    coverage: 0.01
+    heightMultiplier: 30
+    heightCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    heightOffset: 0
+    colorByHeight:
+      serializedVersion: 2
+      key0: {r: 0.13, g: 0.3, b: 0.48, a: 1}
+      key1: {r: 0.24, g: 0.5, b: 0.62, a: 1}
+      key2: {r: 0.8, g: 0.72, b: 0.46, a: 0}
+      key3: {r: 0.3, g: 0.52, b: 0.26, a: 0}
+      key4: {r: 0.42, g: 0.38, b: 0.33, a: 0}
+      key5: {r: 0.93, g: 0.94, b: 0.96, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 18350
+      ctime2: 22488
+      ctime3: 24158
+      ctime4: 59110
+      ctime5: 59110
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: 0
+      m_NumColorKeys: 5
+      m_NumAlphaKeys: 2
+    environmentAssets:
+    - prefab: {fileID: 1251518964109166263, guid: b9c68650d3c754b419610dc2b00d1bde,
+        type: 3}
+      displayName: Pine_Tree
+      instanceTag: 
+      density: 0.5
+      maxInstances: 40
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 0.15
+      embedDepth: 0.2
+      restrictToZones: 1
+      allowedZones: 4
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 0.35
+        grass: 1
+        rock: 0
+        snow: 0
+      maxSlopeAngle: 32
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 4
+      footprintRadius: 0
+    - prefab: {fileID: 7944522665443213417, guid: e9ce9aaec542ef14bb2fdf3a66c7921a,
+        type: 3}
+      displayName: Cedar_Tree_03
+      instanceTag: 
+      density: 0.5
+      maxInstances: 40
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 0.15
+      embedDepth: 0.2
+      restrictToZones: 1
+      allowedZones: 6
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 0.35
+        grass: 1
+        rock: 0
+        snow: 0
+      maxSlopeAngle: 32
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 4
+      footprintRadius: 0
+    - prefab: {fileID: 7390660841207776048, guid: 3006b37c2f6a43142b48b677fae87675,
+        type: 3}
+      displayName: Boletus_Edulis
+      instanceTag: 
+      density: 0.588
+      maxInstances: 9
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 0.6
+      embedDepth: 0.05
+      restrictToZones: 1
+      allowedZones: 6
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 0.5
+        grass: 1
+        rock: 0
+        snow: 0
+      maxSlopeAngle: 40
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 0.5
+      footprintRadius: 0.2
+    - prefab: {fileID: 1866796817763092657, guid: 5149bcbf3fd86e34a9d29fbb7daef8e9,
+        type: 3}
+      displayName: Fern
+      instanceTag: 
+      density: 0.797
+      maxInstances: 6
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 0.6
+      embedDepth: 0.05
+      restrictToZones: 1
+      allowedZones: 4
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 0.5
+        grass: 1
+        rock: 0
+        snow: 0
+      maxSlopeAngle: 40
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 0.5
+      footprintRadius: 0.2
+  - name: Winter
+    coverage: 0.01
+    heightMultiplier: 30
+    heightCurve:
+      serializedVersion: 2
+      m_Curve:
+      - serializedVersion: 3
+        time: 0
+        value: 0
+        inSlope: 0
+        outSlope: 1
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      - serializedVersion: 3
+        time: 1
+        value: 1
+        inSlope: 1
+        outSlope: 0
+        tangentMode: 0
+        weightedMode: 0
+        inWeight: 0
+        outWeight: 0
+      m_PreInfinity: 2
+      m_PostInfinity: 2
+      m_RotationOrder: 4
+    heightOffset: 0
+    colorByHeight:
+      serializedVersion: 2
+      key0: {r: 0.13, g: 0.3, b: 0.48, a: 1}
+      key1: {r: 0.24, g: 0.5, b: 0.62, a: 1}
+      key2: {r: 0.42, g: 0.38, b: 0.33, a: 0}
+      key3: {r: 0.93, g: 0.94, b: 0.96, a: 0}
+      key4: {r: 0.93, g: 0.94, b: 0.96, a: 0}
+      key5: {r: 0.93, g: 0.94, b: 0.96, a: 0}
+      key6: {r: 0, g: 0, b: 0, a: 0}
+      key7: {r: 0, g: 0, b: 0, a: 0}
+      ctime0: 0
+      ctime1: 18350
+      ctime2: 23130
+      ctime3: 32768
+      ctime4: 37651
+      ctime5: 58982
+      ctime6: 0
+      ctime7: 0
+      atime0: 0
+      atime1: 65535
+      atime2: 0
+      atime3: 0
+      atime4: 0
+      atime5: 0
+      atime6: 0
+      atime7: 0
+      m_Mode: 0
+      m_ColorSpace: 0
+      m_NumColorKeys: 4
+      m_NumAlphaKeys: 2
+    environmentAssets:
+    - prefab: {fileID: 5385305736409967822, guid: 4fa87cea36a1ce641948a1c0d439d482,
+        type: 3}
+      displayName: Stump
+      instanceTag: 
+      density: 0.5
+      maxInstances: 60
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 0.8
+      embedDepth: 0.15
+      restrictToZones: 1
+      allowedZones: 12
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 0
+        grass: 1
+        rock: 0.4
+        snow: 0
+      maxSlopeAngle: 35
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 6
+      footprintRadius: 0
+    - prefab: {fileID: 1220206043906976, guid: 86263e8355f96ba4ab9fdf4e96c2090f, type: 3}
+      displayName: Rock2
+      instanceTag: 
+      density: 0.5
+      maxInstances: 40
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 1
+      embedDepth: 0.25
+      restrictToZones: 1
+      allowedZones: 30
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 3
+        grass: 2
+        rock: 1
+        snow: 0.5
+      maxSlopeAngle: 60
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 1.5
+      footprintRadius: 0
+    - prefab: {fileID: 1600038145722832, guid: f36916143c7509543b1b8d40091baa24, type: 3}
+      displayName: Stone2
+      instanceTag: 
+      density: 0.5
+      maxInstances: 40
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 1
+      embedDepth: 0.25
+      restrictToZones: 1
+      allowedZones: 30
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 3
+        grass: 2
+        rock: 1
+        snow: 0.5
+      maxSlopeAngle: 60
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 1.5
+      footprintRadius: 0
+  biomeScale: 600
+  biomeBlend: 0.12
+  biomeSeed: 787402
   maxPooledPerPrefab: 256
+  previewInScene: 1
+  previewRadiusInChunks: 4
+  previewFollowsSceneCamera: 1
+  previewIncludesProps: 1
 --- !u!4 &2106898796
 Transform:
   m_ObjectHideFlags: 0
