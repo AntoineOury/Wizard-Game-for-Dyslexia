@@ -26,6 +26,9 @@ namespace OtherwiseLabs.TerrainTools
             bool settingsChanged = EditorGUI.EndChangeCheck();
 
             EditorGUILayout.Space(6);
+            DrawZoneRuler(generator);
+
+            EditorGUILayout.Space(6);
             DrawDropArea(generator);
             DrawUtilities(generator);
             DrawStats(generator);
@@ -145,6 +148,69 @@ namespace OtherwiseLabs.TerrainTools
                 MarkDirty(generator);
                 SceneView.RepaintAll();
             };
+        }
+
+        // ------------------------------------------------------------------
+        // Terrain zone ruler
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Draws the height gradient as a strip with the zone boundaries marked on
+        /// it, so it's obvious which colors count as Water / Shore / Grass / Rock /
+        /// Snow when assigning Allowed Zones to an asset.
+        /// </summary>
+        static void DrawZoneRuler(ProceduralTerrainGenerator generator)
+        {
+            var bands = generator.zoneBands;
+            if (bands == null || generator.colorByHeight == null) return;
+            bands.Sanitize();
+
+            EditorGUILayout.LabelField("Terrain Zones (low → high)", EditorStyles.boldLabel);
+
+            Rect strip = GUILayoutUtility.GetRect(0f, 26f, GUILayout.ExpandWidth(true));
+            if (Event.current.type == EventType.Repaint)
+            {
+                // Sample the gradient across the strip.
+                const int slices = 128;
+                float sliceWidth = strip.width / slices;
+                for (int i = 0; i < slices; i++)
+                {
+                    float t = i / (float)(slices - 1);
+                    var sliceRect = new Rect(strip.x + i * sliceWidth, strip.y, sliceWidth + 1f, strip.height);
+                    EditorGUI.DrawRect(sliceRect, generator.colorByHeight.Evaluate(t));
+                }
+
+                // Boundary ticks.
+                var boundaries = new[] { bands.waterLevel, bands.shoreLevel, bands.grassLevel, bands.rockLevel };
+                foreach (float b in boundaries)
+                {
+                    var tick = new Rect(strip.x + b * strip.width - 1f, strip.y, 2f, strip.height);
+                    EditorGUI.DrawRect(tick, Color.black);
+                }
+            }
+
+            // Zone name labels under their band.
+            Rect labels = GUILayoutUtility.GetRect(0f, 14f, GUILayout.ExpandWidth(true));
+            var zones = new[]
+            {
+                TerrainZone.Water, TerrainZone.Shore, TerrainZone.Grass,
+                TerrainZone.Rock, TerrainZone.Snow,
+            };
+            var tiny = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.UpperCenter };
+            foreach (TerrainZone zone in zones)
+            {
+                Vector2 range = bands.GetRange(zone);
+                float x = labels.x + range.x * labels.width;
+                float w = (range.y - range.x) * labels.width;
+                if (w < 24f) continue; // too narrow to label legibly
+                GUI.Label(new Rect(x, labels.y, w, labels.height), zone.ToString(), tiny);
+            }
+
+            EditorGUILayout.HelpBox(
+                "'Restrict To Zones' + 'Allowed Zones' is a hard yes/no — uncheck Water so trees never spawn in lakes.\n" +
+                "'Use Zone Weights' biases how often instead — rocks at Shore 3 / Rock 1 appear three times as densely " +
+                "on sand as on cliffs. Only the ratios matter; 0 excludes a zone.",
+                MessageType.None);
         }
 
         // ------------------------------------------------------------------
