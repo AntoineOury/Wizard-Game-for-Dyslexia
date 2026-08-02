@@ -1,0 +1,536 @@
+using System.Collections;
+using System.Collections.Generic;
+using UnityEngine;
+
+namespace OtherwiseLabs.TerrainTools
+{
+    /// <summary>
+    /// Endless chunk-streaming terrain.
+    ///
+    /// Two problems make streaming worlds hard, and both are solved by the same
+    /// property rather than by storage:
+    ///
+    /// 1. Walking far enough would build a world too heavy to render. Chunks
+    ///    outside the view radius are therefore unloaded, and their props pooled,
+    ///    so cost stays proportional to view distance rather than to distance
+    ///    travelled. Props also use a shorter radius than terrain, because a
+    ///    forest 500m away costs a fortune and reads as a green smudge anyway.
+    ///
+    /// 2. Walking back would show a different world, since regenerating usually
+    ///    means re-randomising. Here every chunk's terrain AND its props derive
+    ///    from hash(worldSeed, chunkCoord), so rebuilding a chunk reproduces it
+    ///    exactly. The world is not saved, it is *recomputed* — which is why it
+    ///    can be effectively infinite and still feel like a real place.
+    ///
+    /// Nothing is written to disk, so this only preserves *generated* state. If
+    /// the game later lets players change the world (fell a tree, build a wall),
+    /// those edits are deltas and do need storing — see the notes on WorldEdits
+    /// in the README.
+    /// </summary>
+    [DisallowMultipleComponent]
+    [AddComponentMenu("Otherwise Labs/Infinite Terrain Streamer")]
+    public class InfiniteTerrainStreamer : MonoBehaviour
+    {
+        [Header("Viewer")]
+        [Tooltip("Transform the world streams around — usually the player. Falls back to the main camera.")]
+        public Transform viewer;
+
+        [Tooltip("How far the viewer must move before chunk visibility is recalculated. Avoids doing the work every frame.")]
+        [Min(0.1f)] public float viewerMoveThreshold = 12f;
+
+        [Header("Chunks")]
+        [Tooltip("Size of one chunk in world units.")]
+        [Min(8f)] public float chunkSize = 120f;
+
+        [Tooltip("Quads per chunk side. Higher = finer terrain, more triangles per chunk.")]
+        [Range(4, 254)] public int chunkResolution = 48;
+
+        [Tooltip("Radius, in chunks, of terrain kept loaded around the viewer. 3 = a 7x7 block.")]
+        [Range(1, 12)] public int viewDistanceInChunks = 4;
+
+        [Tooltip("Radius, in chunks, within which props are spawned. Keep below View Distance: " +
+                 "distant terrain is cheap, distant forests are not.")]
+        [Range(0, 12)] public int assetDistanceInChunks = 2;
+
+        [Tooltip("Radius, in chunks, that gets mesh colliders. Only chunks the player can reach need them.")]
+        [Range(0, 12)] public int colliderDistanceInChunks = 1;
+
+        [Tooltip("Maximum chunks built per frame. Lower removes hitching, raises pop-in.")]
+        [Range(1, 16)] public int chunksBuiltPerFrame = 1;
+
+        [Header("World Seed")]
+        [Tooltip("Seed for terrain shape. Same seed = same world, forever.")]
+        public int seed = 12345;
+
+        [Tooltip("Seed for prop placement.")]
+        public int scatterSeed = 54321;
+
+        [Header("Perlin Noise")]
+        [Min(0.01f)] public float noiseScale = 90f;
+        [Range(1, 8)] public int octaves = 4;
+        [Range(0f, 1f)] public float persistence = 0.5f;
+        [Range(1f, 4f)] public float lacunarity = 2f;
+        public Vector2 noiseOffset;
+
+        [Header("Height Shaping")]
+        [Min(0f)] public float heightMultiplier = 30f;
+        public AnimationCurve heightCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+
+        [Header("Rendering")]
+        [Tooltip("Material for chunk meshes. Use the vertex colour terrain shader to see the height gradient.")]
+        public Material terrainMaterial;
+
+        public Gradient colorByHeight = DefaultGradient();
+
+        [Header("Terrain Zones")]
+        public TerrainZoneBands zoneBands = new TerrainZoneBands();
+
+        [Header("Environment Assets")]
+        [Tooltip("Prefabs scattered across the world. Max Instances is per chunk here, not per world.")]
+        public List<EnvironmentAssetRule> environmentAssets = new List<EnvironmentAssetRule>();
+
+        [Tooltip("Stop assets overlapping each other, across chunk borders too.")]
+        public bool preventAssetOverlap = true;
+
+        [Header("Memory")]
+        [Tooltip("Pooled instances kept per prefab. Extras are destroyed when trimming.")]
+        [Min(0)] public int maxPooledPerPrefab = 256;
+
+        // --- runtime state -------------------------------------------------
+        readonly Dictionary<Vector2Int, TerrainChunk> _active = new Dictionary<Vector2Int, TerrainChunk>();
+        readonly Stack<TerrainChunk> _chunkPool = new Stack<TerrainChunk>();
+        readonly Queue<Vector2Int> _buildQueue = new Queue<Vector2Int>();
+        readonly HashSet<Vector2Int> _queued = new HashSet<Vector2Int>();
+
+        // Candidate lists are reused by neighbouring chunks' collision checks, so
+        // caching them avoids regenerating each chunk's candidates up to 9 times.
+        readonly Dictionary<Vector2Int, List<ScatterCandidate>> _candidateCache = new Dictionary<Vector2Int, List<ScatterCandidate>>();
+
+        PrefabPool _pool;
+        Transform _chunkParent;
+        Transform _parkingLot;
+        Vector2[] _octaveOffsets;
+        Vector3 _lastViewerPosition;
+        bool _initialised;
+        Coroutine _buildLoop;
+
+        public int ActiveChunkCount => _active.Count;
+        public int PooledChunkCount => _chunkPool.Count;
+        public int QueuedChunkCount => _buildQueue.Count;
+
+        void OnEnable()
+        {
+            Initialise();
+            UpdateVisibleChunks(force: true);
+            _buildLoop = StartCoroutine(BuildLoop());
+        }
+
+        void OnDisable()
+        {
+            if (_buildLoop != null) StopCoroutine(_buildLoop);
+            _buildLoop = null;
+        }
+
+        void Initialise()
+        {
+            if (_initialised) return;
+
+            if (viewer == null && Camera.main != null) viewer = Camera.main.transform;
+
+            _chunkParent = new GameObject("Chunks").transform;
+            _chunkParent.SetParent(transform, false);
+
+            _parkingLot = new GameObject("Pool (inactive)").transform;
+            _parkingLot.SetParent(transform, false);
+            _parkingLot.gameObject.SetActive(false);
+
+            _pool = new PrefabPool(_parkingLot);
+            RebuildOctaveOffsets();
+            ResolveFootprints();
+
+            _lastViewerPosition = viewer != null ? viewer.position : Vector3.zero;
+            _initialised = true;
+        }
+
+        void RebuildOctaveOffsets()
+        {
+            // The world origin shift keeps every sample in positive space, where
+            // Perlin doesn't mirror. Without it the world is symmetric about (0,0).
+            _octaveOffsets = TerrainNoise.BuildOctaveOffsets(seed, octaves, noiseOffset, TerrainNoise.NoiseOrigin);
+        }
+
+        void ResolveFootprints()
+        {
+            foreach (EnvironmentAssetRule rule in environmentAssets)
+            {
+                if (rule == null || rule.prefab == null) continue;
+                float footprint = rule.footprintRadius > 0f
+                    ? rule.footprintRadius
+                    : ProceduralTerrainGenerator.EstimateFootprintRadius(rule.prefab);
+
+                // Folding same-rule spacing into the radius means one collision pass
+                // handles both "not inside another asset" and "not too close to my
+                // own kind" — and handles them across chunk borders for free.
+                rule.resolvedFootprint = Mathf.Max(footprint, rule.minSpacing * 0.5f);
+            }
+        }
+
+        void Update()
+        {
+            if (viewer == null) return;
+
+            if ((viewer.position - _lastViewerPosition).sqrMagnitude >= viewerMoveThreshold * viewerMoveThreshold)
+            {
+                _lastViewerPosition = viewer.position;
+                UpdateVisibleChunks(force: false);
+            }
+        }
+
+        public Vector2Int ChunkCoordOf(Vector3 worldPosition)
+        {
+            return new Vector2Int(
+                Mathf.FloorToInt(worldPosition.x / Mathf.Max(1f, chunkSize)),
+                Mathf.FloorToInt(worldPosition.z / Mathf.Max(1f, chunkSize)));
+        }
+
+        /// <summary>
+        /// Decides which chunks should exist, queues missing ones nearest-first and
+        /// retires the ones the viewer has left behind.
+        /// </summary>
+        public void UpdateVisibleChunks(bool force)
+        {
+            Initialise();
+            if (viewer == null) return;
+
+            Vector2Int center = ChunkCoordOf(viewer.position);
+            int radius = Mathf.Max(1, viewDistanceInChunks);
+
+            // Retire anything outside the radius (with one chunk of hysteresis, so
+            // standing on a border doesn't thrash load/unload every step).
+            var toRelease = new List<Vector2Int>();
+            foreach (var kv in _active)
+            {
+                Vector2Int offset = kv.Key - center;
+                if (Mathf.Max(Mathf.Abs(offset.x), Mathf.Abs(offset.y)) > radius + 1)
+                    toRelease.Add(kv.Key);
+            }
+            foreach (Vector2Int coord in toRelease) ReleaseChunk(coord);
+
+            // Queue missing chunks, nearest first so the ground under the player
+            // appears before the horizon does.
+            var wanted = new List<Vector2Int>();
+            for (int dz = -radius; dz <= radius; dz++)
+            {
+                for (int dx = -radius; dx <= radius; dx++)
+                {
+                    var coord = new Vector2Int(center.x + dx, center.y + dz);
+                    if (_active.ContainsKey(coord) || _queued.Contains(coord)) continue;
+                    wanted.Add(coord);
+                }
+            }
+            wanted.Sort((a, b) =>
+                (a - center).sqrMagnitude.CompareTo((b - center).sqrMagnitude));
+
+            foreach (Vector2Int coord in wanted)
+            {
+                _buildQueue.Enqueue(coord);
+                _queued.Add(coord);
+            }
+
+            // Props and colliders track the viewer independently of the mesh.
+            RefreshChunkDetail(center);
+            TrimCandidateCache(center, radius + 2);
+        }
+
+        IEnumerator BuildLoop()
+        {
+            while (true)
+            {
+                int budget = Mathf.Max(1, chunksBuiltPerFrame);
+                while (budget-- > 0 && _buildQueue.Count > 0)
+                {
+                    Vector2Int coord = _buildQueue.Dequeue();
+                    _queued.Remove(coord);
+                    if (_active.ContainsKey(coord)) continue;
+                    BuildChunk(coord);
+                }
+
+                if (_buildQueue.Count == 0 && viewer != null)
+                    RefreshChunkDetail(ChunkCoordOf(viewer.position));
+
+                yield return null;
+            }
+        }
+
+        void BuildChunk(Vector2Int coord)
+        {
+            TerrainChunk chunk = _chunkPool.Count > 0 ? _chunkPool.Pop() : new TerrainChunk(_chunkParent, terrainMaterial);
+            chunk.SetActive(true);
+            chunk.BuildMesh(coord, this, _octaveOffsets);
+            _active[coord] = chunk;
+
+            if (viewer != null) RefreshChunkDetail(ChunkCoordOf(viewer.position));
+        }
+
+        /// <summary>
+        /// Adds or removes props and colliders as chunks move through the detail
+        /// radii. Terrain stays loaded further out than either.
+        /// </summary>
+        void RefreshChunkDetail(Vector2Int center)
+        {
+            foreach (var kv in _active)
+            {
+                Vector2Int offset = kv.Key - center;
+                int ring = Mathf.Max(Mathf.Abs(offset.x), Mathf.Abs(offset.y));
+
+                kv.Value.SetCollider(ring <= colliderDistanceInChunks);
+
+                bool wantsProps = ring <= assetDistanceInChunks;
+                if (wantsProps && !kv.Value.HasScatter) ScatterChunk(kv.Value);
+                else if (!wantsProps && kv.Value.HasScatter) kv.Value.ReleaseProps(_pool);
+            }
+        }
+
+        void ReleaseChunk(Vector2Int coord)
+        {
+            if (!_active.TryGetValue(coord, out TerrainChunk chunk)) return;
+            chunk.ReleaseProps(_pool);
+            chunk.SetActive(false);
+            _active.Remove(coord);
+            _chunkPool.Push(chunk);
+            _pool.TrimTo(maxPooledPerPrefab);
+        }
+
+        // ------------------------------------------------------------------
+        // Deterministic scatter
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Candidate placements for a chunk, before cross-chunk collision. Pure
+        /// function of (scatterSeed, coord) so it can be recomputed by neighbours.
+        /// </summary>
+        List<ScatterCandidate> GetCandidates(Vector2Int coord)
+        {
+            if (_candidateCache.TryGetValue(coord, out List<ScatterCandidate> cached)) return cached;
+
+            var candidates = new List<ScatterCandidate>();
+            float size = Mathf.Max(1f, chunkSize);
+            Vector2 origin = new Vector2(coord.x * size, coord.y * size);
+            zoneBands?.Sanitize();
+
+            for (int ruleIndex = 0; ruleIndex < environmentAssets.Count; ruleIndex++)
+            {
+                EnvironmentAssetRule rule = environmentAssets[ruleIndex];
+                if (rule == null || rule.prefab == null) continue;
+
+                int target = Mathf.RoundToInt(rule.density * rule.maxInstances);
+                if (target <= 0) continue;
+
+                var rng = new System.Random(TerrainNoise.Hash(scatterSeed, coord.x, coord.y, ruleIndex));
+
+                bool weighted = rule.useZoneWeights && rule.zoneWeights != null;
+                float maxWeight = weighted ? rule.zoneWeights.MaxAmong(rule.allowedZones, rule.restrictToZones) : 0f;
+                if (weighted && maxWeight <= 0f) continue;
+
+                int accepted = 0;
+                int maxAttempts = target * (weighted ? 20 : 8);
+
+                for (int attempt = 0; attempt < maxAttempts && accepted < target; attempt++)
+                {
+                    float worldX = origin.x + (float)rng.NextDouble() * size;
+                    float worldZ = origin.y + (float)rng.NextDouble() * size;
+
+                    float normalized = TerrainNoise.SampleNormalized(
+                        worldX, worldZ, _octaveOffsets, noiseScale, persistence, lacunarity);
+
+                    if (rule.restrictToZones || weighted)
+                    {
+                        TerrainZone zone = zoneBands.GetZone(normalized);
+                        if (rule.restrictToZones && (rule.allowedZones & zone) == 0) continue;
+                        if (weighted)
+                        {
+                            float weight = rule.zoneWeights.Get(zone);
+                            if (weight <= 0f) continue;
+                            if (weight < maxWeight && rng.NextDouble() > weight / maxWeight) continue;
+                        }
+                    }
+
+                    if (normalized < Mathf.Min(rule.minHeight, rule.maxHeight)) continue;
+                    if (normalized > Mathf.Max(rule.minHeight, rule.maxHeight)) continue;
+
+                    float step = size / Mathf.Max(2, chunkResolution);
+                    Vector3 normal = TerrainNoise.SampleNormal(
+                        worldX, worldZ, step, _octaveOffsets,
+                        noiseScale, persistence, lacunarity, heightCurve, heightMultiplier);
+                    if (Vector3.Angle(normal, Vector3.up) > rule.maxSlopeAngle) continue;
+
+                    candidates.Add(new ScatterCandidate
+                    {
+                        position = new Vector2(worldX, worldZ),
+                        radius = Mathf.Max(0.05f, rule.resolvedFootprint),
+                        normalizedHeight = normalized,
+                        ruleIndex = ruleIndex,
+                        chunkX = coord.x,
+                        chunkZ = coord.y,
+                        candidateIndex = accepted,
+                        order = TerrainNoise.Hash(scatterSeed, coord.x, coord.y, TerrainNoise.Hash(ruleIndex, accepted)),
+                    });
+                    accepted++;
+                }
+            }
+
+            _candidateCache[coord] = candidates;
+            return candidates;
+        }
+
+        void ScatterChunk(TerrainChunk chunk)
+        {
+            ResolveFootprints();
+
+            float largest = 1f;
+            foreach (EnvironmentAssetRule rule in environmentAssets)
+                if (rule != null) largest = Mathf.Max(largest, rule.resolvedFootprint);
+
+            // A one-chunk halo is enough as long as no footprint exceeds a chunk,
+            // because conflicts can only reach as far as two radii.
+            var field = new CandidateField(largest * 2f);
+            var mine = new List<int>();
+
+            for (int dz = -1; dz <= 1; dz++)
+            {
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    var neighbour = new Vector2Int(chunk.Coord.x + dx, chunk.Coord.y + dz);
+                    List<ScatterCandidate> candidates = GetCandidates(neighbour);
+                    bool isCentre = dx == 0 && dz == 0;
+
+                    for (int i = 0; i < candidates.Count; i++)
+                    {
+                        if (isCentre) mine.Add(field.Count);
+                        field.Add(candidates[i]);
+                    }
+                }
+            }
+
+            var spawned = new List<GameObject>();
+
+            foreach (int index in mine)
+            {
+                ScatterCandidate candidate = field[index];
+                if (preventAssetOverlap && field.IsBlocked(index)) continue;
+
+                EnvironmentAssetRule rule = environmentAssets[candidate.ruleIndex];
+                if (rule == null || rule.prefab == null) continue;
+
+                GameObject instance = _pool.Acquire(rule.prefab, chunk.PropRoot);
+
+                float height = TerrainNoise.ToWorldHeight(candidate.normalizedHeight, heightCurve, heightMultiplier);
+                var worldPosition = new Vector3(candidate.position.x, height - rule.embedDepth, candidate.position.y);
+                instance.transform.position = worldPosition;
+
+                // Transform variation is rederived from the candidate's identity, so
+                // it survives unload/reload without being stored.
+                int variationHash = TerrainNoise.Hash(candidate.order, candidate.candidateIndex, candidate.ruleIndex);
+                float yaw = rule.randomYRotation ? TerrainNoise.HashToUnit(variationHash) * 360f : 0f;
+                float scaleT = TerrainNoise.HashToUnit(TerrainNoise.Hash(variationHash, 7919));
+
+                float step = Mathf.Max(1f, chunkSize) / Mathf.Max(2, chunkResolution);
+                Vector3 normal = TerrainNoise.SampleNormal(
+                    candidate.position.x, candidate.position.y, step, _octaveOffsets,
+                    noiseScale, persistence, lacunarity, heightCurve, heightMultiplier);
+
+                Quaternion tilt = Quaternion.Slerp(
+                    Quaternion.identity, Quaternion.FromToRotation(Vector3.up, normal), rule.alignToNormal);
+                instance.transform.rotation = tilt * Quaternion.Euler(0f, yaw, 0f);
+                instance.transform.localScale = rule.prefab.transform.localScale *
+                    Mathf.Lerp(rule.minScale, rule.maxScale, scaleT);
+
+                spawned.Add(instance);
+            }
+
+            chunk.AdoptProps(spawned);
+        }
+
+        void TrimCandidateCache(Vector2Int center, int radius)
+        {
+            if (_candidateCache.Count < 256) return;
+
+            var stale = new List<Vector2Int>();
+            foreach (var kv in _candidateCache)
+            {
+                Vector2Int offset = kv.Key - center;
+                if (Mathf.Max(Mathf.Abs(offset.x), Mathf.Abs(offset.y)) > radius) stale.Add(kv.Key);
+            }
+            foreach (Vector2Int coord in stale) _candidateCache.Remove(coord);
+        }
+
+        // ------------------------------------------------------------------
+        // Editor helpers
+        // ------------------------------------------------------------------
+
+        /// <summary>Drops everything and rebuilds. Use after changing world settings.</summary>
+        public void RegenerateWorld()
+        {
+            var coords = new List<Vector2Int>(_active.Keys);
+            foreach (Vector2Int coord in coords) ReleaseChunk(coord);
+
+            _buildQueue.Clear();
+            _queued.Clear();
+            _candidateCache.Clear();
+
+            RebuildOctaveOffsets();
+            ResolveFootprints();
+            UpdateVisibleChunks(force: true);
+        }
+
+        public void RandomizeSeeds()
+        {
+            seed = Random.Range(0, 1000000);
+            scatterSeed = Random.Range(0, 1000000);
+        }
+
+        static Gradient DefaultGradient()
+        {
+            var gradient = new Gradient();
+            gradient.SetKeys(
+                new[]
+                {
+                    new GradientColorKey(new Color(0.13f, 0.30f, 0.48f), 0.00f),
+                    new GradientColorKey(new Color(0.24f, 0.50f, 0.62f), 0.28f),
+                    new GradientColorKey(new Color(0.80f, 0.72f, 0.46f), 0.35f),
+                    new GradientColorKey(new Color(0.30f, 0.52f, 0.26f), 0.45f),
+                    new GradientColorKey(new Color(0.42f, 0.38f, 0.33f), 0.72f),
+                    new GradientColorKey(new Color(0.93f, 0.94f, 0.96f), 0.90f),
+                },
+                new[] { new GradientAlphaKey(1f, 0f), new GradientAlphaKey(1f, 1f) });
+            return gradient;
+        }
+
+        void OnValidate()
+        {
+            // These radii only make sense nested; silently clamp rather than let a
+            // typo spawn props on chunks that have no collider under them.
+            assetDistanceInChunks = Mathf.Min(assetDistanceInChunks, viewDistanceInChunks);
+            colliderDistanceInChunks = Mathf.Min(colliderDistanceInChunks, viewDistanceInChunks);
+        }
+
+        void OnDrawGizmosSelected()
+        {
+            if (viewer == null) return;
+            float size = Mathf.Max(1f, chunkSize);
+            Vector2Int center = ChunkCoordOf(viewer.position);
+
+            DrawRadius(center, size, viewDistanceInChunks, new Color(0.4f, 0.8f, 1f, 0.5f));
+            DrawRadius(center, size, assetDistanceInChunks, new Color(0.4f, 1f, 0.5f, 0.6f));
+            DrawRadius(center, size, colliderDistanceInChunks, new Color(1f, 0.8f, 0.3f, 0.7f));
+        }
+
+        static void DrawRadius(Vector2Int center, float size, int radius, Color color)
+        {
+            Gizmos.color = color;
+            float span = (radius * 2 + 1) * size;
+            var middle = new Vector3((center.x + 0.5f) * size, 0f, (center.y + 0.5f) * size);
+            Gizmos.DrawWireCube(middle, new Vector3(span, 1f, span));
+        }
+    }
+}
