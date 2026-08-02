@@ -67,7 +67,7 @@ namespace OtherwiseLabs.TerrainTools
         /// world position, so neighbouring chunks sampling the same edge produce
         /// the same vertex height and the seam closes exactly.
         /// </summary>
-        public void BuildMesh(Vector2Int coord, InfiniteTerrainStreamer settings, Vector2[] octaveOffsets)
+        public void BuildMesh(Vector2Int coord, InfiniteTerrainStreamer settings)
         {
             Coord = coord;
             Root.name = $"Chunk {coord.x},{coord.y}";
@@ -98,23 +98,20 @@ namespace OtherwiseLabs.TerrainTools
                     float worldX = origin.x + x * step;
                     float worldZ = origin.z + z * step;
 
-                    float normalized = TerrainNoise.SampleNormalized(
-                        worldX, worldZ, octaveOffsets,
-                        settings.noiseScale, settings.persistence, settings.lacunarity);
-                    float height = TerrainNoise.ToWorldHeight(normalized, settings.heightCurve, settings.heightMultiplier);
+                    // All sampling goes through the streamer so biome blending
+                    // (heights, colors) applies identically to mesh and props.
+                    float normalized = settings.SampleBaseNoise(worldX, worldZ);
+                    float height = settings.HeightFromNormalized(worldX, worldZ, normalized);
 
                     // Local to the chunk, since the chunk root carries the offset.
                     vertices[i] = new Vector3(x * step, height, z * step);
                     uvs[i] = new Vector2(x / (float)res, z / (float)res);
-                    colors[i] = settings.colorByHeight.Evaluate(normalized);
+                    colors[i] = settings.SampleVertexColor(worldX, worldZ, normalized);
 
-                    // Analytic normals from the continuous noise rather than
+                    // Analytic normals from the continuous height field rather than
                     // RecalculateNormals, which would only see this chunk's
                     // triangles and leave a visible lighting seam at every border.
-                    normals[i] = TerrainNoise.SampleNormal(
-                        worldX, worldZ, step, octaveOffsets,
-                        settings.noiseScale, settings.persistence, settings.lacunarity,
-                        settings.heightCurve, settings.heightMultiplier);
+                    normals[i] = settings.SampleTerrainNormal(worldX, worldZ, step);
                 }
             }
 

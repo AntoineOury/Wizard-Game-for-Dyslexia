@@ -71,10 +71,15 @@ namespace OtherwiseLabs.TerrainTools
             return amplitudeSum > 0f ? value / amplitudeSum : 0f;
         }
 
-        /// <summary>Normalized value shaped into a world-space height.</summary>
+        /// <summary>
+        /// Normalized value shaped into a world-space height. A null or empty
+        /// curve falls back to linear — a keyless curve evaluates to 0, which
+        /// would silently flatten the terrain (a fresh Inspector-added biome
+        /// arrives with exactly such a curve).
+        /// </summary>
         public static float ToWorldHeight(float normalized, AnimationCurve heightCurve, float heightMultiplier)
         {
-            float shaped = heightCurve != null ? heightCurve.Evaluate(normalized) : normalized;
+            float shaped = heightCurve != null && heightCurve.length > 0 ? heightCurve.Evaluate(normalized) : normalized;
             return shaped * heightMultiplier;
         }
 
