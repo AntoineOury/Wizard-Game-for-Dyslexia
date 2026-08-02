@@ -195,6 +195,14 @@ namespace OtherwiseLabs.TerrainTools
 
         [Tooltip("Minimum distance in world units between two instances of this rule. 0 = no spacing check.")]
         [Min(0f)] public float minSpacing = 2f;
+
+        [Tooltip("Space this asset claims against OTHER assets, in world units, so a rock can't spawn inside " +
+                 "a tree. 0 = estimate from the prefab's bounds. Min Spacing only separates an asset from " +
+                 "copies of itself; this is what separates it from everything else.")]
+        [Min(0f)] public float footprintRadius = 0f;
+
+        // Resolved once per scatter so the bounds estimate isn't recomputed per instance.
+        [System.NonSerialized] public float resolvedFootprint;
     }
 
     /// <summary>
@@ -267,6 +275,10 @@ namespace OtherwiseLabs.TerrainTools
 
         [Tooltip("Seed for asset placement. Same seed = same layout.")]
         public int scatterSeed = 54321;
+
+        [Tooltip("Stop assets from different rules overlapping each other (rock inside a tree). " +
+                 "Uses each rule's Footprint Radius. Turn off to compare against the old behaviour.")]
+        public bool preventAssetOverlap = true;
 
         [Header("Editor Behaviour")]
         [Tooltip("Regenerate the terrain mesh automatically whenever a setting changes in the Inspector (Editor only). Scattering still requires a button press.")]
@@ -407,8 +419,38 @@ namespace OtherwiseLabs.TerrainTools
             root.SetParent(transform, false);
             RegisterCreated(root.gameObject);
 
+            // Resolve every footprint first: the occupancy grid's cell size has to
+            // cover the largest one, or an overlap could span more cells than a
+            // query looks at and slip through.
+            float largestFootprint = 0.5f;
+            foreach (EnvironmentAssetRule rule in environmentAssets)
+            {
+                if (rule == null || rule.prefab == null) continue;
+                rule.resolvedFootprint = rule.footprintRadius > 0f
+                    ? rule.footprintRadius
+                    : EstimateFootprintRadius(rule.prefab);
+                largestFootprint = Mathf.Max(largestFootprint, rule.resolvedFootprint);
+            }
+
+            // Shared across every rule, which is the whole point: previously each
+            // rule only knew about its own instances, so a rock had no idea a tree
+            // was already standing there.
+            var occupancy = preventAssetOverlap ? new ScatterOccupancy(largestFootprint * 2f) : null;
+
+            // Bigger assets claim their ground first; otherwise a field of grass
+            // placed early leaves nowhere legal for a house.
+            var order = new List<int>();
+            for (int i = 0; i < environmentAssets.Count; i++) order.Add(i);
+            order.Sort((a, b) =>
+            {
+                EnvironmentAssetRule ra = environmentAssets[a], rb = environmentAssets[b];
+                float fa = ra?.resolvedFootprint ?? 0f, fb = rb?.resolvedFootprint ?? 0f;
+                int cmp = fb.CompareTo(fa);
+                return cmp != 0 ? cmp : a.CompareTo(b); // stable, keeps it deterministic
+            });
+
             int total = 0;
-            for (int ruleIndex = 0; ruleIndex < environmentAssets.Count; ruleIndex++)
+            foreach (int ruleIndex in order)
             {
                 EnvironmentAssetRule rule = environmentAssets[ruleIndex];
                 if (rule == null || rule.prefab == null)
@@ -416,7 +458,7 @@ namespace OtherwiseLabs.TerrainTools
                     Debug.LogWarning($"[{name}] Environment asset #{ruleIndex} has no prefab assigned, skipping.", this);
                     continue;
                 }
-                total += ScatterRule(rule, ruleIndex, root);
+                total += ScatterRule(rule, ruleIndex, root, occupancy);
             }
 
             LastScatterCount = total;
@@ -574,6 +616,9 @@ namespace OtherwiseLabs.TerrainTools
                     rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass;
                     // Densest in the meadow, sparse on the sand.
                     rule.zoneWeights = new ZoneWeights { water = 0f, shore = 0.5f, grass = 1f, rock = 0f, snow = 0f };
+                    // Deliberately tiny: grass and flowers tucked under a tree canopy
+                    // look right, so ground cover shouldn't reserve real estate.
+                    rule.footprintRadius = 0.2f;
                     break;
 
                 case AssetCategory.Debris:
@@ -729,7 +774,26 @@ namespace OtherwiseLabs.TerrainTools
         // Scattering
         // ------------------------------------------------------------------
 
-        int ScatterRule(EnvironmentAssetRule rule, int ruleIndex, Transform root)
+        /// <summary>
+        /// Horizontal room a prefab needs, from its renderer bounds. Halved because
+        /// the full extent is the canopy: tree crowns are meant to interlock, it's
+        /// the trunks that must not share ground with a boulder.
+        /// </summary>
+        public static float EstimateFootprintRadius(GameObject prefab)
+        {
+            if (prefab == null) return 0.5f;
+
+            var renderers = prefab.GetComponentsInChildren<Renderer>();
+            if (renderers.Length == 0) return 0.5f;
+
+            Bounds bounds = renderers[0].bounds;
+            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+
+            float horizontal = Mathf.Max(bounds.extents.x, bounds.extents.z);
+            return Mathf.Clamp(horizontal * 0.5f, 0.15f, 20f);
+        }
+
+        int ScatterRule(EnvironmentAssetRule rule, int ruleIndex, Transform root, ScatterOccupancy occupancy)
         {
             int target = Mathf.RoundToInt(rule.density * rule.maxInstances);
             if (target <= 0) return 0;
@@ -752,7 +816,7 @@ namespace OtherwiseLabs.TerrainTools
 
             // Rejection tallies so a rule that places nothing can say why.
             int rejectedByZone = 0, rejectedByHeight = 0, rejectedBySlope = 0, rejectedBySpacing = 0;
-            int rejectedByWeight = 0;
+            int rejectedByWeight = 0, rejectedByOverlap = 0;
 
             // Normalizing by the heaviest allowed zone keeps the favourite zone at
             // 100% acceptance, so weighting changes the distribution without
@@ -800,15 +864,23 @@ namespace OtherwiseLabs.TerrainTools
                 float localX = (nx - 0.5f) * terrainSize.x;
                 float localZ = (nz - 0.5f) * terrainSize.y;
 
+                var candidate = new Vector2(localX, localZ);
+
                 if (rule.minSpacing > 0f)
                 {
                     bool tooClose = false;
-                    var candidate = new Vector2(localX, localZ);
                     for (int p = 0; p < placedPositions.Count; p++)
                     {
                         if ((placedPositions[p] - candidate).sqrMagnitude < spacingSqr) { tooClose = true; break; }
                     }
                     if (tooClose) { rejectedBySpacing++; continue; }
+                }
+
+                // Cross-rule check: does anything already placed by ANY rule stand here?
+                if (occupancy != null && occupancy.Overlaps(candidate, rule.resolvedFootprint))
+                {
+                    rejectedByOverlap++;
+                    continue;
                 }
 
                 GameObject instance = SpawnPrefab(rule.prefab, container);
@@ -827,7 +899,8 @@ namespace OtherwiseLabs.TerrainTools
 
                 if (tag != null) instance.tag = tag;
 
-                placedPositions.Add(new Vector2(localX, localZ));
+                placedPositions.Add(candidate);
+                occupancy?.Add(candidate, rule.resolvedFootprint);
                 placed++;
             }
 
@@ -840,11 +913,12 @@ namespace OtherwiseLabs.TerrainTools
                 if (rejectedByWeight > worstCount) { worst = "zone weights — raise the low ones or turn off Use Zone Weights"; worstCount = rejectedByWeight; }
                 if (rejectedByHeight > worstCount) { worst = $"height band ({minHeight:0.##}-{maxHeight:0.##})"; worstCount = rejectedByHeight; }
                 if (rejectedBySpacing > worstCount) { worst = $"min spacing ({rule.minSpacing:0.##})"; worstCount = rejectedBySpacing; }
+                if (rejectedByOverlap > worstCount) { worst = $"other assets already occupying the ground (footprint {rule.resolvedFootprint:0.##})"; worstCount = rejectedByOverlap; }
 
                 Debug.LogWarning(
                     $"[{name}] '{containerName}': placed {placed}/{target}. Mostly rejected by {worst}. " +
                     $"(zone {rejectedByZone}, weight {rejectedByWeight}, height {rejectedByHeight}, " +
-                    $"slope {rejectedBySlope}, spacing {rejectedBySpacing})", this);
+                    $"slope {rejectedBySlope}, spacing {rejectedBySpacing}, overlap {rejectedByOverlap})", this);
             }
 
             return placed;
