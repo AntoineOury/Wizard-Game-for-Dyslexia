@@ -7,8 +7,19 @@ Two components, sharing one noise/scatter core:
 | `ProceduralTerrainGenerator` | A single finite terrain built in the editor. Authored, saved in the scene. |
 | `InfiniteTerrainStreamer` | An endless world streamed around the player at runtime. |
 
-Both use `TerrainNoise` for height and `ScatterOccupancy` / `CandidateField` for
-placement, so an asset rule tuned in one behaves the same in the other.
+**Shared** between them: `EnvironmentAssetRule` and everything on it (zones,
+weights, footprints), the category presets applied on prefab drop, and the
+`OtherwiseLabs/Terrain Vertex Color` shader. An asset rule tuned in one behaves
+the same way in the other.
+
+**Not shared:** height sampling. `InfiniteTerrainStreamer` uses `TerrainNoise`;
+`ProceduralTerrainGenerator` kept its own inline copy of the same formula, so
+that existing scenes reproduce their terrain byte-for-byte. The two are
+therefore *not* interchangeable — see "Same seed, different worlds" below.
+
+Collision also differs by necessity: the finite generator places sequentially
+into a `ScatterOccupancy`, while the streamer needs the order-independent
+`CandidateField` so separately-generated chunks agree at their borders.
 
 ---
 
@@ -90,6 +101,21 @@ reaches the same verdict independently. Marginally sparser, always consistent.
 
 A one-chunk halo suffices because conflicts can only reach two radii, so keep
 **footprints well below `Chunk Size`**.
+
+### Same seed, different worlds
+
+Putting the same seed into both components does **not** produce the same
+landscape, for two reasons:
+
+- The finite generator samples noise across a local `0..terrainSize` rectangle;
+  the streamer samples absolute world coordinates, so a chunk's position in the
+  world decides its shape.
+- The streamer shifts every sample by `TerrainNoise.NoiseOrigin` to dodge the
+  Perlin mirror described below. The finite generator does not.
+
+This is intentional — matching them would mean changing the finite generator's
+output and invalidating scenes already built with it. Treat the seed as
+meaningful *within* a component, not across the two.
 
 ### Perlin mirrors at the origin
 
