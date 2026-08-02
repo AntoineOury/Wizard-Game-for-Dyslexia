@@ -35,6 +35,7 @@ namespace OtherwiseLabs.TerrainTools
         {
             Root = new GameObject("Chunk");
             Root.transform.SetParent(parent, false);
+            TerrainObjects.MarkTransient(Root);
 
             _meshFilter = Root.AddComponent<MeshFilter>();
             _meshRenderer = Root.AddComponent<MeshRenderer>();
@@ -48,6 +49,7 @@ namespace OtherwiseLabs.TerrainTools
 
             _propRoot = new GameObject("Props").transform;
             _propRoot.SetParent(Root.transform, false);
+            TerrainObjects.MarkTransient(_propRoot.gameObject);
         }
 
         public void SetActive(bool active)
@@ -168,8 +170,8 @@ namespace OtherwiseLabs.TerrainTools
 
         public void Destroy()
         {
-            if (Root != null) Object.Destroy(Root);
-            if (_mesh != null) Object.Destroy(_mesh);
+            TerrainObjects.DestroyObject(Root);
+            TerrainObjects.DestroyObject(_mesh);
         }
     }
 }
