@@ -10,6 +10,77 @@ using UnityEditorInternal;
 namespace OtherwiseLabs.TerrainTools
 {
     /// <summary>
+    /// Named surface bands of the terrain, ordered low to high. Assets pick the
+    /// zones they are allowed to spawn in, so "keep trees out of the water" is a
+    /// checkbox rather than a guess at a normalized height number.
+    /// </summary>
+    [Flags]
+    public enum TerrainZone
+    {
+        None = 0,
+        Water = 1 << 0,
+        Shore = 1 << 1,
+        Grass = 1 << 2,
+        Rock = 1 << 3,
+        Snow = 1 << 4,
+        Everything = Water | Shore | Grass | Rock | Snow,
+    }
+
+    /// <summary>
+    /// Normalized height thresholds that split the terrain into zones. Defaults
+    /// line up with the default height gradient, so the blue part of the terrain
+    /// really is the Water zone.
+    /// </summary>
+    [Serializable]
+    public class TerrainZoneBands
+    {
+        [Tooltip("Everything below this normalized height is Water.")]
+        [Range(0f, 1f)] public float waterLevel = 0.33f;
+
+        [Tooltip("Water up to here is Shore (beach / lake edge).")]
+        [Range(0f, 1f)] public float shoreLevel = 0.42f;
+
+        [Tooltip("Shore up to here is Grass (the main habitable band).")]
+        [Range(0f, 1f)] public float grassLevel = 0.68f;
+
+        [Tooltip("Grass up to here is Rock. Above it is Snow.")]
+        [Range(0f, 1f)] public float rockLevel = 0.86f;
+
+        /// <summary>Forces the thresholds to stay in ascending order.</summary>
+        public void Sanitize()
+        {
+            waterLevel = Mathf.Clamp01(waterLevel);
+            shoreLevel = Mathf.Clamp(shoreLevel, waterLevel, 1f);
+            grassLevel = Mathf.Clamp(grassLevel, shoreLevel, 1f);
+            rockLevel = Mathf.Clamp(rockLevel, grassLevel, 1f);
+        }
+
+        /// <summary>Zone that a normalized terrain height falls into.</summary>
+        public TerrainZone GetZone(float normalizedHeight)
+        {
+            if (normalizedHeight < waterLevel) return TerrainZone.Water;
+            if (normalizedHeight < shoreLevel) return TerrainZone.Shore;
+            if (normalizedHeight < grassLevel) return TerrainZone.Grass;
+            if (normalizedHeight < rockLevel) return TerrainZone.Rock;
+            return TerrainZone.Snow;
+        }
+
+        /// <summary>Normalized height range a zone covers, for previews.</summary>
+        public Vector2 GetRange(TerrainZone zone)
+        {
+            switch (zone)
+            {
+                case TerrainZone.Water: return new Vector2(0f, waterLevel);
+                case TerrainZone.Shore: return new Vector2(waterLevel, shoreLevel);
+                case TerrainZone.Grass: return new Vector2(shoreLevel, grassLevel);
+                case TerrainZone.Rock: return new Vector2(grassLevel, rockLevel);
+                case TerrainZone.Snow: return new Vector2(rockLevel, 1f);
+                default: return new Vector2(0f, 1f);
+            }
+        }
+    }
+
+    /// <summary>
     /// One scatterable environment asset (tree, rock, building, ...) and the rules
     /// that control where and how it gets placed on the generated terrain.
     /// </summary>
@@ -44,6 +115,15 @@ namespace OtherwiseLabs.TerrainTools
 
         [Tooltip("How deep instances sink into the ground, in world units. Useful so rocks and trunks don't float on slopes.")]
         public float embedDepth = 0.1f;
+
+        [Header("Terrain Zone Filter")]
+        [Tooltip("Restrict this asset to specific terrain zones (water / shore / grass / rock / snow). " +
+                 "Leave off to place anywhere the height and slope filters allow.")]
+        public bool restrictToZones = false;
+
+        [Tooltip("Zones this asset may spawn in. Uncheck Water to keep trees out of lakes; " +
+                 "check only Shore and Grass to keep them on the beach and meadow.")]
+        public TerrainZone allowedZones = TerrainZone.Shore | TerrainZone.Grass;
 
         [Header("Placement Filters")]
         [Tooltip("Reject spots steeper than this angle in degrees (e.g. keep buildings on flat ground).")]
@@ -117,6 +197,11 @@ namespace OtherwiseLabs.TerrainTools
 
         [Tooltip("If the MeshRenderer has no material, assign one automatically using the included vertex color shader.")]
         public bool autoAssignMaterial = true;
+
+        [Header("Terrain Zones")]
+        [Tooltip("Normalized height thresholds that name the terrain bands. Assets can then be restricted " +
+                 "to zones (e.g. trees on Shore + Grass only). Keep these lined up with the gradient above.")]
+        public TerrainZoneBands zoneBands = new TerrainZoneBands();
 
         [Header("Environment Assets")]
         [Tooltip("Prefabs to scatter and their placement rules. Use the drag & drop area below to add entries quickly.")]
@@ -247,6 +332,8 @@ namespace OtherwiseLabs.TerrainTools
             }
 
             EnsureTerrainData();
+            if (zoneBands == null) zoneBands = new TerrainZoneBands();
+            zoneBands.Sanitize();
 
 #if UNITY_EDITOR
             if (!Application.isPlaying)
@@ -371,15 +458,21 @@ namespace OtherwiseLabs.TerrainTools
         {
             if (rule == null) return;
 
+            // Every preset opts into zone filtering: it is the setting that most
+            // often makes a scatter look wrong (trees standing in lakes), and the
+            // zone names are far easier to reason about than raw height numbers.
+            rule.restrictToZones = true;
+
             switch (category)
             {
                 case AssetCategory.Tree:
                     rule.maxSlopeAngle = 32f;
                     rule.alignToNormal = 0.15f;
                     rule.minSpacing = 4f;
-                    rule.minHeight = 0.15f;
-                    rule.maxHeight = 0.8f;
+                    rule.minHeight = 0f;
+                    rule.maxHeight = 1f;
                     rule.embedDepth = 0.2f;
+                    rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass;
                     break;
 
                 case AssetCategory.Rock:
@@ -387,6 +480,7 @@ namespace OtherwiseLabs.TerrainTools
                     rule.alignToNormal = 1f;
                     rule.embedDepth = 0.25f;
                     rule.minSpacing = 1.5f;
+                    rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass | TerrainZone.Rock | TerrainZone.Snow;
                     break;
 
                 case AssetCategory.Building:
@@ -396,8 +490,9 @@ namespace OtherwiseLabs.TerrainTools
                     rule.maxScale = 1f;
                     rule.maxInstances = 30;
                     rule.minSpacing = 15f;
-                    rule.minHeight = 0.2f;
-                    rule.maxHeight = 0.6f;
+                    rule.minHeight = 0f;
+                    rule.maxHeight = 1f;
+                    rule.allowedZones = TerrainZone.Grass;
                     break;
 
                 case AssetCategory.GroundCover:
@@ -406,7 +501,8 @@ namespace OtherwiseLabs.TerrainTools
                     rule.embedDepth = 0.05f;
                     rule.alignToNormal = 0.6f;
                     rule.maxSlopeAngle = 40f;
-                    rule.maxHeight = 0.85f;
+                    rule.maxHeight = 1f;
+                    rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass;
                     break;
 
                 case AssetCategory.Debris:
@@ -415,7 +511,12 @@ namespace OtherwiseLabs.TerrainTools
                     rule.alignToNormal = 0.8f;
                     rule.embedDepth = 0.15f;
                     rule.maxSlopeAngle = 35f;
-                    rule.maxHeight = 0.8f;
+                    rule.maxHeight = 1f;
+                    rule.allowedZones = TerrainZone.Grass | TerrainZone.Rock;
+                    break;
+
+                default:
+                    rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass | TerrainZone.Rock;
                     break;
             }
         }
@@ -577,6 +678,9 @@ namespace OtherwiseLabs.TerrainTools
             float maxHeight = Mathf.Max(rule.minHeight, rule.maxHeight);
             float spacingSqr = rule.minSpacing * rule.minSpacing;
 
+            // Rejection tallies so a rule that places nothing can say why.
+            int rejectedByZone = 0, rejectedByHeight = 0, rejectedBySlope = 0, rejectedBySpacing = 0;
+
             int placed = 0;
             int maxAttempts = target * 12;
             for (int attempt = 0; attempt < maxAttempts && placed < target; attempt++)
@@ -585,10 +689,17 @@ namespace OtherwiseLabs.TerrainTools
                 float nz = (float)rng.NextDouble();
 
                 float normalizedHeight = SampleNormalizedHeight(nx, nz);
-                if (normalizedHeight < minHeight || normalizedHeight > maxHeight) continue;
+
+                if (rule.restrictToZones)
+                {
+                    TerrainZone zone = zoneBands.GetZone(normalizedHeight);
+                    if ((rule.allowedZones & zone) == 0) { rejectedByZone++; continue; }
+                }
+
+                if (normalizedHeight < minHeight || normalizedHeight > maxHeight) { rejectedByHeight++; continue; }
 
                 Vector3 normal = SampleLocalNormal(nx, nz);
-                if (Vector3.Angle(normal, Vector3.up) > rule.maxSlopeAngle) continue;
+                if (Vector3.Angle(normal, Vector3.up) > rule.maxSlopeAngle) { rejectedBySlope++; continue; }
 
                 float localX = (nx - 0.5f) * terrainSize.x;
                 float localZ = (nz - 0.5f) * terrainSize.y;
@@ -601,7 +712,7 @@ namespace OtherwiseLabs.TerrainTools
                     {
                         if ((placedPositions[p] - candidate).sqrMagnitude < spacingSqr) { tooClose = true; break; }
                     }
-                    if (tooClose) continue;
+                    if (tooClose) { rejectedBySpacing++; continue; }
                 }
 
                 GameObject instance = SpawnPrefab(rule.prefab, container);
@@ -625,7 +736,18 @@ namespace OtherwiseLabs.TerrainTools
             }
 
             if (placed < target)
-                Debug.LogWarning($"[{name}] '{containerName}': placed {placed}/{target} instances. Filters (slope/height/spacing) rejected the rest — relax them or lower Min Spacing.", this);
+            {
+                // Name the filter that did the most damage, so the fix is obvious.
+                string worst = "slope";
+                int worstCount = rejectedBySlope;
+                if (rejectedByZone > worstCount) { worst = $"terrain zone (allowed: {rule.allowedZones})"; worstCount = rejectedByZone; }
+                if (rejectedByHeight > worstCount) { worst = $"height band ({minHeight:0.##}-{maxHeight:0.##})"; worstCount = rejectedByHeight; }
+                if (rejectedBySpacing > worstCount) { worst = $"min spacing ({rule.minSpacing:0.##})"; worstCount = rejectedBySpacing; }
+
+                Debug.LogWarning(
+                    $"[{name}] '{containerName}': placed {placed}/{target}. Mostly rejected by {worst}. " +
+                    $"(zone {rejectedByZone}, height {rejectedByHeight}, slope {rejectedBySlope}, spacing {rejectedBySpacing})", this);
+            }
 
             return placed;
         }
