@@ -92,6 +92,23 @@ namespace OtherwiseLabs.TerrainTools
         [Tooltip("Stop assets overlapping each other, across chunk borders too.")]
         public bool preventAssetOverlap = true;
 
+        [Header("Biomes")]
+        [Tooltip("Region types with their own assets, heights and colors, laid out along a low-frequency " +
+                 "climate noise. A biome only borders its list neighbours, so order the list like a climate " +
+                 "gradient (e.g. Winter, Forest, Desert). Empty = one uniform world using the settings above.")]
+        public List<BiomeDefinition> biomes = new List<BiomeDefinition>();
+
+        [Tooltip("Size of biome regions in world units. Bigger = larger continents of a single type. " +
+                 "Keep well above Noise Scale so regions are much larger than individual hills.")]
+        [Min(50f)] public float biomeScale = 600f;
+
+        [Tooltip("Width of the crossfade between neighbouring biomes, as a fraction of the climate range. " +
+                 "Bigger = wider, softer borders; smaller = crisper region edges.")]
+        [Range(0.01f, 0.4f)] public float biomeBlend = 0.12f;
+
+        [Tooltip("Seed for the biome layout. Re-roll to rearrange which region lands where without changing the terrain detail inside them.")]
+        public int biomeSeed = 13579;
+
         [Header("Memory")]
         [Tooltip("Pooled instances kept per prefab. Extras are destroyed when trimming.")]
         [Min(0)] public int maxPooledPerPrefab = 256;
@@ -121,10 +138,21 @@ namespace OtherwiseLabs.TerrainTools
         // caching them avoids regenerating each chunk's candidates up to 9 times.
         readonly Dictionary<Vector2Int, List<ScatterCandidate>> _candidateCache = new Dictionary<Vector2Int, List<ScatterCandidate>>();
 
+        // Global and per-biome rules flattened into one indexed table. Candidate
+        // identity stores indices into this, so its order is part of determinism.
+        struct RuleEntry
+        {
+            public EnvironmentAssetRule rule;
+            public int biomeIndex; // -1 = global rule, appears in every biome
+        }
+        readonly List<RuleEntry> _ruleTable = new List<RuleEntry>();
+
         PrefabPool _pool;
         Transform _chunkParent;
         Transform _parkingLot;
         Vector2[] _octaveOffsets;
+        Vector2[] _biomeOctaveOffsets;
+        float[] _biomeWeights;
         Vector3 _lastViewerPosition;
         bool _initialised;
         Coroutine _buildLoop;
@@ -168,7 +196,7 @@ namespace OtherwiseLabs.TerrainTools
 
             _pool = new PrefabPool(_parkingLot);
             RebuildOctaveOffsets();
-            ResolveFootprints();
+            RebuildRuleTable();
 
             _lastViewerPosition = viewer != null ? viewer.position : Vector3.zero;
             _initialised = true;
@@ -179,11 +207,136 @@ namespace OtherwiseLabs.TerrainTools
             // The world origin shift keeps every sample in positive space, where
             // Perlin doesn't mirror. Without it the world is symmetric about (0,0).
             _octaveOffsets = TerrainNoise.BuildOctaveOffsets(seed, octaves, noiseOffset, TerrainNoise.NoiseOrigin);
+            // Two octaves is deliberately soft: biome regions should be big smooth
+            // blobs, not as detailed as the terrain inside them.
+            _biomeOctaveOffsets = TerrainNoise.BuildOctaveOffsets(biomeSeed, 2, Vector2.zero, TerrainNoise.NoiseOrigin);
         }
 
-        void ResolveFootprints()
+        // ------------------------------------------------------------------
+        // World sampling (biome-aware)
+        // ------------------------------------------------------------------
+
+        public bool UsesBiomes => biomes != null && biomes.Count > 0;
+
+        /// <summary>Base terrain noise in 0-1 at a world position. Shared by every biome.</summary>
+        public float SampleBaseNoise(float worldX, float worldZ)
         {
-            foreach (EnvironmentAssetRule rule in environmentAssets)
+            if (_octaveOffsets == null) RebuildOctaveOffsets();
+            return TerrainNoise.SampleNormalized(worldX, worldZ, _octaveOffsets, noiseScale, persistence, lacunarity);
+        }
+
+        /// <summary>
+        /// Climate value in 0-1 deciding which biome owns a position. Sampled from
+        /// its own, much lower-frequency noise field so regions are far larger than
+        /// the hills inside them.
+        /// </summary>
+        public float SampleClimate(float worldX, float worldZ)
+        {
+            if (_biomeOctaveOffsets == null) RebuildOctaveOffsets();
+            return TerrainNoise.SampleNormalized(worldX, worldZ, _biomeOctaveOffsets, biomeScale, 0.5f, 2f);
+        }
+
+        float[] BiomeWeightsAt(float worldX, float worldZ)
+        {
+            if (_biomeWeights == null || _biomeWeights.Length < biomes.Count)
+                _biomeWeights = new float[biomes.Count];
+            BiomeField.GetWeights(biomes, SampleClimate(worldX, worldZ), biomeBlend, _biomeWeights);
+            return _biomeWeights;
+        }
+
+        /// <summary>
+        /// Dominant biome at a world position, or null when no biomes are defined.
+        /// Useful gameplay hook: switch ambience, music or fog when this changes.
+        /// </summary>
+        public BiomeDefinition DominantBiomeAt(Vector3 worldPosition)
+        {
+            if (!UsesBiomes) return null;
+            float[] weights = BiomeWeightsAt(worldPosition.x, worldPosition.z);
+            int best = 0;
+            for (int i = 1; i < biomes.Count; i++)
+                if (weights[i] > weights[best]) best = i;
+            return biomes[best];
+        }
+
+        /// <summary>
+        /// Height shaped from an already-sampled base noise value. With biomes,
+        /// every biome shapes the same base noise through its own curve, multiplier
+        /// and offset, and the results blend by biome weight — heights cross a
+        /// border smoothly because the weights do.
+        /// </summary>
+        public float HeightFromNormalized(float worldX, float worldZ, float normalized)
+        {
+            if (!UsesBiomes)
+                return TerrainNoise.ToWorldHeight(normalized, heightCurve, heightMultiplier);
+
+            float[] weights = BiomeWeightsAt(worldX, worldZ);
+            float height = 0f;
+            for (int i = 0; i < biomes.Count; i++)
+            {
+                float w = weights[i];
+                if (w <= 0f) continue;
+                BiomeDefinition biome = biomes[i];
+                if (biome == null) continue;
+                height += w * (TerrainNoise.ToWorldHeight(normalized, biome.heightCurve, biome.heightMultiplier) + biome.heightOffset);
+            }
+            return height;
+        }
+
+        /// <summary>Final terrain height at a world position, biome blending included.</summary>
+        public float SampleWorldHeight(float worldX, float worldZ)
+            => HeightFromNormalized(worldX, worldZ, SampleBaseNoise(worldX, worldZ));
+
+        /// <summary>Surface normal by central differences of the final height field, so it stays seamless across chunk AND biome borders.</summary>
+        public Vector3 SampleTerrainNormal(float worldX, float worldZ, float step)
+        {
+            float heightL = SampleWorldHeight(worldX - step, worldZ);
+            float heightR = SampleWorldHeight(worldX + step, worldZ);
+            float heightD = SampleWorldHeight(worldX, worldZ - step);
+            float heightU = SampleWorldHeight(worldX, worldZ + step);
+            float dx = (heightR - heightL) / (2f * step);
+            float dz = (heightU - heightD) / (2f * step);
+            return new Vector3(-dx, 1f, -dz).normalized;
+        }
+
+        /// <summary>Ground color at a position: biome gradients blended by weight, so winter whites fade into forest greens.</summary>
+        public Color SampleVertexColor(float worldX, float worldZ, float normalized)
+        {
+            if (!UsesBiomes) return colorByHeight.Evaluate(normalized);
+
+            float[] weights = BiomeWeightsAt(worldX, worldZ);
+            Color color = Color.clear;
+            for (int i = 0; i < biomes.Count; i++)
+            {
+                float w = weights[i];
+                if (w <= 0f) continue;
+                Gradient gradient = biomes[i] != null && biomes[i].colorByHeight != null && biomes[i].colorByHeight.colorKeys.Length > 0
+                    ? biomes[i].colorByHeight
+                    : colorByHeight;
+                color += gradient.Evaluate(normalized) * w;
+            }
+            color.a = 1f;
+            return color;
+        }
+
+        /// <summary>
+        /// Flattens the global and per-biome asset rules into one indexed table
+        /// and resolves their footprints. Candidate identity stores indices into
+        /// this table, so its order is part of the world's determinism.
+        /// </summary>
+        void RebuildRuleTable()
+        {
+            SanitizeBiomes();
+            _ruleTable.Clear();
+            AppendRules(environmentAssets, -1);
+            if (UsesBiomes)
+                for (int b = 0; b < biomes.Count; b++)
+                    if (biomes[b] != null) AppendRules(biomes[b].environmentAssets, b);
+        }
+
+        void AppendRules(List<EnvironmentAssetRule> rules, int biomeIndex)
+        {
+            if (rules == null) return;
+            foreach (EnvironmentAssetRule rule in rules)
             {
                 if (rule == null || rule.prefab == null) continue;
                 float footprint = rule.footprintRadius > 0f
@@ -194,6 +347,30 @@ namespace OtherwiseLabs.TerrainTools
                 // handles both "not inside another asset" and "not too close to my
                 // own kind" — and handles them across chunk borders for free.
                 rule.resolvedFootprint = Mathf.Max(footprint, rule.minSpacing * 0.5f);
+                _ruleTable.Add(new RuleEntry { rule = rule, biomeIndex = biomeIndex });
+            }
+        }
+
+        /// <summary>
+        /// A list element freshly added in the Inspector arrives zeroed rather
+        /// than with field-initializer defaults, which would mean a flat black
+        /// biome. Treat that state as "give me sensible defaults".
+        /// </summary>
+        void SanitizeBiomes()
+        {
+            if (biomes == null) return;
+            foreach (BiomeDefinition biome in biomes)
+            {
+                if (biome == null) continue;
+                if (string.IsNullOrWhiteSpace(biome.name)) biome.name = "Biome";
+                biome.coverage = Mathf.Max(0.01f, biome.coverage);
+                if (biome.heightCurve == null || biome.heightCurve.length == 0)
+                    biome.heightCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+                if (biome.colorByHeight == null || biome.colorByHeight.colorKeys == null || biome.colorByHeight.colorKeys.Length == 0)
+                    biome.colorByHeight = BiomeField.DefaultBiomeGradient();
+                if (biome.heightMultiplier <= 0f && biome.heightOffset == 0f)
+                    biome.heightMultiplier = 30f;
+                biome.environmentAssets ??= new List<EnvironmentAssetRule>();
             }
         }
 
@@ -288,7 +465,7 @@ namespace OtherwiseLabs.TerrainTools
         {
             TerrainChunk chunk = _chunkPool.Count > 0 ? _chunkPool.Pop() : new TerrainChunk(_chunkParent, terrainMaterial);
             chunk.SetActive(true);
-            chunk.BuildMesh(coord, this, _octaveOffsets);
+            chunk.BuildMesh(coord, this);
             _active[coord] = chunk;
 
             if (viewer != null) RefreshChunkDetail(ChunkCoordOf(viewer.position));
@@ -340,10 +517,10 @@ namespace OtherwiseLabs.TerrainTools
             Vector2 origin = new Vector2(coord.x * size, coord.y * size);
             zoneBands?.Sanitize();
 
-            for (int ruleIndex = 0; ruleIndex < environmentAssets.Count; ruleIndex++)
+            for (int ruleIndex = 0; ruleIndex < _ruleTable.Count; ruleIndex++)
             {
-                EnvironmentAssetRule rule = environmentAssets[ruleIndex];
-                if (rule == null || rule.prefab == null) continue;
+                RuleEntry entry = _ruleTable[ruleIndex];
+                EnvironmentAssetRule rule = entry.rule;
 
                 int target = Mathf.RoundToInt(rule.density * rule.maxInstances);
                 if (target <= 0) continue;
@@ -362,8 +539,18 @@ namespace OtherwiseLabs.TerrainTools
                     float worldX = origin.x + (float)rng.NextDouble() * size;
                     float worldZ = origin.y + (float)rng.NextDouble() * size;
 
-                    float normalized = TerrainNoise.SampleNormalized(
-                        worldX, worldZ, _octaveOffsets, noiseScale, persistence, lacunarity);
+                    // Biome gate: a rule owned by a biome only spawns where that
+                    // biome holds ground. Acceptance follows the blend weight, so
+                    // across a border winter trees thin out while forest trees
+                    // thicken, instead of the two swapping at a hard line.
+                    if (entry.biomeIndex >= 0)
+                    {
+                        float biomeWeight = BiomeWeightsAt(worldX, worldZ)[entry.biomeIndex];
+                        if (biomeWeight <= 0.0005f) continue;
+                        if (biomeWeight < 0.999f && rng.NextDouble() > biomeWeight) continue;
+                    }
+
+                    float normalized = SampleBaseNoise(worldX, worldZ);
 
                     if (rule.restrictToZones || weighted)
                     {
@@ -381,9 +568,7 @@ namespace OtherwiseLabs.TerrainTools
                     if (normalized > Mathf.Max(rule.minHeight, rule.maxHeight)) continue;
 
                     float step = size / Mathf.Max(2, chunkResolution);
-                    Vector3 normal = TerrainNoise.SampleNormal(
-                        worldX, worldZ, step, _octaveOffsets,
-                        noiseScale, persistence, lacunarity, heightCurve, heightMultiplier);
+                    Vector3 normal = SampleTerrainNormal(worldX, worldZ, step);
                     if (Vector3.Angle(normal, Vector3.up) > rule.maxSlopeAngle) continue;
 
                     candidates.Add(new ScatterCandidate
@@ -407,11 +592,11 @@ namespace OtherwiseLabs.TerrainTools
 
         void ScatterChunk(TerrainChunk chunk)
         {
-            ResolveFootprints();
+            RebuildRuleTable();
 
             float largest = 1f;
-            foreach (EnvironmentAssetRule rule in environmentAssets)
-                if (rule != null) largest = Mathf.Max(largest, rule.resolvedFootprint);
+            for (int i = 0; i < _ruleTable.Count; i++)
+                largest = Mathf.Max(largest, _ruleTable[i].rule.resolvedFootprint);
 
             // A one-chunk halo is enough as long as no footprint exceeds a chunk,
             // because conflicts can only reach as far as two radii.
@@ -440,13 +625,14 @@ namespace OtherwiseLabs.TerrainTools
             {
                 ScatterCandidate candidate = field[index];
                 if (preventAssetOverlap && field.IsBlocked(index)) continue;
+                if (candidate.ruleIndex >= _ruleTable.Count) continue;
 
-                EnvironmentAssetRule rule = environmentAssets[candidate.ruleIndex];
+                EnvironmentAssetRule rule = _ruleTable[candidate.ruleIndex].rule;
                 if (rule == null || rule.prefab == null) continue;
 
                 GameObject instance = _pool.Acquire(rule.prefab, chunk.PropRoot);
 
-                float height = TerrainNoise.ToWorldHeight(candidate.normalizedHeight, heightCurve, heightMultiplier);
+                float height = HeightFromNormalized(candidate.position.x, candidate.position.y, candidate.normalizedHeight);
                 var worldPosition = new Vector3(candidate.position.x, height - rule.embedDepth, candidate.position.y);
                 instance.transform.position = worldPosition;
 
@@ -457,9 +643,7 @@ namespace OtherwiseLabs.TerrainTools
                 float scaleT = TerrainNoise.HashToUnit(TerrainNoise.Hash(variationHash, 7919));
 
                 float step = Mathf.Max(1f, chunkSize) / Mathf.Max(2, chunkResolution);
-                Vector3 normal = TerrainNoise.SampleNormal(
-                    candidate.position.x, candidate.position.y, step, _octaveOffsets,
-                    noiseScale, persistence, lacunarity, heightCurve, heightMultiplier);
+                Vector3 normal = SampleTerrainNormal(candidate.position.x, candidate.position.y, step);
 
                 Quaternion tilt = Quaternion.Slerp(
                     Quaternion.identity, Quaternion.FromToRotation(Vector3.up, normal), rule.alignToNormal);
@@ -505,7 +689,7 @@ namespace OtherwiseLabs.TerrainTools
 
             Initialise();
             RebuildOctaveOffsets();
-            ResolveFootprints();
+            RebuildRuleTable();
             zoneBands?.Sanitize();
 
             Vector2Int centerCoord = ChunkCoordOf(center);
@@ -530,7 +714,7 @@ namespace OtherwiseLabs.TerrainTools
                         ? _chunkPool.Pop()
                         : new TerrainChunk(_chunkParent, terrainMaterial);
                     chunk.SetActive(true);
-                    chunk.BuildMesh(coord, this, _octaveOffsets);
+                    chunk.BuildMesh(coord, this);
                     chunk.SetCollider(false); // nothing walks on a preview
                     _active[coord] = chunk;
                 }
@@ -597,7 +781,7 @@ namespace OtherwiseLabs.TerrainTools
             _candidateCache.Clear();
 
             RebuildOctaveOffsets();
-            ResolveFootprints();
+            RebuildRuleTable();
             UpdateVisibleChunks(force: true);
         }
 
@@ -605,6 +789,7 @@ namespace OtherwiseLabs.TerrainTools
         {
             seed = Random.Range(0, 1000000);
             scatterSeed = Random.Range(0, 1000000);
+            biomeSeed = Random.Range(0, 1000000);
         }
 
         static Gradient DefaultGradient()
@@ -630,6 +815,7 @@ namespace OtherwiseLabs.TerrainTools
             // typo spawn props on chunks that have no collider under them.
             assetDistanceInChunks = Mathf.Min(assetDistanceInChunks, viewDistanceInChunks);
             colliderDistanceInChunks = Mathf.Min(colliderDistanceInChunks, viewDistanceInChunks);
+            SanitizeBiomes();
         }
 
         void OnDrawGizmosSelected()

@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,6 +13,9 @@ namespace OtherwiseLabs.TerrainTools
     public class InfiniteTerrainStreamerEditor : Editor
     {
         GUIStyle _dropAreaStyle;
+
+        // Which list the drop area adds to: 0 = global, 1..N = biomes[N-1].
+        int _dropTargetIndex;
 
         // Rebuilding on every camera nudge would be unusable, so the preview only
         // refreshes when the camera actually crosses into a different chunk.
@@ -84,6 +88,7 @@ namespace OtherwiseLabs.TerrainTools
             DrawDefaultInspector();
 
             EditorGUILayout.Space(6);
+            DrawBiomeStrip(streamer);
             DrawDropArea(streamer);
 
             EditorGUILayout.Space(6);
@@ -190,8 +195,30 @@ namespace OtherwiseLabs.TerrainTools
                 richText = true,
             };
 
+            // With biomes defined, dropped prefabs need a home: the global list
+            // (appears everywhere) or one specific biome.
+            string targetLabel = "Global (every biome)";
+            if (streamer.biomes != null && streamer.biomes.Count > 0)
+            {
+                var labels = new string[streamer.biomes.Count + 1];
+                labels[0] = "Global (every biome)";
+                for (int i = 0; i < streamer.biomes.Count; i++)
+                {
+                    string biomeName = streamer.biomes[i] != null && !string.IsNullOrWhiteSpace(streamer.biomes[i].name)
+                        ? streamer.biomes[i].name : $"Biome {i}";
+                    labels[i + 1] = $"{biomeName} (only)";
+                }
+                _dropTargetIndex = Mathf.Clamp(_dropTargetIndex, 0, labels.Length - 1);
+                _dropTargetIndex = EditorGUILayout.Popup("Add Dropped Assets To", _dropTargetIndex, labels);
+                targetLabel = labels[_dropTargetIndex];
+            }
+            else
+            {
+                _dropTargetIndex = 0;
+            }
+
             Rect dropRect = GUILayoutUtility.GetRect(0f, 46f, GUILayout.ExpandWidth(true));
-            GUI.Box(dropRect, "<b>+ Drop prefabs here to add environment assets</b>\nMax Instances is per chunk", _dropAreaStyle);
+            GUI.Box(dropRect, $"<b>+ Drop prefabs here \u2192 {targetLabel}</b>\nMax Instances is per chunk", _dropAreaStyle);
 
             Event evt = Event.current;
             if (evt.type != EventType.DragUpdated && evt.type != EventType.DragPerform) return;
@@ -208,6 +235,13 @@ namespace OtherwiseLabs.TerrainTools
                 DragAndDrop.AcceptDrag();
                 Undo.RecordObject(streamer, "Add Environment Assets");
 
+                List<EnvironmentAssetRule> targetList = streamer.environmentAssets;
+                if (_dropTargetIndex > 0 && streamer.biomes != null && _dropTargetIndex <= streamer.biomes.Count
+                    && streamer.biomes[_dropTargetIndex - 1] != null)
+                {
+                    targetList = streamer.biomes[_dropTargetIndex - 1].environmentAssets ??= new List<EnvironmentAssetRule>();
+                }
+
                 foreach (Object dragged in DragAndDrop.objectReferences)
                 {
                     if (dragged is not GameObject prefab) continue;
@@ -222,7 +256,7 @@ namespace OtherwiseLabs.TerrainTools
                     };
                     ProceduralTerrainGenerator.ApplyCategoryDefaults(
                         rule, ProceduralTerrainGenerator.GuessCategory(prefab.name));
-                    streamer.environmentAssets.Add(rule);
+                    targetList.Add(rule);
                 }
 
                 EditorUtility.SetDirty(streamer);
@@ -245,13 +279,31 @@ namespace OtherwiseLabs.TerrainTools
             int trisPerChunk = streamer.chunkResolution * streamer.chunkResolution * 2;
             long totalTris = (long)trisPerChunk * terrainChunks;
 
-            int propsPerChunk = 0;
+            float propsPerChunk = 0f;
             foreach (EnvironmentAssetRule rule in streamer.environmentAssets)
             {
                 if (rule == null || rule.prefab == null) continue;
-                propsPerChunk += Mathf.RoundToInt(rule.density * rule.maxInstances);
+                propsPerChunk += rule.density * rule.maxInstances;
             }
-            long totalProps = (long)propsPerChunk * propChunks;
+            // Biome rules only spawn on their share of the world, so weight them
+            // by coverage rather than counting every biome's list in full.
+            if (streamer.biomes != null && streamer.biomes.Count > 0)
+            {
+                float totalCoverage = 0f;
+                foreach (BiomeDefinition biome in streamer.biomes)
+                    totalCoverage += Mathf.Max(0.01f, biome != null ? biome.coverage : 1f);
+                foreach (BiomeDefinition biome in streamer.biomes)
+                {
+                    if (biome?.environmentAssets == null) continue;
+                    float share = Mathf.Max(0.01f, biome.coverage) / totalCoverage;
+                    foreach (EnvironmentAssetRule rule in biome.environmentAssets)
+                    {
+                        if (rule == null || rule.prefab == null) continue;
+                        propsPerChunk += share * rule.density * rule.maxInstances;
+                    }
+                }
+            }
+            long totalProps = (long)(propsPerChunk * propChunks);
 
             float loadedSpan = (streamer.viewDistanceInChunks * 2 + 1) * streamer.chunkSize;
 
@@ -282,6 +334,52 @@ namespace OtherwiseLabs.TerrainTools
 
             // Counters change as the player moves, so keep the inspector live.
             EditorUtility.SetDirty(streamer);
+        }
+
+        /// <summary>
+        /// The climate axis with each biome's share of it, colored from its own
+        /// gradient. Makes coverage and list order tangible: neighbours on this
+        /// strip are the biomes that will actually border each other in the world.
+        /// </summary>
+        static void DrawBiomeStrip(InfiniteTerrainStreamer streamer)
+        {
+            List<BiomeDefinition> biomes = streamer.biomes;
+            if (biomes == null || biomes.Count == 0) return;
+
+            EditorGUILayout.LabelField("Biome Layout (climate low \u2192 high)", EditorStyles.boldLabel);
+            Rect strip = GUILayoutUtility.GetRect(0f, 22f, GUILayout.ExpandWidth(true));
+
+            float totalCoverage = 0f;
+            foreach (BiomeDefinition biome in biomes)
+                totalCoverage += Mathf.Max(0.01f, biome != null ? biome.coverage : 1f);
+
+            if (Event.current.type == EventType.Repaint)
+            {
+                float x = strip.x;
+                foreach (BiomeDefinition biome in biomes)
+                {
+                    float share = Mathf.Max(0.01f, biome != null ? biome.coverage : 1f) / totalCoverage;
+                    float width = share * strip.width;
+                    Color color = biome != null && biome.colorByHeight != null && biome.colorByHeight.colorKeys.Length > 0
+                        ? biome.colorByHeight.Evaluate(0.55f)
+                        : Color.gray;
+                    EditorGUI.DrawRect(new Rect(x, strip.y, width + 1f, strip.height), color);
+                    x += width;
+                }
+            }
+
+            Rect labels = GUILayoutUtility.GetRect(0f, 14f, GUILayout.ExpandWidth(true));
+            var tiny = new GUIStyle(EditorStyles.miniLabel) { alignment = TextAnchor.UpperCenter };
+            float labelX = labels.x;
+            foreach (BiomeDefinition biome in biomes)
+            {
+                float share = Mathf.Max(0.01f, biome != null ? biome.coverage : 1f) / totalCoverage;
+                float width = share * labels.width;
+                if (width >= 30f)
+                    GUI.Label(new Rect(labelX, labels.y, width, labels.height), biome != null ? biome.name : "?", tiny);
+                labelX += width;
+            }
+            EditorGUILayout.Space(4);
         }
 
         [MenuItem("GameObject/3D Object/Infinite Terrain Streamer (Otherwise Labs)", false, 11)]

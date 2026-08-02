@@ -102,6 +102,43 @@ reaches the same verdict independently. Marginally sparser, always consistent.
 A one-chunk halo suffices because conflicts can only reach two radii, so keep
 **footprints well below `Chunk Size`**.
 
+### Biomes
+
+Add entries to the **Biomes** list to split the world into region types — each
+with its own asset lists, height shaping and ground colors. With the list empty
+the streamer behaves exactly as before (one uniform world).
+
+Which biome owns a position comes from a second, much lower-frequency "climate"
+noise field (`Biome Scale`, default 600) — still a pure function of seed and
+position, so the infinite world stays deterministic. Each biome takes a share of
+the 0-1 climate axis proportional to its `Coverage`, **in list order** — a biome
+only ever borders its list neighbours, so order the list like a climate
+gradient (Winter, Forest, Desert reads sensibly; Winter, Desert, Forest puts
+snow against sand). The colored strip in the Inspector shows the layout.
+
+Per biome:
+
+| Field | Effect |
+| --- | --- |
+| `Coverage` | Relative share of the world (2 = twice the area of 1) |
+| `Height Multiplier / Curve / Offset` | Height shaping: winter at 50 beside forest at 30 gives visibly higher peaks |
+| `Color By Height` | Ground gradient: whites for winter, greens for forest |
+| `Environment Assets` | Assets that appear ONLY in this biome |
+
+The streamer's global `Environment Assets` list still spawns in every biome —
+use it for universal props (rocks), and biome lists for specific ones (snowy
+pines). The drop area gains an **"Add Dropped Assets To"** selector.
+
+**Transitions are smooth by construction.** Every biome shapes the same base
+noise through its own curve/multiplier, and the results are blended by weights
+that crossfade across `Biome Blend` of the climate axis — heights, colors and
+normals all cross the border without seams because the weights do. Assets use
+the same weights as acceptance probability, so winter trees thin out across the
+transition while forest trees thicken, instead of swapping at a hard line.
+
+`DominantBiomeAt(worldPosition)` is public — poll it from a player script to
+switch ambience, music or fog when the player crosses into a new region.
+
 ### Seeing it in the Scene view
 
 The streamer builds nothing in edit mode by default — `Update` and coroutines
