@@ -70,8 +70,10 @@ namespace OtherwiseLabs.TerrainTools
     [AddComponentMenu("Otherwise Labs/Procedural Terrain Generator")]
     public class ProceduralTerrainGenerator : MonoBehaviour
     {
-        public const string EnvironmentRootName = "-- Environment --";
+               public const string EnvironmentRootName = "-- Environment --";
+        public const string TerrainShaderName = "OtherwiseLabs/Terrain Vertex Color";
         const string GeneratedMeshName = "Procedural Terrain Mesh";
+        const string GeneratedMaterialName = "Procedural Terrain Material";
 
         [Header("Terrain Dimensions")]
         [Tooltip("Width (X) and length (Z) of the terrain in world units.")]
@@ -299,9 +301,128 @@ namespace OtherwiseLabs.TerrainTools
             scatterSeed = UnityEngine.Random.Range(0, 1000000);
         }
 
+               /// <summary>
+        /// Category guessed from a prefab's name, used to pick sensible scatter
+        /// defaults on drop.
+        /// </summary>
+        public enum AssetCategory { Generic, Tree, Rock, Building, GroundCover, Debris }
+
+        // Species names are included, not just the generic words: this project's
+        // nature kit ships prefabs like "Cedar03" and "Larch01" that contain no
+        // "tree" at all, and would otherwise fall through to Generic.
+        static readonly string[] TreeKeywords =
+        {
+            "tree", "pine", "palm", "cedar", "larch", "spruce", "fir", "oak",
+            "birch", "willow", "maple", "aspen", "poplar", "redwood", "sequoia",
+        };
+
+        static readonly string[] RockKeywords =
+        {
+            "rock", "stone", "boulder", "cliff", "pebble", "crystal",
+        };
+
+        static readonly string[] BuildingKeywords =
+        {
+            "build", "house", "hut", "tower", "ruin", "wall", "castle",
+            "cottage", "shed", "bridge", "well", "fence", "tent",
+        };
+
+        static readonly string[] GroundCoverKeywords =
+        {
+            "grass", "bush", "fern", "flower", "dandelion", "plantain", "clover",
+            "weed", "shrub", "moss", "reed", "sapling", "mushroom", "boletus",
+            "toadstool", "herb", "nettle", "thistle",
+        };
+
+        static readonly string[] DebrisKeywords =
+        {
+            "stump", "log", "branch", "trunk", "root", "twig", "deadwood", "debris",
+        };
+
+        /// <summary>
+        /// Guesses a category from an asset name. Case-insensitive substring match.
+        /// </summary>
+        public static AssetCategory GuessCategory(string assetName)
+        {
+            if (string.IsNullOrWhiteSpace(assetName)) return AssetCategory.Generic;
+            string n = assetName.ToLowerInvariant();
+
+            // Debris is checked before Tree so "Stump"/"Tree_Log" don't become trees.
+            if (ContainsAny(n, DebrisKeywords)) return AssetCategory.Debris;
+            if (ContainsAny(n, BuildingKeywords)) return AssetCategory.Building;
+            if (ContainsAny(n, TreeKeywords)) return AssetCategory.Tree;
+            if (ContainsAny(n, RockKeywords)) return AssetCategory.Rock;
+            if (ContainsAny(n, GroundCoverKeywords)) return AssetCategory.GroundCover;
+            return AssetCategory.Generic;
+        }
+
+        static bool ContainsAny(string haystack, string[] needles)
+        {
+            for (int i = 0; i < needles.Length; i++)
+                if (haystack.Contains(needles[i])) return true;
+            return false;
+        }
+
+        /// <summary>
+        /// Applies the default placement rules for a category. Public so presets
+        /// can be re-applied from the Inspector after renaming a rule.
+        /// </summary>
+        public static void ApplyCategoryDefaults(EnvironmentAssetRule rule, AssetCategory category)
+        {
+            if (rule == null) return;
+
+            switch (category)
+            {
+                case AssetCategory.Tree:
+                    rule.maxSlopeAngle = 32f;
+                    rule.alignToNormal = 0.15f;
+                    rule.minSpacing = 4f;
+                    rule.minHeight = 0.15f;
+                    rule.maxHeight = 0.8f;
+                    rule.embedDepth = 0.2f;
+                    break;
+
+                case AssetCategory.Rock:
+                    rule.maxSlopeAngle = 60f;
+                    rule.alignToNormal = 1f;
+                    rule.embedDepth = 0.25f;
+                    rule.minSpacing = 1.5f;
+                    break;
+
+                case AssetCategory.Building:
+                    rule.maxSlopeAngle = 10f;
+                    rule.alignToNormal = 0f;
+                    rule.minScale = 1f;
+                    rule.maxScale = 1f;
+                    rule.maxInstances = 30;
+                    rule.minSpacing = 15f;
+                    rule.minHeight = 0.2f;
+                    rule.maxHeight = 0.6f;
+                    break;
+
+                case AssetCategory.GroundCover:
+                    rule.maxInstances = 600;
+                    rule.minSpacing = 0.5f;
+                    rule.embedDepth = 0.05f;
+                    rule.alignToNormal = 0.6f;
+                    rule.maxSlopeAngle = 40f;
+                    rule.maxHeight = 0.85f;
+                    break;
+
+                case AssetCategory.Debris:
+                    rule.maxInstances = 60;
+                    rule.minSpacing = 6f;
+                    rule.alignToNormal = 0.8f;
+                    rule.embedDepth = 0.15f;
+                    rule.maxSlopeAngle = 35f;
+                    rule.maxHeight = 0.8f;
+                    break;
+            }
+        }
+
         /// <summary>
         /// Adds a scatter rule for the given prefab with defaults guessed from its
-        /// name (trees, rocks, buildings and grass get sensible presets).
+        /// name (trees, rocks, buildings, ground cover and debris get presets).
         /// </summary>
         public EnvironmentAssetRule AddEnvironmentAsset(GameObject prefab)
         {
@@ -311,44 +432,12 @@ namespace OtherwiseLabs.TerrainTools
                 displayName = prefab != null ? prefab.name : "New Asset",
             };
 
-            string n = rule.displayName.ToLowerInvariant();
-            if (n.Contains("tree") || n.Contains("pine") || n.Contains("palm"))
-            {
-                rule.maxSlopeAngle = 32f;
-                rule.alignToNormal = 0.15f;
-                rule.minSpacing = 4f;
-                rule.minHeight = 0.15f;
-                rule.maxHeight = 0.8f;
-            }
-            else if (n.Contains("rock") || n.Contains("stone") || n.Contains("boulder"))
-            {
-                rule.maxSlopeAngle = 60f;
-                rule.alignToNormal = 1f;
-                rule.embedDepth = 0.25f;
-                rule.minSpacing = 1.5f;
-            }
-            else if (n.Contains("build") || n.Contains("house") || n.Contains("hut") || n.Contains("tower") || n.Contains("ruin"))
-            {
-                rule.maxSlopeAngle = 10f;
-                rule.alignToNormal = 0f;
-                rule.minScale = 1f;
-                rule.maxScale = 1f;
-                rule.maxInstances = 30;
-                rule.minSpacing = 15f;
-                rule.minHeight = 0.2f;
-                rule.maxHeight = 0.6f;
-            }
-            else if (n.Contains("grass") || n.Contains("bush") || n.Contains("fern") || n.Contains("flower"))
-            {
-                rule.maxInstances = 600;
-                rule.minSpacing = 0.5f;
-                rule.embedDepth = 0.05f;
-                rule.alignToNormal = 0.6f;
-            }
+            ApplyCategoryDefaults(rule, GuessCategory(rule.displayName));
 
             environmentAssets.Add(rule);
             return rule;
         }
+        
 
         // ------------------------------------------------------------------
         // Heightmap
@@ -613,17 +702,66 @@ namespace OtherwiseLabs.TerrainTools
             Destroy(go);
         }
 
+            /// <summary>
+        /// True when the vertex color shader is present in the project. When it is
+        /// missing the terrain falls back to URP/Lit, which ignores vertex colors
+        /// and renders the height gradient as flat white.
+        /// </summary>
+        public static bool VertexColorShaderAvailable => Shader.Find(TerrainShaderName) != null;
+
+        /// <summary>
+        /// Points the terrain material at the vertex color shader, creating the
+        /// material if needed. Returns false if the shader isn't in the project.
+        /// </summary>
+        public bool ApplyVertexColorShader()
+        {
+            Shader shader = Shader.Find(TerrainShaderName);
+            if (shader == null) return false;
+
+            var meshRenderer = GetComponent<MeshRenderer>();
+            Material material = meshRenderer.sharedMaterial;
+
+            if (material == null)
+            {
+                meshRenderer.sharedMaterial = new Material(shader) { name = GeneratedMaterialName };
+                return true;
+            }
+
+            if (material.shader != shader) material.shader = shader;
+            return true;
+        }
+
         void EnsureMaterial()
         {
             var meshRenderer = GetComponent<MeshRenderer>();
-            if (meshRenderer.sharedMaterial != null) return;
+            Shader vertexColorShader = Shader.Find(TerrainShaderName);
+            Material existing = meshRenderer.sharedMaterial;
 
-            Shader shader = Shader.Find("OtherwiseLabs/Terrain Vertex Color");
+            if (existing != null)
+            {
+                // Upgrade a material this tool created back when the shader was
+                // missing (it would have fallen back to URP/Lit). Only touches
+                // scene-embedded materials this tool named, never a saved asset or
+                // a material the user assigned themselves.
+                if (vertexColorShader == null || existing.name != GeneratedMaterialName) return;
+                if (existing.shader == vertexColorShader) return;
+#if UNITY_EDITOR
+                if (EditorUtility.IsPersistent(existing)) return;
+#endif
+                existing.shader = vertexColorShader;
+                Debug.Log($"[{name}] Upgraded '{GeneratedMaterialName}' to the '{TerrainShaderName}' shader so the height gradient shows.", this);
+                return;
+            }
+
+            Shader shader = vertexColorShader;
             if (shader == null) shader = Shader.Find("Universal Render Pipeline/Lit");
             if (shader == null) shader = Shader.Find("Standard");
             if (shader == null) return;
 
-            meshRenderer.sharedMaterial = new Material(shader) { name = "Procedural Terrain Material" };
+            if (vertexColorShader == null)
+                Debug.LogWarning($"[{name}] Shader '{TerrainShaderName}' not found — falling back to {shader.name}, which ignores vertex colors, so the terrain will render untinted. Add TerrainVertexColor.shader to the project and press 'Fix Terrain Material'.", this);
+
+            meshRenderer.sharedMaterial = new Material(shader) { name = GeneratedMaterialName };
         }
 
         static Gradient CreateDefaultGradient()

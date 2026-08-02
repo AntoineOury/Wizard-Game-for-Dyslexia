@@ -43,8 +43,10 @@ namespace OtherwiseLabs.TerrainTools
             EditorGUILayout.HelpBox(
                 "1. Tune the noise settings (terrain rebuilds live while Auto Rebuild is on).\n" +
                 "2. Drop prefabs into the area below, set each Density slider (0-1).\n" +
-                "3. Press Build All.",
+                                "3. Press Build All.",
                 MessageType.Info);
+
+            DrawMaterialWarning(generator);
 
             if (GUILayout.Button("Build All  (Terrain + Environment)", GUILayout.Height(34)))
                 RunBuildStep(generator, generator.GenerateAll);
@@ -68,6 +70,51 @@ namespace OtherwiseLabs.TerrainTools
                 }
                 if (GUILayout.Button("Clear Environment"))
                     RunBuildStep(generator, generator.ClearEnvironment);
+            }
+        }
+
+                /// <summary>
+        /// The height gradient is stored in mesh vertex colors, which URP/Lit and
+        /// Standard both ignore. Warn (and offer a one-click fix) when the terrain
+        /// material isn't using the vertex color shader.
+        /// </summary>
+        static void DrawMaterialWarning(ProceduralTerrainGenerator generator)
+        {
+            var meshRenderer = generator.GetComponent<MeshRenderer>();
+            if (meshRenderer == null) return;
+
+            Material material = meshRenderer.sharedMaterial;
+            bool shaderInProject = ProceduralTerrainGenerator.VertexColorShaderAvailable;
+            bool materialUsesIt = material != null && material.shader != null
+                && material.shader.name == ProceduralTerrainGenerator.TerrainShaderName;
+
+            if (materialUsesIt) return;
+
+            if (!shaderInProject)
+            {
+                EditorGUILayout.HelpBox(
+                    $"Shader '{ProceduralTerrainGenerator.TerrainShaderName}' is not in this project.\n" +
+                    "The terrain will render untinted, because URP/Lit ignores the vertex colors " +
+                    "that carry the height gradient. Add TerrainVertexColor.shader under Assets/Shaders.",
+                    MessageType.Warning);
+                return;
+            }
+
+            EditorGUILayout.HelpBox(
+                "The terrain material is not using the vertex color shader, so the height " +
+                "gradient (water > sand > grass > rock > snow) will not show.",
+                MessageType.Warning);
+
+            if (GUILayout.Button("Fix Terrain Material  (apply vertex color shader)"))
+            {
+                if (material != null) Undo.RecordObject(material, "Apply Vertex Color Shader");
+                Undo.RecordObject(meshRenderer, "Apply Vertex Color Shader");
+                if (generator.ApplyVertexColorShader())
+                {
+                    if (material != null) EditorUtility.SetDirty(material);
+                    MarkDirty(generator);
+                    SceneView.RepaintAll();
+                }
             }
         }
 
@@ -128,13 +175,20 @@ namespace OtherwiseLabs.TerrainTools
 
             if (evt.type == EventType.DragPerform && anyGameObject)
             {
-                DragAndDrop.AcceptDrag();
+                                DragAndDrop.AcceptDrag();
                 Undo.RecordObject(generator, "Add Environment Assets");
+                var added = new System.Text.StringBuilder();
                 foreach (Object dragged in DragAndDrop.objectReferences)
                 {
-                    if (dragged is GameObject prefab)
-                        generator.AddEnvironmentAsset(prefab);
+                    if (dragged is not GameObject prefab) continue;
+                    generator.AddEnvironmentAsset(prefab);
+                    var category = ProceduralTerrainGenerator.GuessCategory(prefab.name);
+                    added.Append($"\n  • {prefab.name} → {category}");
+                    if (category == ProceduralTerrainGenerator.AssetCategory.Generic)
+                        added.Append("  (no keyword matched — set its filters by hand)");
                 }
+                if (added.Length > 0)
+                    Debug.Log($"[{generator.name}] Added environment assets:{added}", generator);
                 MarkDirty(generator);
             }
             evt.Use();
