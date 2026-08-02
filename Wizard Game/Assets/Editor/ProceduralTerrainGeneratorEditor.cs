@@ -207,8 +207,9 @@ namespace OtherwiseLabs.TerrainTools
             }
 
             EditorGUILayout.HelpBox(
-                "Set an asset's 'Restrict To Zones' + 'Allowed Zones' to keep it in the right places — " +
-                "e.g. uncheck Water so trees never spawn in lakes.",
+                "'Restrict To Zones' + 'Allowed Zones' is a hard yes/no — uncheck Water so trees never spawn in lakes.\n" +
+                "'Use Zone Weights' biases how often instead — rocks at Shore 3 / Rock 1 appear three times as densely " +
+                "on sand as on cliffs. Only the ratios matter; 0 excludes a zone.",
                 MessageType.None);
         }
 

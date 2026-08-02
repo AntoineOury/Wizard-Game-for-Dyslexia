@@ -81,6 +81,57 @@ namespace OtherwiseLabs.TerrainTools
     }
 
     /// <summary>
+    /// Relative likelihood of an asset appearing in each zone. Unlike Allowed
+    /// Zones (a hard yes/no), these bias how often it shows up: rocks set to
+    /// 3 on Shore and 1 on Rock appear roughly three times as densely on sand
+    /// as they do on cliffs. 0 excludes a zone entirely.
+    /// </summary>
+    [Serializable]
+    public class ZoneWeights
+    {
+        [Min(0f)] public float water = 1f;
+        [Min(0f)] public float shore = 1f;
+        [Min(0f)] public float grass = 1f;
+        [Min(0f)] public float rock = 1f;
+        [Min(0f)] public float snow = 1f;
+
+        public float Get(TerrainZone zone)
+        {
+            switch (zone)
+            {
+                case TerrainZone.Water: return Mathf.Max(0f, water);
+                case TerrainZone.Shore: return Mathf.Max(0f, shore);
+                case TerrainZone.Grass: return Mathf.Max(0f, grass);
+                case TerrainZone.Rock: return Mathf.Max(0f, rock);
+                case TerrainZone.Snow: return Mathf.Max(0f, snow);
+                default: return 0f;
+            }
+        }
+
+        /// <summary>
+        /// Largest weight among the zones an asset is actually allowed into.
+        /// Acceptance is scaled by this so the favourite zone always accepts,
+        /// keeping the sampler efficient while preserving the ratios.
+        /// </summary>
+        public float MaxAmong(TerrainZone allowed, bool restrict)
+        {
+            float max = 0f;
+            foreach (TerrainZone zone in AllZones)
+            {
+                if (restrict && (allowed & zone) == 0) continue;
+                max = Mathf.Max(max, Get(zone));
+            }
+            return max;
+        }
+
+        public static readonly TerrainZone[] AllZones =
+        {
+            TerrainZone.Water, TerrainZone.Shore, TerrainZone.Grass,
+            TerrainZone.Rock, TerrainZone.Snow,
+        };
+    }
+
+    /// <summary>
     /// One scatterable environment asset (tree, rock, building, ...) and the rules
     /// that control where and how it gets placed on the generated terrain.
     /// </summary>
@@ -124,6 +175,13 @@ namespace OtherwiseLabs.TerrainTools
         [Tooltip("Zones this asset may spawn in. Uncheck Water to keep trees out of lakes; " +
                  "check only Shore and Grass to keep them on the beach and meadow.")]
         public TerrainZone allowedZones = TerrainZone.Shore | TerrainZone.Grass;
+
+        [Tooltip("Bias how often this asset appears per zone instead of just allowing/forbidding. " +
+                 "e.g. rocks at 3 on Shore and 1 on Rock cluster on the sand. 0 excludes a zone.")]
+        public bool useZoneWeights = false;
+
+        [Tooltip("Relative frequency per zone. Only the ratios matter: 2/1 and 8/4 behave the same.")]
+        public ZoneWeights zoneWeights = new ZoneWeights();
 
         [Header("Placement Filters")]
         [Tooltip("Reject spots steeper than this angle in degrees (e.g. keep buildings on flat ground).")]
@@ -463,6 +521,12 @@ namespace OtherwiseLabs.TerrainTools
             // zone names are far easier to reason about than raw height numbers.
             rule.restrictToZones = true;
 
+            // Weights give each category a natural falloff toward the edges of its
+            // range instead of a hard uniform band, which reads far less "placed
+            // by a script" in the scene.
+            rule.useZoneWeights = true;
+            rule.zoneWeights = new ZoneWeights { water = 0f, shore = 1f, grass = 1f, rock = 1f, snow = 1f };
+
             switch (category)
             {
                 case AssetCategory.Tree:
@@ -473,6 +537,8 @@ namespace OtherwiseLabs.TerrainTools
                     rule.maxHeight = 1f;
                     rule.embedDepth = 0.2f;
                     rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass;
+                    // Thin out on the sand so the treeline fades toward the beach.
+                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 0.35f, grass = 1f, rock = 0f, snow = 0f };
                     break;
 
                 case AssetCategory.Rock:
@@ -481,6 +547,8 @@ namespace OtherwiseLabs.TerrainTools
                     rule.embedDepth = 0.25f;
                     rule.minSpacing = 1.5f;
                     rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass | TerrainZone.Rock | TerrainZone.Snow;
+                    // Clusters on sand and grass, sparser up on the crags.
+                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 3f, grass = 2f, rock = 1f, snow = 0.5f };
                     break;
 
                 case AssetCategory.Building:
@@ -493,6 +561,7 @@ namespace OtherwiseLabs.TerrainTools
                     rule.minHeight = 0f;
                     rule.maxHeight = 1f;
                     rule.allowedZones = TerrainZone.Grass;
+                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 0f, grass = 1f, rock = 0f, snow = 0f };
                     break;
 
                 case AssetCategory.GroundCover:
@@ -503,6 +572,8 @@ namespace OtherwiseLabs.TerrainTools
                     rule.maxSlopeAngle = 40f;
                     rule.maxHeight = 1f;
                     rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass;
+                    // Densest in the meadow, sparse on the sand.
+                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 0.5f, grass = 1f, rock = 0f, snow = 0f };
                     break;
 
                 case AssetCategory.Debris:
@@ -513,6 +584,7 @@ namespace OtherwiseLabs.TerrainTools
                     rule.maxSlopeAngle = 35f;
                     rule.maxHeight = 1f;
                     rule.allowedZones = TerrainZone.Grass | TerrainZone.Rock;
+                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 0f, grass = 1f, rock = 0.4f, snow = 0f };
                     break;
 
                 default:
@@ -680,9 +752,23 @@ namespace OtherwiseLabs.TerrainTools
 
             // Rejection tallies so a rule that places nothing can say why.
             int rejectedByZone = 0, rejectedByHeight = 0, rejectedBySlope = 0, rejectedBySpacing = 0;
+            int rejectedByWeight = 0;
+
+            // Normalizing by the heaviest allowed zone keeps the favourite zone at
+            // 100% acceptance, so weighting changes the distribution without
+            // silently thinning the total count.
+            bool weighted = rule.useZoneWeights && rule.zoneWeights != null;
+            float maxWeight = weighted ? rule.zoneWeights.MaxAmong(rule.allowedZones, rule.restrictToZones) : 0f;
+            if (weighted && maxWeight <= 0f)
+            {
+                Debug.LogWarning($"[{name}] '{containerName}': every zone weight is 0, so nothing can spawn. Raise a weight or turn off Use Zone Weights.", this);
+                return 0;
+            }
 
             int placed = 0;
-            int maxAttempts = target * 12;
+            // Weighted sampling discards candidates in the less-favoured zones, so
+            // it needs a bigger budget to still reach the target count.
+            int maxAttempts = target * (weighted ? 30 : 12);
             for (int attempt = 0; attempt < maxAttempts && placed < target; attempt++)
             {
                 float nx = (float)rng.NextDouble();
@@ -690,10 +776,20 @@ namespace OtherwiseLabs.TerrainTools
 
                 float normalizedHeight = SampleNormalizedHeight(nx, nz);
 
-                if (rule.restrictToZones)
+                if (rule.restrictToZones || weighted)
                 {
                     TerrainZone zone = zoneBands.GetZone(normalizedHeight);
-                    if ((rule.allowedZones & zone) == 0) { rejectedByZone++; continue; }
+
+                    if (rule.restrictToZones && (rule.allowedZones & zone) == 0) { rejectedByZone++; continue; }
+
+                    if (weighted)
+                    {
+                        float weight = rule.zoneWeights.Get(zone);
+                        if (weight <= 0f) { rejectedByWeight++; continue; }
+                        // Accept with probability weight/maxWeight -> placement
+                        // frequency across zones follows the weight ratios.
+                        if (weight < maxWeight && rng.NextDouble() > weight / maxWeight) { rejectedByWeight++; continue; }
+                    }
                 }
 
                 if (normalizedHeight < minHeight || normalizedHeight > maxHeight) { rejectedByHeight++; continue; }
@@ -741,12 +837,14 @@ namespace OtherwiseLabs.TerrainTools
                 string worst = "slope";
                 int worstCount = rejectedBySlope;
                 if (rejectedByZone > worstCount) { worst = $"terrain zone (allowed: {rule.allowedZones})"; worstCount = rejectedByZone; }
+                if (rejectedByWeight > worstCount) { worst = "zone weights — raise the low ones or turn off Use Zone Weights"; worstCount = rejectedByWeight; }
                 if (rejectedByHeight > worstCount) { worst = $"height band ({minHeight:0.##}-{maxHeight:0.##})"; worstCount = rejectedByHeight; }
                 if (rejectedBySpacing > worstCount) { worst = $"min spacing ({rule.minSpacing:0.##})"; worstCount = rejectedBySpacing; }
 
                 Debug.LogWarning(
                     $"[{name}] '{containerName}': placed {placed}/{target}. Mostly rejected by {worst}. " +
-                    $"(zone {rejectedByZone}, height {rejectedByHeight}, slope {rejectedBySlope}, spacing {rejectedBySpacing})", this);
+                    $"(zone {rejectedByZone}, weight {rejectedByWeight}, height {rejectedByHeight}, " +
+                    $"slope {rejectedBySlope}, spacing {rejectedBySpacing})", this);
             }
 
             return placed;
