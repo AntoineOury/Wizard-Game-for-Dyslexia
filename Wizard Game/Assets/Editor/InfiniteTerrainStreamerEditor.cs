@@ -13,11 +13,72 @@ namespace OtherwiseLabs.TerrainTools
     {
         GUIStyle _dropAreaStyle;
 
+        // Rebuilding on every camera nudge would be unusable, so the preview only
+        // refreshes when the camera actually crosses into a different chunk.
+        Vector2Int _lastPreviewCoord;
+        bool _hasPreviewCoord;
+
+        void OnEnable()
+        {
+            SceneView.duringSceneGui += OnSceneGUI;
+            EditorApplication.playModeStateChanged += OnPlayModeChanged;
+        }
+
+        void OnDisable()
+        {
+            SceneView.duringSceneGui -= OnSceneGUI;
+            EditorApplication.playModeStateChanged -= OnPlayModeChanged;
+
+            // Deselecting shouldn't leave a preview behind: it is throwaway state,
+            // and an invisible half-world is worse than no world.
+            if (target is InfiniteTerrainStreamer streamer && streamer != null && !Application.isPlaying)
+                streamer.ClearScenePreview();
+            _hasPreviewCoord = false;
+        }
+
+        void OnPlayModeChanged(PlayModeStateChange change)
+        {
+            // The preview must not survive into play mode, or it would sit on top
+            // of the chunks the streamer builds for real.
+            if (change != PlayModeStateChange.ExitingEditMode) return;
+            if (target is InfiniteTerrainStreamer streamer && streamer != null)
+                streamer.ClearScenePreview();
+            _hasPreviewCoord = false;
+        }
+
+        void OnSceneGUI(SceneView sceneView)
+        {
+            if (Application.isPlaying) return;
+            if (target is not InfiniteTerrainStreamer streamer || streamer == null) return;
+
+            if (!streamer.previewInScene)
+            {
+                if (_hasPreviewCoord)
+                {
+                    streamer.ClearScenePreview();
+                    _hasPreviewCoord = false;
+                }
+                return;
+            }
+
+            Vector3 center = streamer.previewFollowsSceneCamera && sceneView.camera != null
+                ? sceneView.camera.transform.position
+                : streamer.transform.position;
+
+            Vector2Int coord = streamer.ChunkCoordOf(center);
+            if (_hasPreviewCoord && coord == _lastPreviewCoord) return;
+
+            streamer.BuildScenePreview(center);
+            _lastPreviewCoord = coord;
+            _hasPreviewCoord = true;
+        }
+
         public override void OnInspectorGUI()
         {
             var streamer = (InfiniteTerrainStreamer)target;
 
             DrawHeaderBox(streamer);
+            DrawPreviewControls(streamer);
 
             EditorGUILayout.Space(4);
             DrawDefaultInspector();
@@ -69,6 +130,54 @@ namespace OtherwiseLabs.TerrainTools
                 streamer.RandomizeSeeds();
                 EditorUtility.SetDirty(streamer);
                 if (Application.isPlaying) streamer.RegenerateWorld();
+            }
+        }
+
+        /// <summary>
+        /// Preview toggle and refresh. Kept at the top because composing the world
+        /// in the Scene view is the main reason to select this component at all.
+        /// </summary>
+        void DrawPreviewControls(InfiniteTerrainStreamer streamer)
+        {
+            if (Application.isPlaying) return;
+
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                bool wanted = GUILayout.Toggle(
+                    streamer.previewInScene,
+                    streamer.previewInScene ? "Scene Preview: ON" : "Scene Preview: OFF",
+                    "Button", GUILayout.Height(26));
+
+                if (wanted != streamer.previewInScene)
+                {
+                    Undo.RecordObject(streamer, "Toggle Scene Preview");
+                    streamer.previewInScene = wanted;
+                    EditorUtility.SetDirty(streamer);
+
+                    if (!wanted) streamer.ClearScenePreview();
+                    _hasPreviewCoord = false;
+                    SceneView.RepaintAll();
+                }
+
+                using (new EditorGUI.DisabledScope(!streamer.previewInScene))
+                {
+                    if (GUILayout.Button("Refresh", GUILayout.Height(26), GUILayout.Width(80)))
+                    {
+                        streamer.ClearScenePreview();
+                        _hasPreviewCoord = false;
+                        SceneView.RepaintAll();
+                    }
+                }
+            }
+
+            if (streamer.previewInScene)
+            {
+                EditorGUILayout.HelpBox(
+                    "Preview is live in the Scene view. It is generated from the same seed as runtime, " +
+                    "so what you see is exactly what the player will walk through.\n" +
+                    "Preview objects are never saved into the scene, and clear on Play or deselect. " +
+                    "Press Refresh after changing noise or asset settings.",
+                    MessageType.None);
             }
         }
 

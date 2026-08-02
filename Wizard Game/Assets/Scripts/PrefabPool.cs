@@ -4,6 +4,38 @@ using UnityEngine;
 namespace OtherwiseLabs.TerrainTools
 {
     /// <summary>
+    /// Object lifetime helpers that behave correctly in both play mode and the
+    /// editor. Streaming creates and destroys objects constantly, and the two
+    /// contexts disagree about how that is done.
+    /// </summary>
+    public static class TerrainObjects
+    {
+        /// <summary>
+        /// Object.Destroy is deferred to end of frame, which never arrives while
+        /// the editor is not playing — the object would linger. DestroyImmediate
+        /// is the edit-mode equivalent, and is illegal during play.
+        /// </summary>
+        public static void DestroyObject(Object target)
+        {
+            if (target == null) return;
+            if (Application.isPlaying) Object.Destroy(target);
+            else Object.DestroyImmediate(target);
+        }
+
+        /// <summary>
+        /// Marks generated objects as throwaway while in the editor, so a Scene
+        /// view preview never gets serialized into the scene file. Without this,
+        /// previewing and saving would bake thousands of chunk objects into the
+        /// scene — which is exactly what a streaming world must not do.
+        /// </summary>
+        public static void MarkTransient(GameObject go)
+        {
+            if (go == null || Application.isPlaying) return;
+            go.hideFlags = HideFlags.DontSave;
+        }
+    }
+
+    /// <summary>
     /// Reuses prop instances instead of instantiating and destroying them as the
     /// player crosses chunk borders.
     ///
@@ -48,6 +80,7 @@ namespace OtherwiseLabs.TerrainTools
             if (instance == null)
             {
                 instance = Object.Instantiate(prefab, parent);
+                TerrainObjects.MarkTransient(instance);
                 _sourceOf[instance] = prefab;
             }
             else
@@ -66,7 +99,7 @@ namespace OtherwiseLabs.TerrainTools
             if (!_sourceOf.TryGetValue(instance, out GameObject prefab))
             {
                 // Not ours; destroy rather than leak it into the pool.
-                Object.Destroy(instance);
+                TerrainObjects.DestroyObject(instance);
                 return;
             }
 
@@ -92,7 +125,7 @@ namespace OtherwiseLabs.TerrainTools
                     GameObject instance = stack.Pop();
                     if (instance == null) continue;
                     _sourceOf.Remove(instance);
-                    Object.Destroy(instance);
+                    TerrainObjects.DestroyObject(instance);
                 }
             }
         }
@@ -104,7 +137,7 @@ namespace OtherwiseLabs.TerrainTools
                 while (kv.Value.Count > 0)
                 {
                     GameObject instance = kv.Value.Pop();
-                    if (instance != null) Object.Destroy(instance);
+                    TerrainObjects.DestroyObject(instance);
                 }
             }
             _free.Clear();

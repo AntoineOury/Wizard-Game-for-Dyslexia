@@ -96,6 +96,21 @@ namespace OtherwiseLabs.TerrainTools
         [Tooltip("Pooled instances kept per prefab. Extras are destroyed when trimming.")]
         [Min(0)] public int maxPooledPerPrefab = 256;
 
+        [Header("Scene View Preview")]
+        [Tooltip("Build chunks in the Scene view while not playing, so the world can be composed without " +
+                 "entering Play mode. Preview objects are never saved into the scene.")]
+        public bool previewInScene = false;
+
+        [Tooltip("Preview radius in chunks. Kept small deliberately — the preview builds synchronously.")]
+        [Range(0, 4)] public int previewRadiusInChunks = 1;
+
+        [Tooltip("Centre the preview on the Scene view camera, so panning around reveals new terrain. " +
+                 "Off centres it on this object instead.")]
+        public bool previewFollowsSceneCamera = true;
+
+        [Tooltip("Include props in the preview. Turn off for a faster terrain-only preview.")]
+        public bool previewIncludesProps = true;
+
         // --- runtime state -------------------------------------------------
         readonly Dictionary<Vector2Int, TerrainChunk> _active = new Dictionary<Vector2Int, TerrainChunk>();
         readonly Stack<TerrainChunk> _chunkPool = new Stack<TerrainChunk>();
@@ -137,12 +152,19 @@ namespace OtherwiseLabs.TerrainTools
 
             if (viewer == null && Camera.main != null) viewer = Camera.main.transform;
 
+            // A script recompile wipes the managed dictionaries but leaves the
+            // GameObjects behind, so anything from a previous session would be
+            // orphaned. Clear it out before building new roots.
+            DestroyOrphanedRoots();
+
             _chunkParent = new GameObject("Chunks").transform;
             _chunkParent.SetParent(transform, false);
+            TerrainObjects.MarkTransient(_chunkParent.gameObject);
 
             _parkingLot = new GameObject("Pool (inactive)").transform;
             _parkingLot.SetParent(transform, false);
             _parkingLot.gameObject.SetActive(false);
+            TerrainObjects.MarkTransient(_parkingLot.gameObject);
 
             _pool = new PrefabPool(_parkingLot);
             RebuildOctaveOffsets();
@@ -462,6 +484,102 @@ namespace OtherwiseLabs.TerrainTools
                 if (Mathf.Max(Mathf.Abs(offset.x), Mathf.Abs(offset.y)) > radius) stale.Add(kv.Key);
             }
             foreach (Vector2Int coord in stale) _candidateCache.Remove(coord);
+        }
+
+        // ------------------------------------------------------------------
+        // Scene view preview
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Builds a bounded block of chunks around a point while the editor is not
+        /// playing, so the world can be composed in the Scene view.
+        ///
+        /// Because generation is deterministic, this is not an approximation: what
+        /// appears here is exactly what the player will walk through at runtime.
+        /// Preview objects carry HideFlags.DontSave, so saving the scene never
+        /// bakes them in.
+        /// </summary>
+        public void BuildScenePreview(Vector3 center)
+        {
+            if (Application.isPlaying) return;
+
+            Initialise();
+            RebuildOctaveOffsets();
+            ResolveFootprints();
+            zoneBands?.Sanitize();
+
+            Vector2Int centerCoord = ChunkCoordOf(center);
+            int radius = Mathf.Clamp(previewRadiusInChunks, 0, 4);
+
+            var stale = new List<Vector2Int>();
+            foreach (var kv in _active)
+            {
+                Vector2Int offset = kv.Key - centerCoord;
+                if (Mathf.Max(Mathf.Abs(offset.x), Mathf.Abs(offset.y)) > radius) stale.Add(kv.Key);
+            }
+            foreach (Vector2Int coord in stale) ReleaseChunk(coord);
+
+            for (int dz = -radius; dz <= radius; dz++)
+            {
+                for (int dx = -radius; dx <= radius; dx++)
+                {
+                    var coord = new Vector2Int(centerCoord.x + dx, centerCoord.y + dz);
+                    if (_active.ContainsKey(coord)) continue;
+
+                    TerrainChunk chunk = _chunkPool.Count > 0
+                        ? _chunkPool.Pop()
+                        : new TerrainChunk(_chunkParent, terrainMaterial);
+                    chunk.SetActive(true);
+                    chunk.BuildMesh(coord, this, _octaveOffsets);
+                    chunk.SetCollider(false); // nothing walks on a preview
+                    _active[coord] = chunk;
+                }
+            }
+
+            foreach (var kv in _active)
+            {
+                if (previewIncludesProps && !kv.Value.HasScatter) ScatterChunk(kv.Value);
+                else if (!previewIncludesProps && kv.Value.HasScatter) kv.Value.ReleaseProps(_pool);
+            }
+
+            TrimCandidateCache(centerCoord, radius + 2);
+        }
+
+        /// <summary>Tears the preview down and returns the object to a clean state.</summary>
+        public void ClearScenePreview()
+        {
+            var coords = new List<Vector2Int>(_active.Keys);
+            foreach (Vector2Int coord in coords) ReleaseChunk(coord);
+
+            while (_chunkPool.Count > 0) _chunkPool.Pop().Destroy();
+
+            _pool?.Clear();
+            _candidateCache.Clear();
+            _buildQueue.Clear();
+            _queued.Clear();
+
+            if (_chunkParent != null) TerrainObjects.DestroyObject(_chunkParent.gameObject);
+            if (_parkingLot != null) TerrainObjects.DestroyObject(_parkingLot.gameObject);
+
+            _chunkParent = null;
+            _parkingLot = null;
+            _pool = null;
+            _initialised = false;
+        }
+
+        /// <summary>
+        /// Removes generated roots left over from a previous editor session. They
+        /// survive script recompiles even though the dictionaries tracking them do
+        /// not, so without this the scene slowly fills with orphans.
+        /// </summary>
+        void DestroyOrphanedRoots()
+        {
+            for (int i = transform.childCount - 1; i >= 0; i--)
+            {
+                Transform child = transform.GetChild(i);
+                if (child.name == "Chunks" || child.name == "Pool (inactive)")
+                    TerrainObjects.DestroyObject(child.gameObject);
+            }
         }
 
         // ------------------------------------------------------------------

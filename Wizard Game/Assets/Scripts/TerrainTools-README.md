@@ -102,6 +102,31 @@ reaches the same verdict independently. Marginally sparser, always consistent.
 A one-chunk halo suffices because conflicts can only reach two radii, so keep
 **footprints well below `Chunk Size`**.
 
+### Seeing it in the Scene view
+
+The streamer builds nothing in edit mode by default — `Update` and coroutines
+only run during play — so the Scene view would otherwise be empty until you
+press Play.
+
+**Scene Preview** (button at the top of the Inspector) builds a bounded block of
+chunks while not playing. Because generation is deterministic this is not an
+approximation: what appears is exactly what the player will walk through.
+
+- `Preview Radius In Chunks` — small on purpose, the preview builds
+  synchronously rather than budgeted across frames.
+- `Preview Follows Scene Camera` — new terrain appears as you fly around.
+  Turn off to pin the preview to the streamer's own position.
+- `Preview Includes Props` — off gives a faster terrain-only preview.
+
+Preview objects carry `HideFlags.DontSave`, so **saving the scene never bakes
+them in** — the whole point of a streaming world is that its contents don't live
+in the scene file. They're also cleared when you press Play, deselect the
+object, or toggle the preview off, so a stale preview can never sit on top of
+the chunks the streamer builds for real.
+
+Press **Refresh** after changing noise or asset settings; the preview only
+rebuilds by itself when the camera crosses into a different chunk.
+
 ### Same seed, different worlds
 
 Putting the same seed into both components does **not** produce the same
