@@ -1898,7 +1898,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   streamer: {fileID: 2106898795}
-  groundClearance: 0.05
+  groundClearance: 1
   readyTimeout: 8
   logSpawn: 1
 --- !u!1 &1850966339
