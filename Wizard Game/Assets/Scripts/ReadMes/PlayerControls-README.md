@@ -11,6 +11,13 @@ One toggle switches the whole input scheme:
 | First-launch default | Desktop on PC/Mac | Touch on phones/tablets (`Application.isMobilePlatform`) |
 
 The choice is saved in PlayerPrefs, so it survives scene switches and restarts.
+
+**UI focus is shared and stateless.** Escape suspends gameplay input so the
+cursor can click buttons; pressing ANY toggle drops you straight back into
+gameplay (cursor locked in Laptop mode). One flag serves both view
+controllers, so switching views or schemes can never strand a controller in
+UI mode with a dead keyboard — press Escape again whenever you want the
+cursor back.
 Touch mode is fully testable on a laptop: the on-screen controls run through
 the EventSystem's pointer events, and the mouse drives those exactly like a
 finger — click-drag the joystick, click-drag the right half to look.

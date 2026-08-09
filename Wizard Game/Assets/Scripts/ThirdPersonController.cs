@@ -68,7 +68,6 @@ public class ThirdPersonController : MonoBehaviour
     float _yaw;
     float _pitch = 15f;
     float _lastGroundedTime = float.NegativeInfinity;
-    bool _uiMode;
 
     void Awake()
     {
@@ -131,14 +130,14 @@ public class ThirdPersonController : MonoBehaviour
             return;
         }
 
-        if (Input.GetKeyDown(KeyCode.Escape)) _uiMode = !_uiMode;
-        Cursor.lockState = _uiMode ? CursorLockMode.None : CursorLockMode.Locked;
-        Cursor.visible = _uiMode;
+        if (Input.GetKeyDown(KeyCode.Escape)) PlayerControlScheme.UiMode = !PlayerControlScheme.UiMode;
+        Cursor.lockState = PlayerControlScheme.UiMode ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = PlayerControlScheme.UiMode;
 
         // Belt and braces for every button, present and future: while in look
         // mode nothing may stay "selected", or Space (the UI Submit key) would
         // re-press it instead of only jumping.
-        if (!_uiMode && EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
+        if (!PlayerControlScheme.UiMode && EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
             EventSystem.current.SetSelectedGameObject(null);
     }
 
@@ -147,7 +146,7 @@ public class ThirdPersonController : MonoBehaviour
         Vector2 look = Vector2.zero;
         if (scheme == ControlSchemeKind.Desktop)
         {
-            if (!_uiMode)
+            if (!PlayerControlScheme.UiMode)
                 look = new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * mouseSensitivity;
         }
         else
@@ -166,11 +165,11 @@ public class ThirdPersonController : MonoBehaviour
         bool jumpPressed;
         if (scheme == ControlSchemeKind.Desktop)
         {
-            moveInput = _uiMode
+            moveInput = PlayerControlScheme.UiMode
                 ? Vector2.zero
                 : new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             sprint = Input.GetKey(KeyCode.LeftShift);
-            jumpPressed = !_uiMode && Input.GetKeyDown(KeyCode.Space);
+            jumpPressed = !PlayerControlScheme.UiMode && Input.GetKeyDown(KeyCode.Space);
         }
         else
         {

@@ -55,8 +55,19 @@ namespace OtherwiseLabs.TerrainTools
         [Tooltip("Radius, in chunks, that gets mesh colliders. Only chunks the player can reach need them.")]
         [Range(0, 12)] public int colliderDistanceInChunks = 1;
 
-        [Tooltip("Maximum chunks built per frame. Lower removes hitching, raises pop-in.")]
-        [Range(1, 16)] public int chunksBuiltPerFrame = 1;
+        [Tooltip("Milliseconds of chunk-building work per frame. The vertex grid is computed a few rows " +
+                 "at a time under this budget, so building never hitches a frame — the async fix.")]
+        [Range(0.5f, 8f)] public float buildBudgetMs = 3f;
+
+        [Header("Level of Detail")]
+        [Tooltip("Chunks within this ring build at full resolution. Held at or above Collider Distance, because colliders must match the visual mesh.")]
+        [Range(1, 12)] public int lod0Radius = 2;
+
+        [Tooltip("Chunks out to this ring build at half resolution; beyond it, quarter. LOD is what makes a wide horizon affordable — view cost grows with the square of distance.")]
+        [Range(1, 12)] public int lod1Radius = 3;
+
+        [Tooltip("Depth of the vertical skirt hung from every chunk edge, hiding hairline cracks where different LODs meet.")]
+        [Min(0.5f)] public float lodSkirtDepth = 3f;
 
         [Header("World Seed")]
         [Tooltip("Seed for terrain shape. Same seed = same world, forever.")]
@@ -109,6 +120,23 @@ namespace OtherwiseLabs.TerrainTools
         [Tooltip("Seed for the biome layout. Re-roll to rearrange which region lands where without changing the terrain detail inside them.")]
         public int biomeSeed = 13579;
 
+        [Header("Water")]
+        [Tooltip("Spawn a translucent surface where terrain dips below the Water zone threshold, making lakes real instead of blue-painted ground. Follows biome height shaping, so it stays seamless across chunks.")]
+        public bool waterEnabled = false;
+
+        [Tooltip("Material for the water surface. Empty = auto-created from the 'OtherwiseLabs/Terrain Water' shader.")]
+        public Material waterMaterial;
+
+        [Tooltip("Drops the surface slightly below the zone threshold so shorelines don't z-fight the sand.")]
+        public float waterSurfaceOffset = -0.2f;
+
+        [Header("Domain Warp")]
+        [Tooltip("Distorts sample positions with a second noise field before every height and biome lookup, breaking up Perlin's characteristic round blobs. 0 = OFF, and existing worlds keep their exact shape — any other value generates a DIFFERENT world for the same seed.")]
+        [Range(0f, 80f)] public float warpStrength = 0f;
+
+        [Tooltip("Feature size of the distortion field in world units.")]
+        [Min(10f)] public float warpScale = 250f;
+
         [Header("Memory")]
         [Tooltip("Pooled instances kept per prefab. Extras are destroyed when trimming.")]
         [Min(0)] public int maxPooledPerPrefab = 256;
@@ -152,7 +180,17 @@ namespace OtherwiseLabs.TerrainTools
         Transform _parkingLot;
         Vector2[] _octaveOffsets;
         Vector2[] _biomeOctaveOffsets;
+        Vector2[] _warpOffsetsX;
+        Vector2[] _warpOffsetsY;
         float[] _biomeWeights;
+        Material _autoWaterMaterial;
+
+        // In-flight incremental build (one at a time; the queue feeds it).
+        IEnumerator _buildSteps;
+        TerrainChunk _buildingChunk;
+        Vector2Int _buildingCoord;
+        bool _buildingIsNew;
+        readonly System.Diagnostics.Stopwatch _buildTimer = new System.Diagnostics.Stopwatch();
         Vector3 _lastViewerPosition;
         bool _initialised;
         Coroutine _buildLoop;
@@ -210,6 +248,22 @@ namespace OtherwiseLabs.TerrainTools
             // Two octaves is deliberately soft: biome regions should be big smooth
             // blobs, not as detailed as the terrain inside them.
             _biomeOctaveOffsets = TerrainNoise.BuildOctaveOffsets(biomeSeed, 2, Vector2.zero, TerrainNoise.NoiseOrigin);
+            _warpOffsetsX = TerrainNoise.BuildOctaveOffsets(TerrainNoise.Hash(seed, 7331), 1, Vector2.zero, TerrainNoise.NoiseOrigin);
+            _warpOffsetsY = TerrainNoise.BuildOctaveOffsets(TerrainNoise.Hash(seed, 7333), 1, Vector2.zero, TerrainNoise.NoiseOrigin);
+        }
+
+        /// <summary>
+        /// Domain warp: bends the coordinate a sample is taken at, by a second
+        /// noise field. Applied identically to height AND climate lookups, so
+        /// terrain shapes and biome borders wander together instead of the
+        /// terrain warping out from under its biome.
+        /// </summary>
+        void WarpPosition(ref float worldX, ref float worldZ)
+        {
+            if (warpStrength <= 0f) return;
+            float x = worldX, z = worldZ;
+            worldX += (TerrainNoise.SampleNormalized(x, z, _warpOffsetsX, warpScale, 0.5f, 2f) - 0.5f) * 2f * warpStrength;
+            worldZ += (TerrainNoise.SampleNormalized(x, z, _warpOffsetsY, warpScale, 0.5f, 2f) - 0.5f) * 2f * warpStrength;
         }
 
         // ------------------------------------------------------------------
@@ -222,6 +276,7 @@ namespace OtherwiseLabs.TerrainTools
         public float SampleBaseNoise(float worldX, float worldZ)
         {
             if (_octaveOffsets == null) RebuildOctaveOffsets();
+            WarpPosition(ref worldX, ref worldZ);
             return TerrainNoise.SampleNormalized(worldX, worldZ, _octaveOffsets, noiseScale, persistence, lacunarity);
         }
 
@@ -233,6 +288,7 @@ namespace OtherwiseLabs.TerrainTools
         public float SampleClimate(float worldX, float worldZ)
         {
             if (_biomeOctaveOffsets == null) RebuildOctaveOffsets();
+            WarpPosition(ref worldX, ref worldZ);
             return TerrainNoise.SampleNormalized(worldX, worldZ, _biomeOctaveOffsets, biomeScale, 0.5f, 2f);
         }
 
@@ -316,6 +372,29 @@ namespace OtherwiseLabs.TerrainTools
             }
             color.a = 1f;
             return color;
+        }
+
+        /// <summary>
+        /// World height of the water surface at a position: the biome-blended
+        /// height that the Water zone threshold maps to. A continuous function,
+        /// so chunk water meshes meet seamlessly, and lakes in a high biome sit
+        /// higher than lakes in a low one — consistent with their terrain.
+        /// </summary>
+        public float SampleWaterSurfaceHeight(float worldX, float worldZ)
+        {
+            float threshold = zoneBands != null ? Mathf.Clamp01(zoneBands.waterLevel) : 0.33f;
+            return HeightFromNormalized(worldX, worldZ, threshold) + waterSurfaceOffset;
+        }
+
+        public Material ResolveWaterMaterial()
+        {
+            if (waterMaterial != null) return waterMaterial;
+            if (_autoWaterMaterial == null)
+            {
+                Shader shader = Shader.Find("OtherwiseLabs/Terrain Water");
+                if (shader != null) _autoWaterMaterial = new Material(shader) { name = "Terrain Water (auto)" };
+            }
+            return _autoWaterMaterial;
         }
 
         /// <summary>
@@ -441,7 +520,7 @@ namespace OtherwiseLabs.TerrainTools
                     Vector2Int offset = coord - center;
                     if (Mathf.Max(Mathf.Abs(offset.x), Mathf.Abs(offset.y)) <= colliderDistanceInChunks)
                     {
-                        BuildChunk(coord);
+                        BuildChunkImmediate(coord, 0);
                         continue;
                     }
                 }
@@ -455,34 +534,86 @@ namespace OtherwiseLabs.TerrainTools
             TrimCandidateCache(center, radius + 2);
         }
 
+        int DesiredLod(Vector2Int coord, Vector2Int center)
+        {
+            int ring = Mathf.Max(Mathf.Abs(coord.x - center.x), Mathf.Abs(coord.y - center.y));
+            // The collider ring is pinned to LOD 0: physics must match visuals.
+            if (ring <= Mathf.Max(lod0Radius, colliderDistanceInChunks)) return 0;
+            return ring <= Mathf.Max(lod1Radius, lod0Radius) ? 1 : 2;
+        }
+
         IEnumerator BuildLoop()
         {
             while (true)
             {
-                int budget = Mathf.Max(1, chunksBuiltPerFrame);
-                while (budget-- > 0 && _buildQueue.Count > 0)
+                _buildTimer.Restart();
+                double budget = Mathf.Clamp(buildBudgetMs, 0.5f, 8f);
+                Vector2Int center = viewer != null ? ChunkCoordOf(viewer.position) : Vector2Int.zero;
+
+                // Pump the in-flight build one vertex row at a time until the
+                // frame's budget is spent. One chunk is in flight at a time; the
+                // queue feeds the next as soon as it finishes.
+                while (_buildTimer.Elapsed.TotalMilliseconds < budget)
                 {
-                    Vector2Int coord = _buildQueue.Dequeue();
-                    _queued.Remove(coord);
-                    if (_active.ContainsKey(coord)) continue;
-                    BuildChunk(coord);
+                    if (_buildSteps == null && !TryStartNextBuild(center)) break;
+                    if (_buildSteps != null && !_buildSteps.MoveNext()) FinishCurrentBuild();
                 }
 
-                if (_buildQueue.Count == 0 && viewer != null)
-                    RefreshChunkDetail(ChunkCoordOf(viewer.position));
+                if (_buildSteps == null && _buildQueue.Count == 0 && viewer != null)
+                    RefreshChunkDetail(center);
 
                 yield return null;
             }
         }
 
-        void BuildChunk(Vector2Int coord)
+        bool TryStartNextBuild(Vector2Int center)
         {
-            TerrainChunk chunk = _chunkPool.Count > 0 ? _chunkPool.Pop() : new TerrainChunk(_chunkParent, terrainMaterial);
-            chunk.SetActive(true);
-            chunk.BuildMesh(coord, this);
-            _active[coord] = chunk;
+            while (_buildQueue.Count > 0)
+            {
+                Vector2Int coord = _buildQueue.Dequeue();
+                _queued.Remove(coord);
+
+                int lod = DesiredLod(coord, center);
+                bool isRebuild = _active.TryGetValue(coord, out TerrainChunk existing);
+                if (isRebuild && existing.CurrentLod == lod) continue; // rings moved while queued
+
+                TerrainChunk chunk = existing;
+                if (chunk == null)
+                    chunk = _chunkPool.Count > 0 ? _chunkPool.Pop() : new TerrainChunk(_chunkParent, terrainMaterial);
+
+                _buildingChunk = chunk;
+                _buildingCoord = coord;
+                _buildingIsNew = !isRebuild;
+                _buildSteps = chunk.BuildSteps(coord, this, lod);
+                return true;
+            }
+            return false;
+        }
+
+        void FinishCurrentBuild()
+        {
+            TerrainChunk chunk = _buildingChunk;
+            _buildSteps = null;
+            _buildingChunk = null;
+            if (chunk == null) return;
+
+            if (_buildingIsNew)
+            {
+                chunk.SetActive(true);
+                _active[_buildingCoord] = chunk;
+            }
 
             if (viewer != null) RefreshChunkDetail(ChunkCoordOf(viewer.position));
+        }
+
+        void BuildChunkImmediate(Vector2Int coord, int lod)
+        {
+            TerrainChunk chunk = _active.TryGetValue(coord, out TerrainChunk existing)
+                ? existing
+                : _chunkPool.Count > 0 ? _chunkPool.Pop() : new TerrainChunk(_chunkParent, terrainMaterial);
+            chunk.SetActive(true);
+            chunk.BuildMesh(coord, this, lod);
+            _active[coord] = chunk;
         }
 
         /// <summary>
@@ -498,6 +629,17 @@ namespace OtherwiseLabs.TerrainTools
 
                 kv.Value.SetCollider(ring <= colliderDistanceInChunks);
 
+                // A chunk whose ring changed gets rebuilt at its new resolution.
+                // It keeps showing the old mesh until the rebuild applies, so
+                // there is never a hole while the player walks toward it.
+                int desiredLod = DesiredLod(kv.Key, center);
+                if (kv.Value.CurrentLod >= 0 && kv.Value.CurrentLod != desiredLod
+                    && kv.Value != _buildingChunk && !_queued.Contains(kv.Key))
+                {
+                    _buildQueue.Enqueue(kv.Key);
+                    _queued.Add(kv.Key);
+                }
+
                 bool wantsProps = ring <= assetDistanceInChunks;
                 if (wantsProps && !kv.Value.HasScatter) ScatterChunk(kv.Value);
                 else if (!wantsProps && kv.Value.HasScatter) kv.Value.ReleaseProps(_pool);
@@ -506,6 +648,13 @@ namespace OtherwiseLabs.TerrainTools
 
         void ReleaseChunk(Vector2Int coord)
         {
+            // Abandon a half-built pass for a chunk the viewer left behind.
+            if (_buildingChunk != null && _buildingCoord == coord)
+            {
+                _buildSteps = null;
+                _buildingChunk = null;
+            }
+
             if (!_active.TryGetValue(coord, out TerrainChunk chunk)) return;
             chunk.ReleaseProps(_pool);
             chunk.SetActive(false);
@@ -641,10 +790,16 @@ namespace OtherwiseLabs.TerrainTools
                 if (preventAssetOverlap && field.IsBlocked(index)) continue;
                 if (candidate.ruleIndex >= _ruleTable.Count) continue;
 
+                // Player edits are deltas over the deterministic baseline: a
+                // felled tree stays felled when its chunk streams back in.
+                long candidateId = WorldEdits.CandidateId(candidate.chunkX, candidate.chunkZ, candidate.ruleIndex, candidate.candidateIndex);
+                if (WorldEdits.IsRemoved(chunk.Coord, candidateId)) continue;
+
                 EnvironmentAssetRule rule = _ruleTable[candidate.ruleIndex].rule;
                 if (rule == null || rule.prefab == null) continue;
 
                 GameObject instance = _pool.Acquire(rule.prefab, chunk.PropRoot);
+                WorldEdits.Tag(instance, chunk.Coord, candidateId);
 
                 float height = HeightFromNormalized(candidate.position.x, candidate.position.y, candidate.normalizedHeight);
                 var worldPosition = new Vector3(candidate.position.x, height - rule.embedDepth, candidate.position.y);
@@ -668,7 +823,69 @@ namespace OtherwiseLabs.TerrainTools
                 spawned.Add(instance);
             }
 
+            SpawnRecordedAdditions(chunk, spawned);
             chunk.AdoptProps(spawned);
+        }
+
+        /// <summary>Respawns player-placed props recorded for this chunk in WorldEdits.</summary>
+        void SpawnRecordedAdditions(TerrainChunk chunk, List<GameObject> spawned)
+        {
+            foreach (WorldEdits.AddedProp added in WorldEdits.AdditionsFor(chunk.Coord))
+            {
+                if (added.ruleIndex < 0 || added.ruleIndex >= _ruleTable.Count) continue;
+                EnvironmentAssetRule rule = _ruleTable[added.ruleIndex].rule;
+                if (rule == null || rule.prefab == null) continue;
+
+                GameObject instance = _pool.Acquire(rule.prefab, chunk.PropRoot);
+                instance.transform.position = added.position;
+                instance.transform.rotation = Quaternion.Euler(0f, added.yaw, 0f);
+                instance.transform.localScale = rule.prefab.transform.localScale * added.scale;
+                WorldEdits.Tag(instance, chunk.Coord, added.id);
+                spawned.Add(instance);
+            }
+        }
+
+        /// <summary>
+        /// Deterministic fingerprint of one chunk: heights, climate and scatter
+        /// candidates, quantized and folded into a hash. Two runs of the same
+        /// code and settings must produce identical signatures — the editor's
+        /// determinism test records these and compares after code changes, so a
+        /// refactor that silently breaks walk-back persistence is caught at once.
+        /// </summary>
+        public long ComputeChunkSignature(Vector2Int coord)
+        {
+            RebuildOctaveOffsets();
+            RebuildRuleTable();
+            zoneBands?.Sanitize();
+
+            float size = Mathf.Max(1f, chunkSize);
+            unchecked
+            {
+                long hash = 1469598103934665603L;
+                void Fold(int value) => hash = (hash ^ value) * 1099511628211L;
+
+                for (int gz = 0; gz <= 8; gz++)
+                {
+                    for (int gx = 0; gx <= 8; gx++)
+                    {
+                        float worldX = (coord.x + gx / 8f) * size;
+                        float worldZ = (coord.y + gz / 8f) * size;
+                        Fold(Mathf.RoundToInt(SampleWorldHeight(worldX, worldZ) * 512f));
+                        Fold(Mathf.RoundToInt(SampleClimate(worldX, worldZ) * 4096f));
+                    }
+                }
+
+                List<ScatterCandidate> candidates = GetCandidates(coord);
+                Fold(candidates.Count);
+                foreach (ScatterCandidate candidate in candidates)
+                {
+                    Fold(Mathf.RoundToInt(candidate.position.x * 128f));
+                    Fold(Mathf.RoundToInt(candidate.position.y * 128f));
+                    Fold(candidate.ruleIndex);
+                    Fold(candidate.order);
+                }
+                return hash;
+            }
         }
 
         void TrimCandidateCache(Vector2Int center, int radius)
@@ -728,7 +945,7 @@ namespace OtherwiseLabs.TerrainTools
                         ? _chunkPool.Pop()
                         : new TerrainChunk(_chunkParent, terrainMaterial);
                     chunk.SetActive(true);
-                    chunk.BuildMesh(coord, this);
+                    chunk.BuildMesh(coord, this, 0);
                     chunk.SetCollider(false); // nothing walks on a preview
                     _active[coord] = chunk;
                 }
@@ -829,6 +1046,8 @@ namespace OtherwiseLabs.TerrainTools
             // typo spawn props on chunks that have no collider under them.
             assetDistanceInChunks = Mathf.Min(assetDistanceInChunks, viewDistanceInChunks);
             colliderDistanceInChunks = Mathf.Min(colliderDistanceInChunks, viewDistanceInChunks);
+            lod0Radius = Mathf.Clamp(lod0Radius, Mathf.Max(1, colliderDistanceInChunks), viewDistanceInChunks);
+            lod1Radius = Mathf.Clamp(lod1Radius, lod0Radius, viewDistanceInChunks);
             SanitizeBiomes();
         }
 

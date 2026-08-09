@@ -23,6 +23,13 @@ public static class PlayerViewMode
 
     public static event Action<ViewModeKind> Changed;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        _current = null;
+        Changed = null;
+    }
+
     public static ViewModeKind Current
     {
         get
@@ -37,6 +44,10 @@ public static class PlayerViewMode
     {
         if (_current == mode) return;
         _current = mode;
+        // Switching views is a "back to playing" action too: without this, an
+        // Escape pressed before clicking the view toggle leaves the incoming
+        // controller stuck in UI mode with gameplay input dead.
+        PlayerControlScheme.UiMode = false;
         PlayerPrefs.SetInt(PrefKey, (int)mode);
         PlayerPrefs.Save();
         Changed?.Invoke(mode);

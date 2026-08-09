@@ -41,6 +41,17 @@ namespace OtherwiseLabs.TerrainTools
         [Header("Environment Assets")]
         [Tooltip("Assets that appear ONLY in this biome. The streamer's global Environment Assets list appears in every biome.")]
         public List<EnvironmentAssetRule> environmentAssets = new List<EnvironmentAssetRule>();
+
+        [Header("Ambience")]
+        [Tooltip("Looping soundscape while this biome is dominant (wind, birds, snow). Crossfaded by the BiomeAmbience component.")]
+        public AudioClip ambientLoop;
+
+        [Range(0f, 1f)] public float ambientVolume = 0.6f;
+
+        [Tooltip("Tint the scene fog while inside this biome. Fog must be enabled in Lighting > Environment for this to show.")]
+        public bool overrideFogColor = false;
+
+        public Color fogColor = new Color(0.70f, 0.75f, 0.80f);
     }
 
     /// <summary>

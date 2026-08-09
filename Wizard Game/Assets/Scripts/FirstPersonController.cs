@@ -56,10 +56,9 @@ public class FirstPersonController : MonoBehaviour
     float _verticalVelocity;
     float _pitch;
     float _lastGroundedTime = float.NegativeInfinity;
-    bool _uiMode;
 
     /// <summary>True while gameplay input is suspended so the cursor can use UI (desktop Escape toggle).</summary>
-    public bool InUiMode => _uiMode;
+    public bool InUiMode => PlayerControlScheme.UiMode;
 
     void Awake()
     {
@@ -130,14 +129,14 @@ public class FirstPersonController : MonoBehaviour
 
         // Desktop: Escape flips between look mode (cursor locked, camera live)
         // and UI mode (cursor free for clicking buttons).
-        if (Input.GetKeyDown(KeyCode.Escape)) _uiMode = !_uiMode;
-        Cursor.lockState = _uiMode ? CursorLockMode.None : CursorLockMode.Locked;
-        Cursor.visible = _uiMode;
+        if (Input.GetKeyDown(KeyCode.Escape)) PlayerControlScheme.UiMode = !PlayerControlScheme.UiMode;
+        Cursor.lockState = PlayerControlScheme.UiMode ? CursorLockMode.None : CursorLockMode.Locked;
+        Cursor.visible = PlayerControlScheme.UiMode;
 
         // Belt and braces for every button, present and future: while in look
         // mode nothing may stay "selected", or Space (the UI Submit key) would
         // re-press it instead of only jumping.
-        if (!_uiMode && EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
+        if (!PlayerControlScheme.UiMode && EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
             EventSystem.current.SetSelectedGameObject(null);
     }
 
@@ -146,7 +145,7 @@ public class FirstPersonController : MonoBehaviour
         Vector2 look = Vector2.zero;
         if (scheme == ControlSchemeKind.Desktop)
         {
-            if (!_uiMode)
+            if (!PlayerControlScheme.UiMode)
                 look = new Vector2(Input.GetAxisRaw("Mouse X"), Input.GetAxisRaw("Mouse Y")) * mouseSensitivity;
         }
         else
@@ -174,11 +173,11 @@ public class FirstPersonController : MonoBehaviour
         bool jumpPressed;
         if (scheme == ControlSchemeKind.Desktop)
         {
-            moveInput = _uiMode
+            moveInput = PlayerControlScheme.UiMode
                 ? Vector2.zero
                 : new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
             sprint = Input.GetKey(KeyCode.LeftShift);
-            jumpPressed = !_uiMode && Input.GetKeyDown(KeyCode.Space);
+            jumpPressed = !PlayerControlScheme.UiMode && Input.GetKeyDown(KeyCode.Space);
         }
         else
         {
