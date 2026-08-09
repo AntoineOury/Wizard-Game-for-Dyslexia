@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -48,6 +49,7 @@ public class FirstPersonController : MonoBehaviour
     public float minPitch = -75f;
     public float maxPitch = 60f;
 
+    readonly List<Renderer> _bodyRenderers = new List<Renderer>();
     CharacterController _controller;
     Vector3 _horizontalVelocity;
     Vector3 _cameraLocalPosition;
@@ -72,6 +74,10 @@ public class FirstPersonController : MonoBehaviour
             _pitch = NormalizePitch(cameraTransform.localEulerAngles.x);
             _cameraLocalPosition = cameraTransform.localPosition;
         }
+
+        // A body built from a Capsule primitive brings its own CapsuleCollider,
+        // which fights the CharacterController every frame if left connected.
+        PlayerRig.IgnoreSelfColliders(_controller);
     }
 
     void Update()
@@ -80,20 +86,35 @@ public class FirstPersonController : MonoBehaviour
         // components stay enabled so a UI toggle can switch on the fly.
         if (PlayerViewMode.Current != ViewModeKind.FirstPerson) return;
 
+        // The camera sits inside the body mesh in first person, so looking down
+        // would show the inside of the player's own model.
+        PlayerRig.SetBodyVisible(transform, false, _bodyRenderers);
+
         ControlSchemeKind scheme = PlayerControlScheme.Current;
         if (scheme == ControlSchemeKind.Touch) TouchControls.EnsureExists();
 
         ApplyCursorPolicy(scheme);
         HandleLook(scheme);
+
+        // The spawner owns the transform until the player is standing on real
+        // ground; applying gravity now would drag them through unbuilt terrain.
+        if (PlayerTerrainSpawner.SpawnPending)
+        {
+            _verticalVelocity = 0f;
+            _horizontalVelocity = Vector3.zero;
+            return;
+        }
+
         HandleMove(scheme);
     }
 
     void OnDisable()
     {
         // Whatever disables the player (scene switch, death, cutscene) should
-        // leave the person with a usable cursor.
+        // leave the person with a usable cursor, and their body back on show.
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+        PlayerRig.SetBodyVisible(transform, true, _bodyRenderers);
     }
 
     void ApplyCursorPolicy(ControlSchemeKind scheme)

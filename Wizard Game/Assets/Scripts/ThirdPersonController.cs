@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -46,13 +47,22 @@ public class ThirdPersonController : MonoBehaviour
     [Tooltip("Radius of the collision probe that keeps the camera out of terrain and props.")]
     [Min(0.05f)] public float cameraCollisionRadius = 0.3f;
 
+    [Tooltip("Closest the camera may ever get to the player. Stops it entering the body when something crowds it from behind.")]
+    [Min(0.2f)] public float minCameraDistance = 1.4f;
+
+    [Tooltip("How fast the camera eases back out after an obstruction clears, in units per second. Pulling in is always instant.")]
+    [Min(0.1f)] public float cameraReturnSpeed = 6f;
+
     [Header("Look")]
     [Tooltip("Degrees per mouse delta unit.")]
     [Min(0.01f)] public float mouseSensitivity = 2f;
     [Tooltip("Degrees per percent of screen height dragged on the look area.")]
     [Min(0.01f)] public float touchSensitivity = 2f;
 
+    readonly List<Renderer> _bodyRenderers = new List<Renderer>();
+    readonly RaycastHit[] _cameraHits = new RaycastHit[16];
     CharacterController _controller;
+    float _currentCameraDistance;
     Vector3 _horizontalVelocity;
     float _verticalVelocity;
     float _yaw;
@@ -69,17 +79,31 @@ public class ThirdPersonController : MonoBehaviour
             if (childCamera != null) cameraTransform = childCamera.transform;
         }
         _yaw = transform.eulerAngles.y;
+        _currentCameraDistance = cameraDistance;
+
+        PlayerRig.IgnoreSelfColliders(_controller);
     }
 
     void Update()
     {
         if (PlayerViewMode.Current != ViewModeKind.ThirdPerson) return;
 
+        // The body is the whole point of third person.
+        PlayerRig.SetBodyVisible(transform, true, _bodyRenderers);
+
         ControlSchemeKind scheme = PlayerControlScheme.Current;
         if (scheme == ControlSchemeKind.Touch) TouchControls.EnsureExists();
 
         ApplyCursorPolicy(scheme);
         HandleOrbitInput(scheme);
+
+        if (PlayerTerrainSpawner.SpawnPending)
+        {
+            _verticalVelocity = 0f;
+            _horizontalVelocity = Vector3.zero;
+            return;
+        }
+
         HandleMove(scheme);
     }
 
@@ -95,6 +119,7 @@ public class ThirdPersonController : MonoBehaviour
     {
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+        PlayerRig.SetBodyVisible(transform, true, _bodyRenderers);
     }
 
     void ApplyCursorPolicy(ControlSchemeKind scheme)
@@ -203,15 +228,28 @@ public class ThirdPersonController : MonoBehaviour
         Vector3 back = orbit * Vector3.back;
 
         // Pull the camera in when something solid sits between it and the
-        // player. The cast starts inside the player's own capsule, and a
-        // spherecast ignores colliders it starts inside, so the player never
-        // blocks their own camera.
-        float distance = cameraDistance;
-        if (Physics.SphereCast(pivot, cameraCollisionRadius, back, out RaycastHit hit,
-                cameraDistance, ~0, QueryTriggerInteraction.Ignore))
+        // player, ignoring the player's own body. PhysX reports distance 0 for
+        // a cast that begins inside a collider, so a single SphereCast would
+        // hit the player first and jam the camera at its minimum — the flicker
+        // between hitting and not hitting is what causes the dizziness. Scan
+        // every hit instead and discard our own.
+        float target = cameraDistance;
+        int count = Physics.SphereCastNonAlloc(pivot, cameraCollisionRadius, back, _cameraHits,
+            cameraDistance, ~0, QueryTriggerInteraction.Ignore);
+        for (int i = 0; i < count; i++)
         {
-            distance = Mathf.Max(0.5f, hit.distance);
+            if (_cameraHits[i].distance <= 0f) continue;                       // started inside: no usable normal
+            if (PlayerRig.IsSelfCollider(_cameraHits[i].collider, transform)) continue;
+            target = Mathf.Min(target, _cameraHits[i].distance);
         }
+        target = Mathf.Max(minCameraDistance, target);
+
+        // Snap inwards so nothing ever clips through the camera, ease back out
+        // so a passing tree does not fling the view.
+        _currentCameraDistance = target < _currentCameraDistance
+            ? target
+            : Mathf.MoveTowards(_currentCameraDistance, target, cameraReturnSpeed * Time.deltaTime);
+        float distance = _currentCameraDistance;
 
         // World-space assignment deliberately overrides the parent hierarchy:
         // the camera stays a child of the player, but the orbit math decides
