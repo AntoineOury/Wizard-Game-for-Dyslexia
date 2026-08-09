@@ -77,10 +77,27 @@ public static class PlayerRig
         {
             return;
         }
+
+        // A no-op teleport is not free: toggling a collider below wipes its
+        // Physics.IgnoreCollision pairs, silently re-enabling self-collision.
+        if ((controller.transform.position - position).sqrMagnitude < 1e-8f)
+        {
+            return;
+        }
+
         bool wasEnabled = controller.enabled;
         controller.enabled = false;
         controller.transform.position = position;
         controller.enabled = wasEnabled;
+
+        // Unity drops every IgnoreCollision pair involving a collider when it is
+        // disabled, so the toggle above just undid IgnoreSelfColliders. Restore
+        // it, or the controller resumes fighting its own body colliders — which
+        // shows up as the player jittering up and down while standing still.
+        if (wasEnabled)
+        {
+            IgnoreSelfColliders(controller);
+        }
     }
 
     /// <summary>

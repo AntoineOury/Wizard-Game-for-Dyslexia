@@ -65,8 +65,16 @@ public class PlayerTerrainSpawner : MonoBehaviour
     {
         if (_done) return;
 
-        if (HasRealGroundBelow())
+        if (TryGetRealGround(out RaycastHit ground))
         {
+            // Hand off standing exactly on the real collider, not the analytic
+            // approximation. The mesh interpolates linearly across ~2.5 m quads,
+            // so it can sit up to ~10 cm off the sampled surface — enough for a
+            // visible depenetration pop or settle drop at the moment physics
+            // takes over.
+            Vector3 target = transform.position;
+            target.y = PlayerRig.FeetToCenter(_controller, ground.point.y);
+            PlayerRig.Teleport(_controller, target);
             Finish("terrain collider ready");
             return;
         }
@@ -94,22 +102,35 @@ public class PlayerTerrainSpawner : MonoBehaviour
 
         Vector3 target = transform.position;
         target.y = PlayerRig.FeetToCenter(_controller, groundWorld.y) + groundClearance;
-        PlayerRig.Teleport(_controller, target);
+
+        // The sampled height is constant while we hold still, so this is a
+        // no-op almost every frame — and must stay one: each real teleport
+        // toggles the controller, which is not free (see PlayerRig.Teleport).
+        if (Mathf.Abs(target.y - transform.position.y) > 0.002f)
+            PlayerRig.Teleport(_controller, target);
     }
 
-    bool HasRealGroundBelow()
+    bool TryGetRealGround(out RaycastHit ground)
     {
         // Cast from inside the capsule down past the feet. Anything solid means
-        // a chunk collider has arrived and physics can take over.
-        float reach = _controller.height * 0.5f + 0.5f;
+        // a chunk collider has arrived and physics can take over. Reports the
+        // nearest non-self hit so the caller can stand the player exactly on it.
+        float reach = _controller.height * 0.5f + 1f;
         Vector3 origin = transform.position + Vector3.up * 0.1f;
 
+        ground = default;
+        float nearest = float.PositiveInfinity;
         int count = Physics.RaycastNonAlloc(origin, Vector3.down, _hitBuffer, reach, ~0, QueryTriggerInteraction.Ignore);
         for (int i = 0; i < count; i++)
         {
-            if (!PlayerRig.IsSelfCollider(_hitBuffer[i].collider, transform)) return true;
+            if (PlayerRig.IsSelfCollider(_hitBuffer[i].collider, transform)) continue;
+            if (_hitBuffer[i].distance < nearest)
+            {
+                nearest = _hitBuffer[i].distance;
+                ground = _hitBuffer[i];
+            }
         }
-        return false;
+        return nearest < float.PositiveInfinity;
     }
 
     readonly RaycastHit[] _hitBuffer = new RaycastHit[8];
