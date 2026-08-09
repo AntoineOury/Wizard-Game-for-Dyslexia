@@ -1,5 +1,6 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 /// <summary>
@@ -27,15 +28,25 @@ public class ViewModeToggleButton : MonoBehaviour
 
     void OnEnable()
     {
-        _button.onClick.AddListener(PlayerViewMode.Toggle);
+        _button.onClick.AddListener(OnClicked);
         PlayerViewMode.Changed += OnViewChanged;
         Refresh();
     }
 
     void OnDisable()
     {
-        _button.onClick.RemoveListener(PlayerViewMode.Toggle);
+        _button.onClick.RemoveListener(OnClicked);
         PlayerViewMode.Changed -= OnViewChanged;
+    }
+
+    void OnClicked()
+    {
+        PlayerViewMode.Toggle();
+        // A clicked button stays "selected", and the EventSystem re-presses the
+        // selected control on Space/Enter (Submit). Deselect immediately so the
+        // jump key can never re-fire this button.
+        if (EventSystem.current != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     void OnViewChanged(ViewModeKind mode) => Refresh();

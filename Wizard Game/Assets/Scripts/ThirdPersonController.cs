@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 /// <summary>
 /// Third-person movement with an orbit camera, for both control schemes:
@@ -108,6 +109,12 @@ public class ThirdPersonController : MonoBehaviour
         if (Input.GetKeyDown(KeyCode.Escape)) _uiMode = !_uiMode;
         Cursor.lockState = _uiMode ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = _uiMode;
+
+        // Belt and braces for every button, present and future: while in look
+        // mode nothing may stay "selected", or Space (the UI Submit key) would
+        // re-press it instead of only jumping.
+        if (!_uiMode && EventSystem.current != null && EventSystem.current.currentSelectedGameObject != null)
+            EventSystem.current.SetSelectedGameObject(null);
     }
 
     void HandleOrbitInput(ControlSchemeKind scheme)
