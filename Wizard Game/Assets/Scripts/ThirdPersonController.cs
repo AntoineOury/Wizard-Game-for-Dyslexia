@@ -81,7 +81,7 @@ public class ThirdPersonController : MonoBehaviour
         _yaw = transform.eulerAngles.y;
         _currentCameraDistance = cameraDistance;
 
-        PlayerRig.SuppressSelfColliders(_controller);
+        PlayerRig.IgnoreSelfColliders(_controller);
     }
 
     void Update()
