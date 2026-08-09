@@ -164,6 +164,70 @@ the chunks the streamer builds for real.
 Press **Refresh** after changing noise or asset settings; the preview only
 rebuilds by itself when the camera crosses into a different chunk.
 
+### Performance: incremental builds and LOD
+
+Chunk building is time-sliced: the vertex grid is computed a few rows per
+frame under `Build Budget Ms` (default 3), so streaming never hitches a frame
+no matter the resolution. A chunk keeps showing its previous mesh until the
+new one applies, so LOD swaps and rebuilds never flash a hole.
+
+LOD rings: chunks within `Lod0 Radius` build at full resolution, out to
+`Lod1 Radius` at half, beyond at quarter (a quarter-res chunk is ~11x fewer
+triangles). The collider ring is pinned to full resolution — physics must
+match visuals. Vertical skirts hang from every chunk edge to hide the
+hairline cracks where different LODs meet; depth is `Lod Skirt Depth`.
+
+### Water
+
+Enable `Water Enabled` for a translucent, rippling surface wherever terrain
+dips below the Water zone threshold. The surface samples the same
+biome-blended height pipeline as the ground, so it is seamless across chunks
+and lakes sit level with their local terrain rules. Chunks whose lowest point
+is above the waterline skip the surface entirely. Material auto-creates from
+`OtherwiseLabs/Terrain Water`, or assign your own.
+
+### Grass (GPU instanced)
+
+Add the **Terrain Grass Renderer** component (anywhere; it auto-finds the
+streamer): thousands of swaying blades drawn via `DrawMeshInstanced` — a few
+draw calls, zero GameObjects. Placement is deterministic and restricted to the
+Grass zone on walkable slopes; density halves each chunk ring outward.
+
+### Domain warp
+
+`Warp Strength` bends every height and biome lookup through a second noise
+field, breaking up Perlin's characteristic round blobs. **0 = off and the
+default: existing worlds keep their exact shape. Any other value is a
+different world for the same seed** — choose it before you get attached to a
+layout.
+
+### World edits (player changes that stick)
+
+`WorldEdits` stores player changes as deltas over the deterministic baseline —
+the Minecraft save-file trick. `WorldEdits.RemoveProp(gameObject)` fells a
+scattered prop permanently (every prop carries a `SpawnedPropId` tag);
+`RecordAddition` plants one. The streamer consults removals after candidates
+resolve and respawns additions after scatter, so edits survive streaming out
+and back. Saved as JSON in `Application.persistentDataPath` on quit or via
+`WorldEdits.Save()`. Only edited chunks occupy memory or disk.
+
+### Biome ambience
+
+`BiomeDefinition` now carries an `Ambient Loop` clip, volume, and an optional
+fog color override. Add the **Biome Ambience** component (the streamer object
+is fine): it crossfades soundscapes and tints the fog as the player crosses
+borders. Fog tint needs fog enabled in Lighting > Environment.
+
+### Determinism regression test
+
+`Tools > Otherwise Labs > Terrain > Record Determinism Baseline` fingerprints
+five reference chunks (heights, climate, scatter candidates) into
+`ProjectSettings/OtherwiseLabsTerrainBaseline.json`. After any terrain code
+change, run **Verify Determinism**: a FAIL means the code now generates a
+different world from the same settings — walk-back persistence would silently
+break. Changing Inspector settings legitimately changes the world; Verify
+detects that separately and asks for a re-record instead of failing.
+
 ### Same seed, different worlds
 
 Putting the same seed into both components does **not** produce the same
