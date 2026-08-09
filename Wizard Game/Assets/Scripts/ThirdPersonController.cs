@@ -34,7 +34,7 @@ public class ThirdPersonController : MonoBehaviour
     [Range(0f, 1f)] public float airControl = 0.4f;
     [Min(0f)] public float gravity = 25f;
     [Tooltip("Apex height of a jump in world units. 0 disables jumping.")]
-    [Min(0f)] public float jumpHeight = 1.2f;
+    [Min(0f)] public float jumpHeight = 1.5f;
     [Tooltip("Degrees per second the character turns to face its movement direction.")]
     [Min(30f)] public float turnSpeed = 540f;
 

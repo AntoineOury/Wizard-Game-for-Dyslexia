@@ -1825,7 +1825,7 @@ MonoBehaviour:
   acceleration: 40
   airControl: 0.4
   gravity: 25
-  jumpHeight: 1.2
+  jumpHeight: 1.5
   mouseSensitivity: 2
   touchSensitivity: 2
   minPitch: -75
@@ -1874,7 +1874,7 @@ MonoBehaviour:
   acceleration: 40
   airControl: 0.4
   gravity: 25
-  jumpHeight: 1.2
+  jumpHeight: 1.5
   turnSpeed: 540
   cameraDistance: 5
   pivotHeight: 1.6
@@ -2244,7 +2244,7 @@ MonoBehaviour:
       maxScale: 1.2
       randomYRotation: 1
       alignToNormal: 0.15
-      embedDepth: 0.2
+      embedDepth: 0.5
       restrictToZones: 1
       allowedZones: 4
       useZoneWeights: 1

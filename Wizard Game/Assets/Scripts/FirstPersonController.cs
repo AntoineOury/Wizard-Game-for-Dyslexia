@@ -39,7 +39,7 @@ public class FirstPersonController : MonoBehaviour
     [Range(0f, 1f)] public float airControl = 0.4f;
     [Min(0f)] public float gravity = 25f;
     [Tooltip("Apex height of a jump in world units. 0 disables jumping.")]
-    [Min(0f)] public float jumpHeight = 1.2f;
+    [Min(0f)] public float jumpHeight = 1.5f;
 
     [Header("Look")]
     [Tooltip("Degrees per mouse delta unit.")]
