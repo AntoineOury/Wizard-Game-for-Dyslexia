@@ -432,6 +432,20 @@ namespace OtherwiseLabs.TerrainTools
 
             foreach (Vector2Int coord in wanted)
             {
+                // On the first pass, build the chunks that carry colliders right
+                // away rather than a few per frame. Otherwise the player spends
+                // the first second falling through terrain that does not exist
+                // yet, which is the startup drop players actually notice.
+                if (force)
+                {
+                    Vector2Int offset = coord - center;
+                    if (Mathf.Max(Mathf.Abs(offset.x), Mathf.Abs(offset.y)) <= colliderDistanceInChunks)
+                    {
+                        BuildChunk(coord);
+                        continue;
+                    }
+                }
+
                 _buildQueue.Enqueue(coord);
                 _queued.Add(coord);
             }
