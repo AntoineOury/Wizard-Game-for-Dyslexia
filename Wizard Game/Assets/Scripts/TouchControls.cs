@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -19,6 +20,7 @@ public class TouchControls : MonoBehaviour
 
     VirtualJoystick _joystick;
     TouchLookArea _lookArea;
+    TouchJumpButton _jumpButton;
     Canvas _canvas;
 
     /// <summary>Joystick deflection, each axis -1..1. Zero when hidden or untouched.</summary>
@@ -28,6 +30,10 @@ public class TouchControls : MonoBehaviour
     /// <summary>Look drag accumulated since the last call, in percent of screen height.</summary>
     public static Vector2 ConsumeLookDelta()
         => Instance != null && Instance._lookArea != null ? Instance._lookArea.Consume() : Vector2.zero;
+
+    /// <summary>True once per press of the on-screen jump button.</summary>
+    public static bool ConsumeJump()
+        => Instance != null && Instance._jumpButton != null && Instance._jumpButton.Consume();
 
     public static void EnsureExists()
     {
@@ -109,6 +115,35 @@ public class TouchControls : MonoBehaviour
 
         _joystick = baseGo.AddComponent<VirtualJoystick>();
         _joystick.knob = knobRect;
+
+        // Jump button bottom-right — the mainstream mobile spot, under the
+        // right thumb. Created after the look area, so it sits above it in the
+        // hierarchy and wins the raycast: a press jumps, it never drags the
+        // camera.
+        var jumpGo = CreateChild(canvasGo.transform, "Jump Button");
+        var jumpImage = jumpGo.AddComponent<Image>();
+        jumpImage.sprite = circle;
+        jumpImage.color = new Color(1f, 1f, 1f, 0.35f);
+        var jumpRect = (RectTransform)jumpGo.transform;
+        jumpRect.anchorMin = new Vector2(1f, 0f);
+        jumpRect.anchorMax = new Vector2(1f, 0f);
+        jumpRect.sizeDelta = new Vector2(170f, 170f);
+        jumpRect.anchoredPosition = new Vector2(-215f, 235f);
+        _jumpButton = jumpGo.AddComponent<TouchJumpButton>();
+
+        var jumpLabelGo = CreateChild(jumpGo.transform, "Label");
+        var jumpLabel = jumpLabelGo.AddComponent<TextMeshProUGUI>();
+        jumpLabel.text = "JUMP";
+        jumpLabel.fontSize = 36f;
+        jumpLabel.fontStyle = FontStyles.Bold;
+        jumpLabel.alignment = TextAlignmentOptions.Center;
+        jumpLabel.color = new Color(0.1f, 0.1f, 0.15f, 0.75f);
+        jumpLabel.raycastTarget = false;
+        var jumpLabelRect = (RectTransform)jumpLabelGo.transform;
+        jumpLabelRect.anchorMin = Vector2.zero;
+        jumpLabelRect.anchorMax = Vector2.one;
+        jumpLabelRect.offsetMin = Vector2.zero;
+        jumpLabelRect.offsetMax = Vector2.zero;
     }
 
     static GameObject CreateChild(Transform parent, string name)
@@ -205,6 +240,29 @@ public class VirtualJoystick : MonoBehaviour, IPointerDownHandler, IDragHandler,
 /// normalized by screen height so the same swipe turns the camera the same
 /// amount on any resolution or DPI.
 /// </summary>
+public class TouchJumpButton : MonoBehaviour, IPointerDownHandler
+{
+    bool _queued;
+
+    /// <summary>Returns whether a press happened since the last call, then clears it.</summary>
+    public bool Consume()
+    {
+        bool queued = _queued;
+        _queued = false;
+        return queued;
+    }
+
+    void OnDisable()
+    {
+        _queued = false;
+    }
+
+    public void OnPointerDown(PointerEventData eventData)
+    {
+        _queued = true;
+    }
+}
+
 public class TouchLookArea : MonoBehaviour, IPointerDownHandler, IDragHandler, IPointerUpHandler
 {
     Vector2 _accumulated;

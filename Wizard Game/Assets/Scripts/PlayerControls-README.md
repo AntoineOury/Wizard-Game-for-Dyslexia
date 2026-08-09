@@ -6,6 +6,7 @@ One toggle switches the whole input scheme:
 | --- | --- | --- |
 | Move | WASD / arrows, Shift = sprint | Virtual joystick (bottom-left); push to the rim = sprint |
 | Look | Mouse (cursor locked) | Drag anywhere on the right of the screen |
+| Jump | **Space** | **JUMP button** (bottom-right) |
 | Cursor | Locked; **Escape** toggles UI mode for clicking buttons | Always free |
 | First-launch default | Desktop on PC/Mac | Touch on phones/tablets (`Application.isMobilePlatform`) |
 
@@ -31,9 +32,29 @@ original, rename it, and add the **ControlSchemeToggleButton** component. That
 is all: it wires its own onClick and keeps its label showing the active mode
 ("Controls: Laptop" / "Controls: Touch"). Works with TMP and legacy Text.
 
-**3. Nothing else.** The touch joystick/look surface is built at runtime by
-`TouchControls` the moment the Touch scheme is active — no prefabs, no canvas
-authoring, and it hides itself again in Desktop mode.
+**3. View toggle + third person (optional)** — duplicate a button once more,
+empty its On Click () list, and add **ViewModeToggleButton**. Then add
+**Third Person Controller** to the player root — the *same object* as First
+Person Controller. Both stay enabled; they share the CharacterController and
+camera, and only the controller matching the active view mode drives. Camera
+view and control scheme are independent toggles: all four combinations work.
+
+**4. Nothing else.** The touch joystick, look surface and JUMP button are
+built at runtime by `TouchControls` the moment the Touch scheme is active —
+no prefabs, no canvas authoring, and they hide again in Desktop mode.
+
+## Third person
+
+Classic mainstream feel: movement is relative to the camera and the character
+turns to face where it is going; the mouse or look-drag orbits the camera
+around the player. A spherecast pulls the camera in when terrain or props sit
+between it and the player, so the player is never hidden. Orbit distance,
+pivot height, pitch limits and collision radius are Inspector fields on the
+Third Person Controller.
+
+Switching views is instant and stateless: first person re-asserts the camera's
+authored head pose every frame, third person writes the orbit pose every
+frame, so the toggle just changes which one wins.
 
 ## Why the button did nothing before
 
@@ -55,5 +76,6 @@ reach the button — no event, no error. Two fixes shipped together:
   `Time.deltaTime`, making look speed depend on FPS. Mouse deltas are already
   per-frame; the new controller uses them directly.
 - **Single component** owning move + look + cursor policy, scheme-aware.
-- No jump, matching the old controls. Add `jumpHeight` + a touch button later
-  if the design ever wants it.
+- **Jump** on Space / the touch JUMP button, with a short coyote window
+  (jumps pressed a hair after stepping off a ledge still fire). Set
+  `jumpHeight` to 0 on either controller to disable jumping.

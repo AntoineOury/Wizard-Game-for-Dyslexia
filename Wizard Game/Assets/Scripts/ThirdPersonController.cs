@@ -1,31 +1,26 @@
 using UnityEngine;
 
 /// <summary>
-/// First-person movement and look in one component, replacing the
-/// PlayerMovement + FirstPersonCam pair.
+/// Third-person movement with an orbit camera, for both control schemes:
+/// desktop (WASD moves relative to the camera, mouse orbits, Space jumps) and
+/// touch (the same joystick / look surface / jump button as first person).
 ///
-/// Setup: on the player root, remove PlayerMovement, Rigidbody and any capsule
-/// collider, then add this (a CharacterController is added automatically).
-/// Remove FirstPersonCam from the camera child — this script drives the pitch.
+/// Lives on the same player object as FirstPersonController — they share the
+/// CharacterController and the camera, and each drives only while its view
+/// mode (PlayerViewMode) is active, so a UI toggle switches views on the fly.
 ///
-/// Improvements over the old pair:
-/// - CharacterController instead of Rigidbody forces: no sliding on slopes, a
-///   real slope limit and step offset, and no ground-layer mask to configure —
-///   which also means it just works on streamed terrain chunks.
-/// - Mouse look is no longer multiplied by Time.deltaTime. Mouse deltas are
-///   already per-frame, so the old code made look speed depend on framerate.
-/// - Desktop/Touch aware: reads keyboard + mouse or the on-screen controls
-///   depending on PlayerControlScheme, and owns the cursor policy that
-///   previously made the UI unclickable.
+/// Classic third-person feel: the character turns to face where it is going
+/// rather than where the camera looks, and the camera is pulled in by a
+/// spherecast so hills, trees and buildings never hide the player.
 /// </summary>
 [RequireComponent(typeof(CharacterController))]
-[AddComponentMenu("Otherwise Labs/First Person Controller")]
-public class FirstPersonController : MonoBehaviour
+[AddComponentMenu("Otherwise Labs/Third Person Controller")]
+public class ThirdPersonController : MonoBehaviour
 {
     const float CoyoteTime = 0.12f;
 
     [Header("References")]
-    [Tooltip("Camera to pitch up and down. Auto-finds a child Camera when empty.")]
+    [Tooltip("Camera to orbit. Auto-finds a child Camera when empty. Shared with FirstPersonController.")]
     public Transform cameraTransform;
 
     [Header("Movement")]
@@ -38,25 +33,31 @@ public class FirstPersonController : MonoBehaviour
     [Min(0f)] public float gravity = 25f;
     [Tooltip("Apex height of a jump in world units. 0 disables jumping.")]
     [Min(0f)] public float jumpHeight = 1.2f;
+    [Tooltip("Degrees per second the character turns to face its movement direction.")]
+    [Min(30f)] public float turnSpeed = 540f;
+
+    [Header("Camera Orbit")]
+    [Min(1f)] public float cameraDistance = 5f;
+    [Tooltip("Height above the player's pivot that the camera looks at (roughly the head).")]
+    public float pivotHeight = 1.6f;
+    public float minPitch = -30f;
+    public float maxPitch = 65f;
+    [Tooltip("Radius of the collision probe that keeps the camera out of terrain and props.")]
+    [Min(0.05f)] public float cameraCollisionRadius = 0.3f;
 
     [Header("Look")]
     [Tooltip("Degrees per mouse delta unit.")]
     [Min(0.01f)] public float mouseSensitivity = 2f;
     [Tooltip("Degrees per percent of screen height dragged on the look area.")]
     [Min(0.01f)] public float touchSensitivity = 2f;
-    public float minPitch = -75f;
-    public float maxPitch = 60f;
 
     CharacterController _controller;
     Vector3 _horizontalVelocity;
-    Vector3 _cameraLocalPosition;
     float _verticalVelocity;
-    float _pitch;
+    float _yaw;
+    float _pitch = 15f;
     float _lastGroundedTime = float.NegativeInfinity;
     bool _uiMode;
-
-    /// <summary>True while gameplay input is suspended so the cursor can use UI (desktop Escape toggle).</summary>
-    public bool InUiMode => _uiMode;
 
     void Awake()
     {
@@ -66,31 +67,31 @@ public class FirstPersonController : MonoBehaviour
             Camera childCamera = GetComponentInChildren<Camera>();
             if (childCamera != null) cameraTransform = childCamera.transform;
         }
-        if (cameraTransform != null)
-        {
-            _pitch = NormalizePitch(cameraTransform.localEulerAngles.x);
-            _cameraLocalPosition = cameraTransform.localPosition;
-        }
+        _yaw = transform.eulerAngles.y;
     }
 
     void Update()
     {
-        // ThirdPersonController drives while its view mode is active; both
-        // components stay enabled so a UI toggle can switch on the fly.
-        if (PlayerViewMode.Current != ViewModeKind.FirstPerson) return;
+        if (PlayerViewMode.Current != ViewModeKind.ThirdPerson) return;
 
         ControlSchemeKind scheme = PlayerControlScheme.Current;
         if (scheme == ControlSchemeKind.Touch) TouchControls.EnsureExists();
 
         ApplyCursorPolicy(scheme);
-        HandleLook(scheme);
+        HandleOrbitInput(scheme);
         HandleMove(scheme);
+    }
+
+    // Camera follows in LateUpdate so it always sees this frame's final
+    // character position, not last frame's.
+    void LateUpdate()
+    {
+        if (PlayerViewMode.Current != ViewModeKind.ThirdPerson) return;
+        PositionCamera();
     }
 
     void OnDisable()
     {
-        // Whatever disables the player (scene switch, death, cutscene) should
-        // leave the person with a usable cursor.
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
     }
@@ -99,21 +100,17 @@ public class FirstPersonController : MonoBehaviour
     {
         if (scheme == ControlSchemeKind.Touch)
         {
-            // Touch has no pointer to trap; on a laptop this leaves the mouse
-            // free to act as the finger.
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             return;
         }
 
-        // Desktop: Escape flips between look mode (cursor locked, camera live)
-        // and UI mode (cursor free for clicking buttons).
         if (Input.GetKeyDown(KeyCode.Escape)) _uiMode = !_uiMode;
         Cursor.lockState = _uiMode ? CursorLockMode.None : CursorLockMode.Locked;
         Cursor.visible = _uiMode;
     }
 
-    void HandleLook(ControlSchemeKind scheme)
+    void HandleOrbitInput(ControlSchemeKind scheme)
     {
         Vector2 look = Vector2.zero;
         if (scheme == ControlSchemeKind.Desktop)
@@ -126,17 +123,8 @@ public class FirstPersonController : MonoBehaviour
             look = TouchControls.ConsumeLookDelta() * touchSensitivity;
         }
 
-        transform.Rotate(0f, look.x, 0f);
-
+        _yaw += look.x;
         _pitch = Mathf.Clamp(_pitch - look.y, minPitch, maxPitch);
-        if (cameraTransform != null)
-        {
-            // Re-assert the authored local pose every frame: third person moves
-            // the camera in world space, so returning to first person must snap
-            // it back onto the head.
-            cameraTransform.localPosition = _cameraLocalPosition;
-            cameraTransform.localRotation = Quaternion.Euler(_pitch, 0f, 0f);
-        }
     }
 
     void HandleMove(ControlSchemeKind scheme)
@@ -155,16 +143,25 @@ public class FirstPersonController : MonoBehaviour
         else
         {
             moveInput = TouchControls.Move;
-            // Pushing the stick to its rim reads as "as fast as possible".
             sprint = moveInput.magnitude > 0.92f;
             jumpPressed = TouchControls.ConsumeJump();
         }
 
         if (moveInput.sqrMagnitude > 1f) moveInput.Normalize();
 
-        Vector3 wishDirection = transform.right * moveInput.x + transform.forward * moveInput.y;
-        Vector3 targetVelocity = wishDirection * (sprint ? sprintSpeed : walkSpeed);
+        // Movement is relative to the camera's orbit yaw, and the character
+        // turns to face travel — where the camera looks and where the body
+        // points are independent, which is what makes it read as third person.
+        Quaternion orbitYaw = Quaternion.Euler(0f, _yaw, 0f);
+        Vector3 wishDirection = orbitYaw * new Vector3(moveInput.x, 0f, moveInput.y);
 
+        if (wishDirection.sqrMagnitude > 0.0001f)
+        {
+            Quaternion facing = Quaternion.LookRotation(wishDirection.normalized);
+            transform.rotation = Quaternion.RotateTowards(transform.rotation, facing, turnSpeed * Time.deltaTime);
+        }
+
+        Vector3 targetVelocity = wishDirection * (sprint ? sprintSpeed : walkSpeed);
         float control = _controller.isGrounded ? 1f : airControl;
         _horizontalVelocity = Vector3.MoveTowards(
             _horizontalVelocity, targetVelocity, acceleration * control * Time.deltaTime);
@@ -181,8 +178,7 @@ public class FirstPersonController : MonoBehaviour
         }
         else if (grounded && _verticalVelocity < 0f)
         {
-            // Small downward bias keeps the controller glued to slopes instead
-            // of hopping down them.
+            // Small downward bias keeps the controller glued to slopes.
             _verticalVelocity = -3f;
         }
         _verticalVelocity -= gravity * Time.deltaTime;
@@ -191,9 +187,30 @@ public class FirstPersonController : MonoBehaviour
         _controller.Move(motion * Time.deltaTime);
     }
 
-    static float NormalizePitch(float eulerX)
+    void PositionCamera()
     {
-        // localEulerAngles reports 0..360; pitch math wants -180..180.
-        return eulerX > 180f ? eulerX - 360f : eulerX;
+        if (cameraTransform == null) return;
+
+        Vector3 pivot = transform.position + Vector3.up * pivotHeight;
+        Quaternion orbit = Quaternion.Euler(_pitch, _yaw, 0f);
+        Vector3 back = orbit * Vector3.back;
+
+        // Pull the camera in when something solid sits between it and the
+        // player. The cast starts inside the player's own capsule, and a
+        // spherecast ignores colliders it starts inside, so the player never
+        // blocks their own camera.
+        float distance = cameraDistance;
+        if (Physics.SphereCast(pivot, cameraCollisionRadius, back, out RaycastHit hit,
+                cameraDistance, ~0, QueryTriggerInteraction.Ignore))
+        {
+            distance = Mathf.Max(0.5f, hit.distance);
+        }
+
+        // World-space assignment deliberately overrides the parent hierarchy:
+        // the camera stays a child of the player, but the orbit math decides
+        // its final pose every frame. FirstPersonController re-asserts its own
+        // local pose the same way, so switching views never leaves stale state.
+        cameraTransform.position = pivot + back * distance;
+        cameraTransform.rotation = orbit;
     }
 }
