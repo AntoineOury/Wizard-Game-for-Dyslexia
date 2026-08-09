@@ -1755,6 +1755,7 @@ GameObject:
   - component: {fileID: 1830604990}
   - component: {fileID: 1830604989}
   - component: {fileID: 1830604991}
+  - component: {fileID: 1830604992}
   m_Layer: 0
   m_Name: Player
   m_TagString: Untagged
@@ -1880,8 +1881,26 @@ MonoBehaviour:
   minPitch: -30
   maxPitch: 65
   cameraCollisionRadius: 0.3
+  minCameraDistance: 1.4
+  cameraReturnSpeed: 6
   mouseSensitivity: 2
   touchSensitivity: 2
+--- !u!114 &1830604992
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1830604986}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 014fe00449b44034d96f021440937787, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  streamer: {fileID: 2106898795}
+  groundClearance: 0.05
+  readyTimeout: 8
+  logSpawn: 1
 --- !u!1 &1850966339
 GameObject:
   m_ObjectHideFlags: 0
