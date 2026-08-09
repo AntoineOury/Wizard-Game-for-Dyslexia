@@ -23,6 +23,29 @@ public static class PlayerControlScheme
 
     public static event Action<ControlSchemeKind> Changed;
 
+    /// <summary>
+    /// Desktop-only UI focus: true while gameplay input is suspended so the
+    /// cursor can click buttons (Escape toggles it in the controllers).
+    ///
+    /// One shared flag, deliberately NOT per-controller: when each controller
+    /// kept its own, an Escape pressed in first person left that controller
+    /// convinced it was in UI mode forever — switch schemes and views a few
+    /// times and you returned to Laptop with the keyboard dead and no clue why.
+    /// Shared state cannot diverge, and every toggle press clears it, because
+    /// tapping "Controls: Laptop" means "let me play".
+    /// </summary>
+    public static bool UiMode;
+
+    // Statics survive play sessions when Enter Play Mode's domain reload is
+    // off; reset explicitly so every run starts clean.
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    static void ResetStatics()
+    {
+        UiMode = false;
+        _current = null;
+        Changed = null;
+    }
+
     public static ControlSchemeKind Current
     {
         get
@@ -41,6 +64,7 @@ public static class PlayerControlScheme
     {
         if (_current == scheme) return;
         _current = scheme;
+        UiMode = false;
         PlayerPrefs.SetInt(PrefKey, (int)scheme);
         PlayerPrefs.Save();
         Changed?.Invoke(scheme);
