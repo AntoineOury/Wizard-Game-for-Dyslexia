@@ -5,19 +5,25 @@ using UnityEngine;
 /// Shared rig housekeeping for the player object, used by both controllers.
 ///
 /// A player built from a Unity Capsule primitive arrives with a CapsuleCollider
-/// on the body mesh, sitting in the same space as the CharacterController on the
-/// root. Those two fight every frame — and the third-person camera's collision
-/// probe hits the body and slams itself into the player. Rather than make the
-/// setup instructions longer, both problems are handled here in code.
+/// on the body mesh, coincident with the CharacterController on the root. The
+/// controller's overlap recovery fights that capsule on every Move — and the
+/// third-person camera probe hits it too. Rather than make the setup
+/// instructions longer, both problems are handled here in code.
 /// </summary>
 public static class PlayerRig
 {
     /// <summary>
-    /// Stops the CharacterController colliding with colliders on its own body.
-    /// A child CapsuleCollider overlapping the controller produces a constant
-    /// depenetration fight, which reads as jitter while standing still.
+    /// Disables solid colliders on the player's own body so they cannot fight
+    /// the CharacterController.
+    ///
+    /// This must be DISABLING, not Physics.IgnoreCollision: the controller's
+    /// PhysX character module runs its own sweeps and overlap recovery and does
+    /// not consult ignore pairs. With a body capsule perfectly overlapping the
+    /// controller, that recovery shoves the player upward on every Move while
+    /// gravity pulls back down — a permanent stand-still vibration that ignore
+    /// pairs cannot cure. Triggers are left alone; they never collide anyway.
     /// </summary>
-    public static void IgnoreSelfColliders(CharacterController controller)
+    public static void SuppressSelfColliders(CharacterController controller)
     {
         if (controller == null) return;
 
@@ -25,8 +31,8 @@ public static class PlayerRig
         foreach (Collider collider in colliders)
         {
             if (collider == null || collider == controller) continue;
-            if (collider.isTrigger) continue;  // triggers are for gameplay, leave them alone
-            Physics.IgnoreCollision(controller, collider, true);
+            if (collider.isTrigger) continue;
+            collider.enabled = false;
         }
     }
 
@@ -78,8 +84,8 @@ public static class PlayerRig
             return;
         }
 
-        // A no-op teleport is not free: toggling a collider below wipes its
-        // Physics.IgnoreCollision pairs, silently re-enabling self-collision.
+        // Skip no-op moves; toggling the controller for nothing costs a physics
+        // re-registration.
         if ((controller.transform.position - position).sqrMagnitude < 1e-8f)
         {
             return;
@@ -89,15 +95,6 @@ public static class PlayerRig
         controller.enabled = false;
         controller.transform.position = position;
         controller.enabled = wasEnabled;
-
-        // Unity drops every IgnoreCollision pair involving a collider when it is
-        // disabled, so the toggle above just undid IgnoreSelfColliders. Restore
-        // it, or the controller resumes fighting its own body colliders — which
-        // shows up as the player jittering up and down while standing still.
-        if (wasEnabled)
-        {
-            IgnoreSelfColliders(controller);
-        }
     }
 
     /// <summary>

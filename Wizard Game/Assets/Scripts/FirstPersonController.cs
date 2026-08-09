@@ -76,8 +76,10 @@ public class FirstPersonController : MonoBehaviour
         }
 
         // A body built from a Capsule primitive brings its own CapsuleCollider,
-        // which fights the CharacterController every frame if left connected.
-        PlayerRig.IgnoreSelfColliders(_controller);
+        // coincident with the CharacterController — which fights it on every
+        // Move. IgnoreCollision cannot exempt a CharacterController, so the
+        // body collider is disabled outright.
+        PlayerRig.SuppressSelfColliders(_controller);
     }
 
     void Update()

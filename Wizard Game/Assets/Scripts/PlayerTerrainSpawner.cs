@@ -48,7 +48,7 @@ public class PlayerTerrainSpawner : MonoBehaviour
         if (streamer == null) streamer = FindObjectOfType<InfiniteTerrainStreamer>();
 
         // Do this before the first physics step, not after the first collision.
-        PlayerRig.IgnoreSelfColliders(_controller);
+        PlayerRig.SuppressSelfColliders(_controller);
 
         SpawnPending = true;
         _startTime = Time.time;
