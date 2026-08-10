@@ -1,22 +1,27 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace OtherwiseLabs.TerrainTools
 {
     /// <summary>
     /// Atmosphere per biome: crossfades each biome's ambient loop and tints the
     /// scene fog as the listener crosses regions. A lot of mood for very little
-    /// code, hanging entirely off the streamer's public DominantBiomeAt.
+    /// code, hanging entirely off a terrain's public DominantBiomeAt.
     ///
-    /// Drop on any GameObject (the streamer itself is fine). Creates its own two
+    /// Works with ANY biome source — the infinite streamer and the finite
+    /// procedural generator both implement IBiomeSource — so this one component
+    /// serves both worlds without tying them to each other.
+    ///
+    /// Drop on any GameObject (the terrain itself is fine). Creates its own two
     /// AudioSources for the crossfade — nothing to author.
     /// </summary>
     [AddComponentMenu("Otherwise Labs/Biome Ambience")]
     public class BiomeAmbience : MonoBehaviour
     {
-        [Tooltip("Streamer whose biomes drive the ambience. Auto-found when empty.")]
-        public InfiniteTerrainStreamer streamer;
+        [Tooltip("Terrain whose biomes drive the ambience (streamer or procedural generator). Auto-found in the scene when empty.")]
+        [FormerlySerializedAs("streamer")] public MonoBehaviour biomeSource;
 
-        [Tooltip("Whose position decides the biome — usually the player. Falls back to the streamer's viewer, then the main camera.")]
+        [Tooltip("Whose position decides the biome — usually the player. Falls back to the main camera.")]
         public Transform listener;
 
         [Tooltip("Seconds between biome checks. Cheap either way; there is no need to poll every frame.")]
@@ -25,6 +30,7 @@ namespace OtherwiseLabs.TerrainTools
         [Tooltip("Seconds for the audio crossfade and fog tint to complete after crossing a border.")]
         [Min(0.1f)] public float fadeTime = 2.5f;
 
+        IBiomeSource _source;
         AudioSource _fadingIn;
         AudioSource _fadingOut;
         BiomeDefinition _current;
@@ -35,7 +41,24 @@ namespace OtherwiseLabs.TerrainTools
 
         void Awake()
         {
-            if (streamer == null) streamer = FindObjectOfType<InfiniteTerrainStreamer>();
+            _source = biomeSource as IBiomeSource;
+            if (biomeSource != null && _source == null)
+                Debug.LogWarning($"[{name}] '{biomeSource.name}' is not a biome source; looking for one in the scene instead.", this);
+
+            if (_source == null)
+            {
+                // FindObjectOfType cannot search by interface, so scan components.
+                // Awake-only, and scenes have a handful of MonoBehaviours' roots
+                // to walk — not a per-frame cost.
+                foreach (MonoBehaviour candidate in FindObjectsOfType<MonoBehaviour>())
+                {
+                    if (candidate is IBiomeSource found)
+                    {
+                        _source = found;
+                        break;
+                    }
+                }
+            }
 
             _fadingIn = CreateSource("Ambience A");
             _fadingOut = CreateSource("Ambience B");
@@ -66,7 +89,7 @@ namespace OtherwiseLabs.TerrainTools
 
         void Update()
         {
-            if (streamer == null) return;
+            if (_source == null) return;
 
             if (Time.time >= _nextPoll)
             {
@@ -87,11 +110,10 @@ namespace OtherwiseLabs.TerrainTools
         void Poll()
         {
             Transform anchor = listener != null ? listener
-                : streamer.viewer != null ? streamer.viewer
                 : Camera.main != null ? Camera.main.transform : null;
             if (anchor == null) return;
 
-            BiomeDefinition biome = streamer.DominantBiomeAt(anchor.position);
+            BiomeDefinition biome = _source.DominantBiomeAt(anchor.position);
             if (biome == _current) return;
             _current = biome;
 

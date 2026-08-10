@@ -254,8 +254,8 @@ namespace OtherwiseLabs.TerrainTools
                         // generator's per-world default.
                         maxInstances = 40,
                     };
-                    ProceduralTerrainGenerator.ApplyCategoryDefaults(
-                        rule, ProceduralTerrainGenerator.GuessCategory(prefab.name));
+                    ScatterRules.ApplyCategoryDefaults(
+                        rule, ScatterRules.GuessCategory(prefab.name));
                     targetList.Add(rule);
                 }
 
