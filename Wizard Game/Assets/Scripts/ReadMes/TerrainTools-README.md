@@ -7,14 +7,23 @@ Two components, sharing one noise/scatter core:
 | `ProceduralTerrainGenerator` | A single finite terrain built in the editor. Authored, saved in the scene. |
 | `InfiniteTerrainStreamer` | An endless world streamed around the player at runtime. |
 
-**Shared** between them: `EnvironmentAssetRule` and everything on it (zones,
-weights, footprints), the category presets applied on prefab drop, and the
-`OtherwiseLabs/Terrain Vertex Color` shader. An asset rule tuned in one behaves
-the same way in the other.
+**Shared** between them — and deliberately owned by neither: the scatter
+vocabulary in `TerrainScatterRules.cs` (`EnvironmentAssetRule`, zones, weights,
+footprint estimation, the category presets applied on prefab drop), the noise
+core in `TerrainNoise.cs`, biomes in `TerrainBiome.cs` (`BiomeDefinition`,
+blending, the `IBiomeSource` interface), the `BiomeAmbience` component, the
+water material resolver, and the terrain/water shaders. An asset rule or biome
+tuned in one behaves the same way in the other.
 
-**Not shared:** height sampling. `InfiniteTerrainStreamer` uses `TerrainNoise`;
-`ProceduralTerrainGenerator` kept its own inline copy of the same formula, so
-that existing scenes reproduce their terrain byte-for-byte. The two are
+**The two components never reference each other.** Each depends only on the
+shared files above, so either can be deleted from the project without breaking
+the other. Anything both need lives in a shared file — never as a call from one
+system into the other.
+
+Height sampling: both now run the same `TerrainNoise` formula, but in different
+sample spaces (the finite generator: local `0..terrainSize`, origin 0 — which
+is what keeps scenes built with its older inline copy byte-identical; the
+streamer: absolute world coordinates shifted by `NoiseOrigin`). The two are
 therefore *not* interchangeable — see "Same seed, different worlds" below.
 
 Collision also differs by necessity: the finite generator places sequentially
@@ -41,6 +50,63 @@ so cost stays near-constant instead of O(n²) as instance counts climb.
 - Rules are placed **largest footprint first**, otherwise a field of grass
   placed early leaves nowhere legal for a house.
 - Toggle off with `Prevent Asset Overlap` to compare against the old behaviour.
+
+---
+
+## The finite terrain
+
+`ProceduralTerrainGenerator` now carries the streamer's world features, driven
+by the same shared types, so a look developed on one terrain transfers to the
+other:
+
+- **Biomes** — same `BiomeDefinition` list, same blending, same per-biome asset
+  lists (the drop area gains the same "Add Dropped Assets To" selector). The
+  climate field defaults to `Biome Scale` 300 rather than the streamer's 600:
+  on a 200 m map that yields a couple of regions rather than one.
+- **Water** — `Water Enabled` builds one low-res translucent sheet
+  (`Water Resolution` quads per side) at the biome-blended Water-zone height,
+  skipped entirely when the terrain never dips near the waterline. Pairs well
+  with `Island Falloff`: the coast drops below the waterline, so an island gets
+  a real sea.
+- **Domain warp** — same `Warp Strength` semantics: 0 = off = existing scenes
+  keep their exact shape; anything else is a different terrain for the same
+  seed.
+- **Ambience + fog** — the generator implements `IBiomeSource`, so the shared
+  **Biome Ambience** component works unchanged (see "Biome ambience" below).
+
+With biomes, warp, water and paths all left at their defaults, old scenes
+regenerate **bit-identically** from their existing seeds.
+
+### Paths and roads (finite terrain only)
+
+Press **Add Path / Road** in the Inspector (or add a child object with a
+`TerrainPath` component and empty children as waypoints). Drag the waypoints
+around in the Scene view — the gizmo ribbon shows the route — then press
+**Generate Terrain**. The generator:
+
+1. **Flattens the ground** along a Catmull-Rom spline through the waypoints.
+   The route reads its elevation from the terrain and smooths it
+   (`Smoothing Passes`), so the road bed grades gently — cutting through bumps
+   and filling dips — instead of copying every wrinkle it crosses. Open path
+   ends stay pinned to ground level so roads emerge from the landscape.
+2. **Tints the roadway** (`Surface Color`, packed-dirt by default) into the
+   vertex colors, fading out across the `Shoulder Width` embankment.
+3. **Keeps props off the road**: Scatter Environment rejects candidates within
+   the roadway plus `Scatter Clearance`.
+
+Waypoint Y positions are ignored — routes hug the terrain by design. `Closed
+Loop` joins the last waypoint back to the first for a ring road. Multiple paths
+may cross; where they overlap the strongest influence wins, which stays smooth
+because both are near full strength at a junction. Disable a path's component
+(or its GameObject) to rebuild without it.
+
+Paths are baked against the un-carved heightmap during `Generate Terrain`, so
+the mesh, the collider, the scatterer and the visible tint always agree.
+
+`TerrainPath` itself references neither terrain system — it is handed a
+height-sampling function at bake time — so the streamer could adopt it later
+(that needs per-chunk carving hooks and determinism care, which is why it is
+finite-only today).
 
 ---
 
@@ -213,10 +279,14 @@ and back. Saved as JSON in `Application.persistentDataPath` on quit or via
 
 ### Biome ambience
 
-`BiomeDefinition` now carries an `Ambient Loop` clip, volume, and an optional
-fog color override. Add the **Biome Ambience** component (the streamer object
+`BiomeDefinition` carries an `Ambient Loop` clip, volume, and an optional
+fog color override. Add the **Biome Ambience** component (the terrain object
 is fine): it crossfades soundscapes and tints the fog as the player crosses
 borders. Fog tint needs fog enabled in Lighting > Environment.
+
+It binds to any `IBiomeSource` — the streamer and the finite generator both
+implement it — via its `Biome Source` field, auto-found in the scene when
+empty. One component, either world.
 
 ### Determinism regression test
 

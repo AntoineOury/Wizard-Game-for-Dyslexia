@@ -13,6 +13,7 @@ namespace OtherwiseLabs.TerrainTools
     {
         static bool _rebuildQueued;
         GUIStyle _dropAreaStyle;
+        int _dropTargetIndex;
 
         public override void OnInspectorGUI()
         {
@@ -226,8 +227,30 @@ namespace OtherwiseLabs.TerrainTools
                 richText = true,
             };
 
+            // With biomes defined, dropped prefabs need a home: the global list
+            // (appears everywhere) or one specific biome.
+            string targetLabel = "everywhere";
+            if (generator.biomes != null && generator.biomes.Count > 0)
+            {
+                var labels = new string[generator.biomes.Count + 1];
+                labels[0] = "Global (every biome)";
+                for (int i = 0; i < generator.biomes.Count; i++)
+                {
+                    string biomeName = generator.biomes[i] != null && !string.IsNullOrWhiteSpace(generator.biomes[i].name)
+                        ? generator.biomes[i].name : $"Biome {i}";
+                    labels[i + 1] = $"{biomeName} (only)";
+                }
+                _dropTargetIndex = Mathf.Clamp(_dropTargetIndex, 0, labels.Length - 1);
+                _dropTargetIndex = EditorGUILayout.Popup("Add Dropped Assets To", _dropTargetIndex, labels);
+                targetLabel = labels[_dropTargetIndex];
+            }
+            else
+            {
+                _dropTargetIndex = 0;
+            }
+
             Rect dropRect = GUILayoutUtility.GetRect(0f, 48f, GUILayout.ExpandWidth(true));
-            GUI.Box(dropRect, "<b>+ Drop prefabs here to add environment assets</b>\ntrees, buildings, rocks, grass ...", _dropAreaStyle);
+            GUI.Box(dropRect, $"<b>+ Drop prefabs here → {targetLabel}</b>\ntrees, buildings, rocks, grass ...", _dropAreaStyle);
 
             Event evt = Event.current;
             if (evt.type != EventType.DragUpdated && evt.type != EventType.DragPerform) return;
@@ -247,10 +270,10 @@ namespace OtherwiseLabs.TerrainTools
                 foreach (Object dragged in DragAndDrop.objectReferences)
                 {
                     if (dragged is not GameObject prefab) continue;
-                    generator.AddEnvironmentAsset(prefab);
-                    var category = ProceduralTerrainGenerator.GuessCategory(prefab.name);
+                    generator.AddEnvironmentAsset(prefab, _dropTargetIndex - 1);
+                    var category = ScatterRules.GuessCategory(prefab.name);
                     added.Append($"\n  • {prefab.name} → {category}");
-                    if (category == ProceduralTerrainGenerator.AssetCategory.Generic)
+                    if (category == ScatterRules.AssetCategory.Generic)
                         added.Append("  (no keyword matched — set its filters by hand)");
                 }
                 if (added.Length > 0)
@@ -266,8 +289,44 @@ namespace OtherwiseLabs.TerrainTools
 
         void DrawUtilities(ProceduralTerrainGenerator generator)
         {
-            if (GUILayout.Button("Save Terrain Mesh As Asset..."))
-                SaveMeshAsset(generator);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("Add Path / Road"))
+                    AddPath(generator);
+                if (GUILayout.Button("Save Terrain Mesh As Asset..."))
+                    SaveMeshAsset(generator);
+            }
+
+            if (generator.GetComponentInChildren<TerrainPath>() != null)
+            {
+                EditorGUILayout.HelpBox(
+                    "Paths: drag a path's waypoint children around in the Scene view, then press " +
+                    "Generate Terrain to carve the road bed, tint the surface and re-run height data. " +
+                    "Scatter Environment keeps props off the roadway.",
+                    MessageType.None);
+            }
+        }
+
+        /// <summary>
+        /// Creates a child path with three waypoints across the middle of the
+        /// terrain — enough to see the ribbon immediately and start dragging.
+        /// </summary>
+        static void AddPath(ProceduralTerrainGenerator generator)
+        {
+            var go = new GameObject("Path");
+            go.transform.SetParent(generator.transform, false);
+            go.AddComponent<TerrainPath>();
+
+            float span = Mathf.Max(10f, generator.terrainSize.x * 0.3f);
+            for (int i = 0; i < 3; i++)
+            {
+                var waypoint = new GameObject($"Waypoint {i}");
+                waypoint.transform.SetParent(go.transform, false);
+                waypoint.transform.localPosition = new Vector3((i - 1) * span, 0f, (i - 1) * span * 0.35f);
+            }
+
+            Undo.RegisterCreatedObjectUndo(go, "Add Terrain Path");
+            Selection.activeGameObject = go;
         }
 
         static void SaveMeshAsset(ProceduralTerrainGenerator generator)

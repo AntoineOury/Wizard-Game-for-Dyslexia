@@ -10,216 +10,40 @@ using UnityEditorInternal;
 namespace OtherwiseLabs.TerrainTools
 {
     /// <summary>
-    /// Named surface bands of the terrain, ordered low to high. Assets pick the
-    /// zones they are allowed to spawn in, so "keep trees out of the water" is a
-    /// checkbox rather than a guess at a normalized height number.
-    /// </summary>
-    [Flags]
-    public enum TerrainZone
-    {
-        None = 0,
-        Water = 1 << 0,
-        Shore = 1 << 1,
-        Grass = 1 << 2,
-        Rock = 1 << 3,
-        Snow = 1 << 4,
-        Everything = Water | Shore | Grass | Rock | Snow,
-    }
-
-    /// <summary>
-    /// Normalized height thresholds that split the terrain into zones. Defaults
-    /// line up with the default height gradient, so the blue part of the terrain
-    /// really is the Water zone.
-    /// </summary>
-    [Serializable]
-    public class TerrainZoneBands
-    {
-        [Tooltip("Everything below this normalized height is Water.")]
-        [Range(0f, 1f)] public float waterLevel = 0.33f;
-
-        [Tooltip("Water up to here is Shore (beach / lake edge).")]
-        [Range(0f, 1f)] public float shoreLevel = 0.42f;
-
-        [Tooltip("Shore up to here is Grass (the main habitable band).")]
-        [Range(0f, 1f)] public float grassLevel = 0.68f;
-
-        [Tooltip("Grass up to here is Rock. Above it is Snow.")]
-        [Range(0f, 1f)] public float rockLevel = 0.86f;
-
-        /// <summary>Forces the thresholds to stay in ascending order.</summary>
-        public void Sanitize()
-        {
-            waterLevel = Mathf.Clamp01(waterLevel);
-            shoreLevel = Mathf.Clamp(shoreLevel, waterLevel, 1f);
-            grassLevel = Mathf.Clamp(grassLevel, shoreLevel, 1f);
-            rockLevel = Mathf.Clamp(rockLevel, grassLevel, 1f);
-        }
-
-        /// <summary>Zone that a normalized terrain height falls into.</summary>
-        public TerrainZone GetZone(float normalizedHeight)
-        {
-            if (normalizedHeight < waterLevel) return TerrainZone.Water;
-            if (normalizedHeight < shoreLevel) return TerrainZone.Shore;
-            if (normalizedHeight < grassLevel) return TerrainZone.Grass;
-            if (normalizedHeight < rockLevel) return TerrainZone.Rock;
-            return TerrainZone.Snow;
-        }
-
-        /// <summary>Normalized height range a zone covers, for previews.</summary>
-        public Vector2 GetRange(TerrainZone zone)
-        {
-            switch (zone)
-            {
-                case TerrainZone.Water: return new Vector2(0f, waterLevel);
-                case TerrainZone.Shore: return new Vector2(waterLevel, shoreLevel);
-                case TerrainZone.Grass: return new Vector2(shoreLevel, grassLevel);
-                case TerrainZone.Rock: return new Vector2(grassLevel, rockLevel);
-                case TerrainZone.Snow: return new Vector2(rockLevel, 1f);
-                default: return new Vector2(0f, 1f);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Relative likelihood of an asset appearing in each zone. Unlike Allowed
-    /// Zones (a hard yes/no), these bias how often it shows up: rocks set to
-    /// 3 on Shore and 1 on Rock appear roughly three times as densely on sand
-    /// as they do on cliffs. 0 excludes a zone entirely.
-    /// </summary>
-    [Serializable]
-    public class ZoneWeights
-    {
-        [Min(0f)] public float water = 1f;
-        [Min(0f)] public float shore = 1f;
-        [Min(0f)] public float grass = 1f;
-        [Min(0f)] public float rock = 1f;
-        [Min(0f)] public float snow = 1f;
-
-        public float Get(TerrainZone zone)
-        {
-            switch (zone)
-            {
-                case TerrainZone.Water: return Mathf.Max(0f, water);
-                case TerrainZone.Shore: return Mathf.Max(0f, shore);
-                case TerrainZone.Grass: return Mathf.Max(0f, grass);
-                case TerrainZone.Rock: return Mathf.Max(0f, rock);
-                case TerrainZone.Snow: return Mathf.Max(0f, snow);
-                default: return 0f;
-            }
-        }
-
-        /// <summary>
-        /// Largest weight among the zones an asset is actually allowed into.
-        /// Acceptance is scaled by this so the favourite zone always accepts,
-        /// keeping the sampler efficient while preserving the ratios.
-        /// </summary>
-        public float MaxAmong(TerrainZone allowed, bool restrict)
-        {
-            float max = 0f;
-            foreach (TerrainZone zone in AllZones)
-            {
-                if (restrict && (allowed & zone) == 0) continue;
-                max = Mathf.Max(max, Get(zone));
-            }
-            return max;
-        }
-
-        public static readonly TerrainZone[] AllZones =
-        {
-            TerrainZone.Water, TerrainZone.Shore, TerrainZone.Grass,
-            TerrainZone.Rock, TerrainZone.Snow,
-        };
-    }
-
-    /// <summary>
-    /// One scatterable environment asset (tree, rock, building, ...) and the rules
-    /// that control where and how it gets placed on the generated terrain.
-    /// </summary>
-    [Serializable]
-    public class EnvironmentAssetRule
-    {
-        [Tooltip("Prefab to scatter across the terrain.")]
-        public GameObject prefab;
-
-        [Tooltip("Name used for the container object and spawned instances (e.g. \"Trees\").")]
-        public string displayName = "New Asset";
-
-        [Tooltip("Tag applied to every spawned instance. Missing tags are added to the project automatically in the Editor. Leave empty for Untagged.")]
-        public string instanceTag = "";
-
-        [Tooltip("Randomization amount, 0-1. Multiplied by Max Instances to get the target count (0 = none, 1 = Max Instances).")]
-        [Range(0f, 1f)] public float density = 0.5f;
-
-        [Tooltip("Instance count when Density is 1.")]
-        [Min(1)] public int maxInstances = 150;
-
-        [Header("Transform Randomization")]
-        [Tooltip("Random uniform scale range applied on top of the prefab's own scale.")]
-        [Min(0.01f)] public float minScale = 0.85f;
-        [Min(0.01f)] public float maxScale = 1.2f;
-
-        [Tooltip("Give each instance a random rotation around its Y axis.")]
-        public bool randomYRotation = true;
-
-        [Tooltip("How much instances tilt to match the ground slope. 0 = always upright (buildings), 1 = fully aligned to the surface (rocks).")]
-        [Range(0f, 1f)] public float alignToNormal = 0.25f;
-
-        [Tooltip("How deep instances sink into the ground, in world units. Useful so rocks and trunks don't float on slopes.")]
-        public float embedDepth = 0.1f;
-
-        [Header("Terrain Zone Filter")]
-        [Tooltip("Restrict this asset to specific terrain zones (water / shore / grass / rock / snow). " +
-                 "Leave off to place anywhere the height and slope filters allow.")]
-        public bool restrictToZones = false;
-
-        [Tooltip("Zones this asset may spawn in. Uncheck Water to keep trees out of lakes; " +
-                 "check only Shore and Grass to keep them on the beach and meadow.")]
-        public TerrainZone allowedZones = TerrainZone.Shore | TerrainZone.Grass;
-
-        [Tooltip("Bias how often this asset appears per zone instead of just allowing/forbidding. " +
-                 "e.g. rocks at 3 on Shore and 1 on Rock cluster on the sand. 0 excludes a zone.")]
-        public bool useZoneWeights = false;
-
-        [Tooltip("Relative frequency per zone. Only the ratios matter: 2/1 and 8/4 behave the same.")]
-        public ZoneWeights zoneWeights = new ZoneWeights();
-
-        [Header("Placement Filters")]
-        [Tooltip("Reject spots steeper than this angle in degrees (e.g. keep buildings on flat ground).")]
-        [Range(0f, 90f)] public float maxSlopeAngle = 45f;
-
-        [Tooltip("Only place on terrain whose normalized height (0 = lowest, 1 = highest) is at or above this value. Use to keep assets out of lakes/beaches.")]
-        [Range(0f, 1f)] public float minHeight = 0f;
-
-        [Tooltip("Only place on terrain whose normalized height is at or below this value. Use to keep assets off mountain peaks.")]
-        [Range(0f, 1f)] public float maxHeight = 1f;
-
-        [Tooltip("Minimum distance in world units between two instances of this rule. 0 = no spacing check.")]
-        [Min(0f)] public float minSpacing = 2f;
-
-        [Tooltip("Space this asset claims against OTHER assets, in world units, so a rock can't spawn inside " +
-                 "a tree. 0 = estimate from the prefab's bounds. Min Spacing only separates an asset from " +
-                 "copies of itself; this is what separates it from everything else.")]
-        [Min(0f)] public float footprintRadius = 0f;
-
-        // Resolved once per scatter so the bounds estimate isn't recomputed per instance.
-        [System.NonSerialized] public float resolvedFootprint;
-    }
-
-    /// <summary>
     /// Procedural terrain + environment generator for Unity 2022.3.
-    /// Builds a terrain mesh from multi-octave Perlin noise and scatters prefabs
-    /// (trees, rocks, buildings, ...) over it using per-asset placement rules.
-    /// Use the custom inspector buttons, or call GenerateAll() at runtime.
+    /// Builds a bounded terrain mesh from multi-octave Perlin noise and scatters
+    /// prefabs (trees, rocks, buildings, ...) over it using per-asset placement
+    /// rules. Use the custom inspector buttons, or call GenerateAll() at runtime.
+    ///
+    /// Feature parity with the Infinite Terrain Streamer, without depending on
+    /// it (both build on the same shared pieces — TerrainNoise, BiomeDefinition,
+    /// EnvironmentAssetRule, the water shader — and neither references the
+    /// other):
+    /// - Biomes: regions with their own height shaping, colors and assets, laid
+    ///   out by a low-frequency climate noise and blended at borders.
+    /// - Water: a translucent surface where terrain dips below the Water zone.
+    /// - Domain warp: bends noise lookups to break up Perlin's round blobs.
+    /// - Ambience + fog: implements IBiomeSource, so the shared BiomeAmbience
+    ///   component crossfades soundscapes and tints fog per biome here too.
+    /// - Paths/roads: add child objects with a TerrainPath component; the
+    ///   generator flattens the ground along them, tints the roadway and keeps
+    ///   scattered props off it. (This one is exclusive to the finite terrain.)
+    ///
+    /// With biomes, warp and water left at their defaults, a terrain generated
+    /// by an older version of this tool rebuilds bit-identically from the same
+    /// seeds — existing scenes keep their exact shape.
     /// </summary>
     [DisallowMultipleComponent]
     [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
     [AddComponentMenu("Otherwise Labs/Procedural Terrain Generator")]
-    public class ProceduralTerrainGenerator : MonoBehaviour
+    public class ProceduralTerrainGenerator : MonoBehaviour, IBiomeSource
     {
-               public const string EnvironmentRootName = "-- Environment --";
+        public const string EnvironmentRootName = "-- Environment --";
+        public const string WaterRootName = "-- Water --";
         public const string TerrainShaderName = "OtherwiseLabs/Terrain Vertex Color";
         const string GeneratedMeshName = "Procedural Terrain Mesh";
         const string GeneratedMaterialName = "Procedural Terrain Material";
+        const string GeneratedWaterMeshName = "Procedural Terrain Water Mesh";
 
         [Header("Terrain Dimensions")]
         [Tooltip("Width (X) and length (Z) of the terrain in world units.")]
@@ -248,17 +72,24 @@ namespace OtherwiseLabs.TerrainTools
         public Vector2 noiseOffset;
 
         [Header("Height Shaping")]
-        [Tooltip("World-space height of the highest terrain point.")]
+        [Tooltip("World-space height of the highest terrain point. With biomes defined, each biome's own multiplier applies instead.")]
         [Min(0f)] public float heightMultiplier = 25f;
 
-        [Tooltip("Remaps normalized noise (X: 0-1) to height (Y: 0-1). Flatten the low end for plains/lakes, steepen the top for peaks.")]
+        [Tooltip("Remaps normalized noise (X: 0-1) to height (Y: 0-1). Flatten the low end for plains/lakes, steepen the top for peaks. With biomes defined, each biome's own curve applies instead.")]
         public AnimationCurve heightCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
 
-        [Tooltip("Fades heights down toward the terrain edges to make an island. 0 = off.")]
+        [Tooltip("Fades heights down toward the terrain edges to make an island. 0 = off. Combines with biomes and water: the coast dips below the waterline, so an island gets a real sea.")]
         [Range(0f, 1f)] public float islandFalloff = 0f;
 
+        [Header("Domain Warp")]
+        [Tooltip("Distorts sample positions with a second noise field before every height and biome lookup, breaking up Perlin's characteristic round blobs. 0 = OFF, and existing terrains keep their exact shape — any other value generates a DIFFERENT terrain for the same seed.")]
+        [Range(0f, 80f)] public float warpStrength = 0f;
+
+        [Tooltip("Feature size of the distortion field in world units.")]
+        [Min(10f)] public float warpScale = 250f;
+
         [Header("Rendering")]
-        [Tooltip("Vertex colors by normalized height (water > sand > grass > rock > snow). Rendered by the included 'OtherwiseLabs/Terrain Vertex Color' shader.")]
+        [Tooltip("Vertex colors by normalized height (water > sand > grass > rock > snow). Rendered by the included 'OtherwiseLabs/Terrain Vertex Color' shader. With biomes defined, each biome's own gradient applies instead.")]
         public Gradient colorByHeight = CreateDefaultGradient();
 
         [Tooltip("If the MeshRenderer has no material, assign one automatically using the included vertex color shader.")]
@@ -269,8 +100,39 @@ namespace OtherwiseLabs.TerrainTools
                  "to zones (e.g. trees on Shore + Grass only). Keep these lined up with the gradient above.")]
         public TerrainZoneBands zoneBands = new TerrainZoneBands();
 
+        [Header("Biomes")]
+        [Tooltip("Region types with their own assets, heights and colors, laid out along a low-frequency " +
+                 "climate noise. A biome only borders its list neighbours, so order the list like a climate " +
+                 "gradient (e.g. Winter, Forest, Desert). Empty = one uniform terrain using the settings above.")]
+        public List<BiomeDefinition> biomes = new List<BiomeDefinition>();
+
+        [Tooltip("Size of biome regions in world units. Bigger = larger stretches of a single type. " +
+                 "Around your terrain size gives a couple of regions per map; well below it gives a patchwork.")]
+        [Min(50f)] public float biomeScale = 300f;
+
+        [Tooltip("Width of the crossfade between neighbouring biomes, as a fraction of the climate range. " +
+                 "Bigger = wider, softer borders; smaller = crisper region edges.")]
+        [Range(0.01f, 0.4f)] public float biomeBlend = 0.12f;
+
+        [Tooltip("Seed for the biome layout. Re-roll to rearrange which region lands where without changing the terrain detail inside them.")]
+        public int biomeSeed = 13579;
+
+        [Header("Water")]
+        [Tooltip("Spawn a translucent surface where terrain dips below the Water zone threshold, making lakes real instead of blue-painted ground. Follows biome height shaping, so lakes in a high biome sit higher than lakes in a low one.")]
+        public bool waterEnabled = false;
+
+        [Tooltip("Material for the water surface. Empty = auto-created from the shared 'OtherwiseLabs/Terrain Water' shader.")]
+        public Material waterMaterial;
+
+        [Tooltip("Drops the surface slightly below the zone threshold so shorelines don't z-fight the sand.")]
+        public float waterSurfaceOffset = -0.2f;
+
+        [Tooltip("Quads per side of the water sheet. It only needs enough to follow biome height differences — far fewer than the terrain.")]
+        [Range(2, 128)] public int waterResolution = 48;
+
         [Header("Environment Assets")]
-        [Tooltip("Prefabs to scatter and their placement rules. Use the drag & drop area below to add entries quickly.")]
+        [Tooltip("Prefabs to scatter everywhere and their placement rules. Assets that belong to ONE biome go " +
+                 "in that biome's own list instead. Use the drag & drop area below to add entries quickly.")]
         public List<EnvironmentAssetRule> environmentAssets = new List<EnvironmentAssetRule>();
 
         [Tooltip("Seed for asset placement. Same seed = same layout.")]
@@ -290,10 +152,29 @@ namespace OtherwiseLabs.TerrainTools
         [NonSerialized] float[,] _worldHeights;
         [NonSerialized] int _cachedResolution;
 
+        // Sampling state shared by heights, water, scatter and DominantBiomeAt.
+        [NonSerialized] Vector2[] _octaveOffsets;
+        [NonSerialized] Vector2[] _biomeOctaveOffsets;
+        [NonSerialized] Vector2[] _warpOffsetsX;
+        [NonSerialized] Vector2[] _warpOffsetsY;
+        [NonSerialized] float[] _biomeWeights;
+        [NonSerialized] int _offsetsStamp;
+        [NonSerialized] bool _offsetsBuilt;
+
+        // Path influence from the last height build: carved into _worldHeights,
+        // with the paint mask kept for the mesh's color pass.
+        [NonSerialized] List<TerrainPath> _bakedPaths;
+        [NonSerialized] float[,] _pathPaintMask;
+        [NonSerialized] Color[,] _pathPaintColor;
+
+        [NonSerialized] Material _autoWaterMaterial;
+
         public int LastVertexCount { get; private set; }
         public int LastTriangleCount { get; private set; }
         public double LastGenerateMilliseconds { get; private set; }
         public int LastScatterCount { get; private set; }
+
+        public bool UsesBiomes => biomes != null && biomes.Count > 0;
 
         // ------------------------------------------------------------------
         // Public build API
@@ -316,6 +197,7 @@ namespace OtherwiseLabs.TerrainTools
             int res = _cachedResolution;
             int vertsPerLine = res + 1;
             int vertexCount = vertsPerLine * vertsPerLine;
+            Vector2 size = SafeSize;
 
             var vertices = new Vector3[vertexCount];
             var uvs = new Vector2[vertexCount];
@@ -332,11 +214,15 @@ namespace OtherwiseLabs.TerrainTools
 
                     // Mesh is centered on the transform so the pivot sits in the middle.
                     vertices[i] = new Vector3(
-                        (nx - 0.5f) * terrainSize.x,
+                        (nx - 0.5f) * size.x,
                         _worldHeights[x, z],
-                        (nz - 0.5f) * terrainSize.y);
+                        (nz - 0.5f) * size.y);
                     uvs[i] = new Vector2(nx, nz);
-                    colors[i] = colorByHeight.Evaluate(_normalizedHeights[x, z]);
+
+                    Color color = SampleVertexColor(nx * size.x, nz * size.y, _normalizedHeights[x, z]);
+                    if (_pathPaintMask != null && _pathPaintMask[x, z] > 0f)
+                        color = Color.Lerp(color, _pathPaintColor[x, z], _pathPaintMask[x, z]);
+                    colors[i] = color;
                 }
             }
 
@@ -386,6 +272,8 @@ namespace OtherwiseLabs.TerrainTools
 
             if (autoAssignMaterial) EnsureMaterial();
 
+            BuildWater();
+
             stopwatch.Stop();
             LastVertexCount = vertexCount;
             LastTriangleCount = triangles.Length / 3;
@@ -395,9 +283,10 @@ namespace OtherwiseLabs.TerrainTools
         [ContextMenu("Scatter Environment")]
         public void ScatterEnvironment()
         {
-            if (environmentAssets == null || environmentAssets.Count == 0)
+            List<RuleEntry> table = BuildRuleTable();
+            if (table.Count == 0)
             {
-                Debug.LogWarning($"[{name}] No environment assets configured. Drag prefabs into the drop area in the Inspector first.", this);
+                Debug.LogWarning($"[{name}] No environment assets configured (global or per-biome). Drag prefabs into the drop area in the Inspector first.", this);
                 return;
             }
 
@@ -423,12 +312,12 @@ namespace OtherwiseLabs.TerrainTools
             // cover the largest one, or an overlap could span more cells than a
             // query looks at and slip through.
             float largestFootprint = 0.5f;
-            foreach (EnvironmentAssetRule rule in environmentAssets)
+            foreach (RuleEntry entry in table)
             {
-                if (rule == null || rule.prefab == null) continue;
+                EnvironmentAssetRule rule = entry.rule;
                 rule.resolvedFootprint = rule.footprintRadius > 0f
                     ? rule.footprintRadius
-                    : EstimateFootprintRadius(rule.prefab);
+                    : ScatterRules.EstimateFootprintRadius(rule.prefab);
                 largestFootprint = Mathf.Max(largestFootprint, rule.resolvedFootprint);
             }
 
@@ -440,29 +329,28 @@ namespace OtherwiseLabs.TerrainTools
             // Bigger assets claim their ground first; otherwise a field of grass
             // placed early leaves nowhere legal for a house.
             var order = new List<int>();
-            for (int i = 0; i < environmentAssets.Count; i++) order.Add(i);
+            for (int i = 0; i < table.Count; i++) order.Add(i);
             order.Sort((a, b) =>
             {
-                EnvironmentAssetRule ra = environmentAssets[a], rb = environmentAssets[b];
-                float fa = ra?.resolvedFootprint ?? 0f, fb = rb?.resolvedFootprint ?? 0f;
+                float fa = table[a].rule.resolvedFootprint, fb = table[b].rule.resolvedFootprint;
                 int cmp = fb.CompareTo(fa);
                 return cmp != 0 ? cmp : a.CompareTo(b); // stable, keeps it deterministic
             });
 
+            // One sub-container per biome keeps the hierarchy readable when
+            // several biomes each bring their own asset lists.
+            var groupRoots = new Dictionary<int, Transform>();
+
             int total = 0;
-            foreach (int ruleIndex in order)
+            foreach (int tableIndex in order)
             {
-                EnvironmentAssetRule rule = environmentAssets[ruleIndex];
-                if (rule == null || rule.prefab == null)
-                {
-                    Debug.LogWarning($"[{name}] Environment asset #{ruleIndex} has no prefab assigned, skipping.", this);
-                    continue;
-                }
-                total += ScatterRule(rule, ruleIndex, root, occupancy);
+                RuleEntry entry = table[tableIndex];
+                total += ScatterRule(entry.rule, tableIndex, entry.biomeIndex,
+                    GroupRoot(root, groupRoots, entry.biomeIndex), occupancy);
             }
 
             LastScatterCount = total;
-            Debug.Log($"[{name}] Scattered {total} environment instances across {environmentAssets.Count} asset rule(s).", this);
+            Debug.Log($"[{name}] Scattered {total} environment instances across {table.Count} asset rule(s).", this);
 
 #if UNITY_EDITOR
             if (!Application.isPlaying)
@@ -486,163 +374,16 @@ namespace OtherwiseLabs.TerrainTools
         {
             seed = UnityEngine.Random.Range(0, 1000000);
             scatterSeed = UnityEngine.Random.Range(0, 1000000);
-        }
-
-               /// <summary>
-        /// Category guessed from a prefab's name, used to pick sensible scatter
-        /// defaults on drop.
-        /// </summary>
-        public enum AssetCategory { Generic, Tree, Rock, Building, GroundCover, Debris }
-
-        // Species names are included, not just the generic words: this project's
-        // nature kit ships prefabs like "Cedar03" and "Larch01" that contain no
-        // "tree" at all, and would otherwise fall through to Generic.
-        static readonly string[] TreeKeywords =
-        {
-            "tree", "pine", "palm", "cedar", "larch", "spruce", "fir", "oak",
-            "birch", "willow", "maple", "aspen", "poplar", "redwood", "sequoia",
-        };
-
-        static readonly string[] RockKeywords =
-        {
-            "rock", "stone", "boulder", "cliff", "pebble", "crystal",
-        };
-
-        static readonly string[] BuildingKeywords =
-        {
-            "build", "house", "hut", "tower", "ruin", "wall", "castle",
-            "cottage", "shed", "bridge", "well", "fence", "tent",
-        };
-
-        static readonly string[] GroundCoverKeywords =
-        {
-            "grass", "bush", "fern", "flower", "dandelion", "plantain", "clover",
-            "weed", "shrub", "moss", "reed", "sapling", "mushroom", "boletus",
-            "toadstool", "herb", "nettle", "thistle",
-        };
-
-        static readonly string[] DebrisKeywords =
-        {
-            "stump", "log", "branch", "trunk", "root", "twig", "deadwood", "debris",
-        };
-
-        /// <summary>
-        /// Guesses a category from an asset name. Case-insensitive substring match.
-        /// </summary>
-        public static AssetCategory GuessCategory(string assetName)
-        {
-            if (string.IsNullOrWhiteSpace(assetName)) return AssetCategory.Generic;
-            string n = assetName.ToLowerInvariant();
-
-            // Debris is checked before Tree so "Stump"/"Tree_Log" don't become trees.
-            if (ContainsAny(n, DebrisKeywords)) return AssetCategory.Debris;
-            if (ContainsAny(n, BuildingKeywords)) return AssetCategory.Building;
-            if (ContainsAny(n, TreeKeywords)) return AssetCategory.Tree;
-            if (ContainsAny(n, RockKeywords)) return AssetCategory.Rock;
-            if (ContainsAny(n, GroundCoverKeywords)) return AssetCategory.GroundCover;
-            return AssetCategory.Generic;
-        }
-
-        static bool ContainsAny(string haystack, string[] needles)
-        {
-            for (int i = 0; i < needles.Length; i++)
-                if (haystack.Contains(needles[i])) return true;
-            return false;
-        }
-
-        /// <summary>
-        /// Applies the default placement rules for a category. Public so presets
-        /// can be re-applied from the Inspector after renaming a rule.
-        /// </summary>
-        public static void ApplyCategoryDefaults(EnvironmentAssetRule rule, AssetCategory category)
-        {
-            if (rule == null) return;
-
-            // Every preset opts into zone filtering: it is the setting that most
-            // often makes a scatter look wrong (trees standing in lakes), and the
-            // zone names are far easier to reason about than raw height numbers.
-            rule.restrictToZones = true;
-
-            // Weights give each category a natural falloff toward the edges of its
-            // range instead of a hard uniform band, which reads far less "placed
-            // by a script" in the scene.
-            rule.useZoneWeights = true;
-            rule.zoneWeights = new ZoneWeights { water = 0f, shore = 1f, grass = 1f, rock = 1f, snow = 1f };
-
-            switch (category)
-            {
-                case AssetCategory.Tree:
-                    rule.maxSlopeAngle = 32f;
-                    rule.alignToNormal = 0.15f;
-                    rule.minSpacing = 4f;
-                    rule.minHeight = 0f;
-                    rule.maxHeight = 1f;
-                    rule.embedDepth = 0.2f;
-                    rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass;
-                    // Thin out on the sand so the treeline fades toward the beach.
-                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 0.35f, grass = 1f, rock = 0f, snow = 0f };
-                    break;
-
-                case AssetCategory.Rock:
-                    rule.maxSlopeAngle = 60f;
-                    rule.alignToNormal = 1f;
-                    rule.embedDepth = 0.25f;
-                    rule.minSpacing = 1.5f;
-                    rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass | TerrainZone.Rock | TerrainZone.Snow;
-                    // Clusters on sand and grass, sparser up on the crags.
-                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 3f, grass = 2f, rock = 1f, snow = 0.5f };
-                    break;
-
-                case AssetCategory.Building:
-                    rule.maxSlopeAngle = 10f;
-                    rule.alignToNormal = 0f;
-                    rule.minScale = 1f;
-                    rule.maxScale = 1f;
-                    rule.maxInstances = 30;
-                    rule.minSpacing = 15f;
-                    rule.minHeight = 0f;
-                    rule.maxHeight = 1f;
-                    rule.allowedZones = TerrainZone.Grass;
-                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 0f, grass = 1f, rock = 0f, snow = 0f };
-                    break;
-
-                case AssetCategory.GroundCover:
-                    rule.maxInstances = 600;
-                    rule.minSpacing = 0.5f;
-                    rule.embedDepth = 0.05f;
-                    rule.alignToNormal = 0.6f;
-                    rule.maxSlopeAngle = 40f;
-                    rule.maxHeight = 1f;
-                    rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass;
-                    // Densest in the meadow, sparse on the sand.
-                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 0.5f, grass = 1f, rock = 0f, snow = 0f };
-                    // Deliberately tiny: grass and flowers tucked under a tree canopy
-                    // look right, so ground cover shouldn't reserve real estate.
-                    rule.footprintRadius = 0.2f;
-                    break;
-
-                case AssetCategory.Debris:
-                    rule.maxInstances = 60;
-                    rule.minSpacing = 6f;
-                    rule.alignToNormal = 0.8f;
-                    rule.embedDepth = 0.15f;
-                    rule.maxSlopeAngle = 35f;
-                    rule.maxHeight = 1f;
-                    rule.allowedZones = TerrainZone.Grass | TerrainZone.Rock;
-                    rule.zoneWeights = new ZoneWeights { water = 0f, shore = 0f, grass = 1f, rock = 0.4f, snow = 0f };
-                    break;
-
-                default:
-                    rule.allowedZones = TerrainZone.Shore | TerrainZone.Grass | TerrainZone.Rock;
-                    break;
-            }
+            biomeSeed = UnityEngine.Random.Range(0, 1000000);
         }
 
         /// <summary>
         /// Adds a scatter rule for the given prefab with defaults guessed from its
         /// name (trees, rocks, buildings, ground cover and debris get presets).
+        /// Pass a biome index to add it to that biome's own list instead of the
+        /// global one.
         /// </summary>
-        public EnvironmentAssetRule AddEnvironmentAsset(GameObject prefab)
+        public EnvironmentAssetRule AddEnvironmentAsset(GameObject prefab, int biomeIndex = -1)
         {
             var rule = new EnvironmentAssetRule
             {
@@ -650,12 +391,178 @@ namespace OtherwiseLabs.TerrainTools
                 displayName = prefab != null ? prefab.name : "New Asset",
             };
 
-            ApplyCategoryDefaults(rule, GuessCategory(rule.displayName));
+            ScatterRules.ApplyCategoryDefaults(rule, ScatterRules.GuessCategory(rule.displayName));
 
-            environmentAssets.Add(rule);
+            List<EnvironmentAssetRule> target = environmentAssets;
+            if (biomeIndex >= 0 && biomes != null && biomeIndex < biomes.Count && biomes[biomeIndex] != null)
+                target = biomes[biomeIndex].environmentAssets ??= new List<EnvironmentAssetRule>();
+
+            target.Add(rule);
             return rule;
         }
-        
+
+        void OnValidate()
+        {
+            zoneBands?.Sanitize();
+            BiomeField.Sanitize(biomes);
+        }
+
+        // ------------------------------------------------------------------
+        // World sampling (biome-aware)
+        // ------------------------------------------------------------------
+
+        // Noise is sampled in "sample space": the terrain's local space shifted so
+        // coordinates run 0..terrainSize instead of being centered on the pivot.
+        // Staying positive keeps Mathf.PerlinNoise away from its mirror at zero,
+        // and it is exactly the space the original generator sampled in — which
+        // is what keeps old seeds producing their old terrain.
+
+        Vector2 SafeSize => new Vector2(Mathf.Max(1f, terrainSize.x), Mathf.Max(1f, terrainSize.y));
+
+        Vector2 LocalToSample(float localX, float localZ)
+        {
+            Vector2 size = SafeSize;
+            return new Vector2(localX + size.x * 0.5f, localZ + size.y * 0.5f);
+        }
+
+        /// <summary>
+        /// (Re)builds octave offsets when a seed or offset changed. Cheap enough
+        /// to gate every sampler with, so runtime queries (ambience, water) never
+        /// read offsets from a previous seed.
+        /// </summary>
+        void EnsureSamplingState()
+        {
+            int stamp = TerrainNoise.Hash(seed, biomeSeed, octaves,
+                TerrainNoise.Hash(Mathf.RoundToInt(noiseOffset.x * 1000f), Mathf.RoundToInt(noiseOffset.y * 1000f)));
+            if (_offsetsBuilt && stamp == _offsetsStamp) return;
+
+            // Offsets from seed, in the original generator's own scheme (origin 0):
+            // identical inputs to the old inline loop, so identical terrain.
+            _octaveOffsets = TerrainNoise.BuildOctaveOffsets(seed, Mathf.Clamp(octaves, 1, 8), noiseOffset);
+            // Two octaves is deliberately soft: biome regions should be big smooth
+            // blobs, not as detailed as the terrain inside them.
+            _biomeOctaveOffsets = TerrainNoise.BuildOctaveOffsets(biomeSeed, 2, Vector2.zero);
+            _warpOffsetsX = TerrainNoise.BuildOctaveOffsets(TerrainNoise.Hash(seed, 7331), 1, Vector2.zero);
+            _warpOffsetsY = TerrainNoise.BuildOctaveOffsets(TerrainNoise.Hash(seed, 7333), 1, Vector2.zero);
+
+            _offsetsStamp = stamp;
+            _offsetsBuilt = true;
+        }
+
+        /// <summary>
+        /// Domain warp: bends the coordinate a sample is taken at, by a second
+        /// noise field. Applied identically to height AND climate lookups, so
+        /// terrain shapes and biome borders wander together instead of the
+        /// terrain warping out from under its biome.
+        /// </summary>
+        void WarpPosition(ref float sampleX, ref float sampleZ)
+        {
+            if (warpStrength <= 0f) return;
+            float x = sampleX, z = sampleZ;
+            sampleX += (TerrainNoise.SampleNormalized(x, z, _warpOffsetsX, warpScale, 0.5f, 2f) - 0.5f) * 2f * warpStrength;
+            sampleZ += (TerrainNoise.SampleNormalized(x, z, _warpOffsetsY, warpScale, 0.5f, 2f) - 0.5f) * 2f * warpStrength;
+        }
+
+        /// <summary>Base terrain noise in 0-1 at a sample-space position. Shared by every biome.</summary>
+        float SampleBaseNoise(float sampleX, float sampleZ)
+        {
+            WarpPosition(ref sampleX, ref sampleZ);
+            return TerrainNoise.SampleNormalized(sampleX, sampleZ, _octaveOffsets, noiseScale, persistence, lacunarity);
+        }
+
+        /// <summary>
+        /// Climate value in 0-1 deciding which biome owns a position. Sampled from
+        /// its own, much lower-frequency noise field so regions are far larger than
+        /// the hills inside them.
+        /// </summary>
+        float SampleClimate(float sampleX, float sampleZ)
+        {
+            WarpPosition(ref sampleX, ref sampleZ);
+            return TerrainNoise.SampleNormalized(sampleX, sampleZ, _biomeOctaveOffsets, biomeScale, 0.5f, 2f);
+        }
+
+        float[] BiomeWeightsAt(float sampleX, float sampleZ)
+        {
+            if (_biomeWeights == null || _biomeWeights.Length < biomes.Count)
+                _biomeWeights = new float[biomes.Count];
+            BiomeField.GetWeights(biomes, SampleClimate(sampleX, sampleZ), biomeBlend, _biomeWeights);
+            return _biomeWeights;
+        }
+
+        /// <summary>
+        /// Height shaped from an already-sampled base noise value. With biomes,
+        /// every biome shapes the same base noise through its own curve, multiplier
+        /// and offset, and the results blend by biome weight — heights cross a
+        /// border smoothly because the weights do.
+        /// </summary>
+        float HeightFromNormalized(float sampleX, float sampleZ, float normalized)
+        {
+            if (!UsesBiomes)
+                return TerrainNoise.ToWorldHeight(normalized, heightCurve, heightMultiplier);
+
+            float[] weights = BiomeWeightsAt(sampleX, sampleZ);
+            float height = 0f;
+            for (int i = 0; i < biomes.Count; i++)
+            {
+                float w = weights[i];
+                if (w <= 0f) continue;
+                BiomeDefinition biome = biomes[i];
+                if (biome == null) continue;
+                height += w * (TerrainNoise.ToWorldHeight(normalized, biome.heightCurve, biome.heightMultiplier) + biome.heightOffset);
+            }
+            return height;
+        }
+
+        /// <summary>Ground color at a position: biome gradients blended by weight, so winter whites fade into forest greens.</summary>
+        Color SampleVertexColor(float sampleX, float sampleZ, float normalized)
+        {
+            if (!UsesBiomes) return colorByHeight.Evaluate(normalized);
+
+            float[] weights = BiomeWeightsAt(sampleX, sampleZ);
+            Color color = Color.clear;
+            for (int i = 0; i < biomes.Count; i++)
+            {
+                float w = weights[i];
+                if (w <= 0f) continue;
+                Gradient gradient = biomes[i] != null && biomes[i].colorByHeight != null && biomes[i].colorByHeight.colorKeys.Length > 0
+                    ? biomes[i].colorByHeight
+                    : colorByHeight;
+                color += gradient.Evaluate(normalized) * w;
+            }
+            color.a = 1f;
+            return color;
+        }
+
+        /// <summary>
+        /// World height of the water surface at a sample-space position: the
+        /// biome-blended height that the Water zone threshold maps to. Continuous,
+        /// so lakes in a high biome sit higher than lakes in a low one —
+        /// consistent with their terrain.
+        /// </summary>
+        float SampleWaterSurfaceHeight(float sampleX, float sampleZ)
+        {
+            float threshold = zoneBands != null ? Mathf.Clamp01(zoneBands.waterLevel) : 0.33f;
+            return HeightFromNormalized(sampleX, sampleZ, threshold) + waterSurfaceOffset;
+        }
+
+        /// <summary>
+        /// Dominant biome at a world position, or null when no biomes are defined.
+        /// This is the IBiomeSource hook that lets the shared BiomeAmbience
+        /// component drive per-biome soundscapes and fog from this terrain.
+        /// </summary>
+        public BiomeDefinition DominantBiomeAt(Vector3 worldPosition)
+        {
+            if (!UsesBiomes) return null;
+            EnsureSamplingState();
+
+            Vector3 local = transform.InverseTransformPoint(worldPosition);
+            Vector2 sample = LocalToSample(local.x, local.z);
+            float[] weights = BiomeWeightsAt(sample.x, sample.y);
+            int best = 0;
+            for (int i = 1; i < biomes.Count; i++)
+                if (weights[i] > weights[best]) best = i;
+            return biomes[best];
+        }
 
         // ------------------------------------------------------------------
         // Heightmap
@@ -664,22 +571,16 @@ namespace OtherwiseLabs.TerrainTools
         void BuildHeightData()
         {
             int res = Mathf.Clamp(resolution, 2, 1024);
-            int oct = Mathf.Clamp(octaves, 1, 8);
-            float pers = Mathf.Clamp01(persistence);
-            float lac = Mathf.Max(1f, lacunarity);
-            float scale = Mathf.Max(0.01f, noiseScale);
-            Vector2 size = new Vector2(Mathf.Max(1f, terrainSize.x), Mathf.Max(1f, terrainSize.y));
+            Vector2 size = SafeSize;
 
             _cachedResolution = res;
             _normalizedHeights = new float[res + 1, res + 1];
             _worldHeights = new float[res + 1, res + 1];
 
-            // Per-octave offsets from the seed. Kept in positive range because
-            // Mathf.PerlinNoise mirrors around zero and produces seams there.
-            var rng = new System.Random(seed);
-            var octaveOffsets = new Vector2[oct];
-            for (int o = 0; o < oct; o++)
-                octaveOffsets[o] = new Vector2(rng.Next(0, 10000) + noiseOffset.x, rng.Next(0, 10000) + noiseOffset.y);
+            EnsureSamplingState();
+            if (zoneBands == null) zoneBands = new TerrainZoneBands();
+            zoneBands.Sanitize();
+            BiomeField.Sanitize(biomes);
 
             for (int z = 0; z <= res; z++)
             {
@@ -687,33 +588,20 @@ namespace OtherwiseLabs.TerrainTools
                 {
                     float nx = x / (float)res;
                     float nz = z / (float)res;
-                    float worldX = nx * size.x;
-                    float worldZ = nz * size.y;
+                    float sampleX = nx * size.x;
+                    float sampleZ = nz * size.y;
 
-                    float amplitude = 1f;
-                    float frequency = 1f;
-                    float value = 0f;
-                    float amplitudeSum = 0f;
-
-                    for (int o = 0; o < oct; o++)
-                    {
-                        float sampleX = (worldX + octaveOffsets[o].x) / scale * frequency;
-                        float sampleZ = (worldZ + octaveOffsets[o].y) / scale * frequency;
-                        value += Mathf.PerlinNoise(sampleX, sampleZ) * amplitude;
-                        amplitudeSum += amplitude;
-                        amplitude *= pers;
-                        frequency *= lac;
-                    }
-
-                    value /= amplitudeSum;
+                    float value = SampleBaseNoise(sampleX, sampleZ);
 
                     if (islandFalloff > 0f)
                         value = Mathf.Clamp01(value - EvaluateFalloff(nx, nz) * islandFalloff);
 
                     _normalizedHeights[x, z] = value;
-                    _worldHeights[x, z] = heightCurve.Evaluate(value) * heightMultiplier;
+                    _worldHeights[x, z] = HeightFromNormalized(sampleX, sampleZ, value);
                 }
             }
+
+            ApplyPaths();
         }
 
         static float EvaluateFalloff(float nx, float nz)
@@ -771,44 +659,273 @@ namespace OtherwiseLabs.TerrainTools
         }
 
         // ------------------------------------------------------------------
-        // Scattering
+        // Paths / roads
         // ------------------------------------------------------------------
 
         /// <summary>
-        /// Horizontal room a prefab needs, from its renderer bounds. Halved because
-        /// the full extent is the canopy: tree crowns are meant to interlock, it's
-        /// the trunks that must not share ground with a boulder.
+        /// Bakes every enabled child TerrainPath against the raw heightmap, then
+        /// carves their flattened road beds into it and records the paint mask
+        /// for the mesh's color pass. Runs inside BuildHeightData so the collider,
+        /// the scatterer and the visible mesh all agree on the carved ground.
         /// </summary>
-        public static float EstimateFootprintRadius(GameObject prefab)
+        void ApplyPaths()
         {
-            if (prefab == null) return 0.5f;
+            _pathPaintMask = null;
+            _pathPaintColor = null;
 
-            var renderers = prefab.GetComponentsInChildren<Renderer>();
-            if (renderers.Length == 0) return 0.5f;
+            _bakedPaths = new List<TerrainPath>();
+            foreach (TerrainPath path in GetComponentsInChildren<TerrainPath>(false))
+            {
+                if (path == null || !path.enabled) continue;
 
-            Bounds bounds = renderers[0].bounds;
-            for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+                Vector2 size = SafeSize;
+                // Profiles read the pre-carve terrain: every path is baked before
+                // any carving happens, so crossing paths sample the same ground.
+                path.Bake(transform, (lx, lz) => SampleWorldHeight(lx / size.x + 0.5f, lz / size.y + 0.5f));
+                if (path.IsBaked) _bakedPaths.Add(path);
+            }
+            if (_bakedPaths.Count == 0) return;
 
-            float horizontal = Mathf.Max(bounds.extents.x, bounds.extents.z);
-            return Mathf.Clamp(horizontal * 0.5f, 0.15f, 20f);
+            int res = _cachedResolution;
+            Vector2 terrain = SafeSize;
+            _pathPaintMask = new float[res + 1, res + 1];
+            _pathPaintColor = new Color[res + 1, res + 1];
+
+            for (int z = 0; z <= res; z++)
+            {
+                for (int x = 0; x <= res; x++)
+                {
+                    var local = new Vector2(
+                        (x / (float)res - 0.5f) * terrain.x,
+                        (z / (float)res - 0.5f) * terrain.y);
+
+                    // Where routes overlap, the strongest influence wins — both are
+                    // near 1 at a junction, so the hand-off stays smooth.
+                    float bestFlatten = 0f;
+                    float bestCarve = 0f;
+                    float bestHeight = 0f;
+                    float bestPaint = 0f;
+                    Color bestColor = Color.clear;
+
+                    foreach (TerrainPath path in _bakedPaths)
+                    {
+                        if (!path.SampleInfluence(local, out float flatten, out float paint, out float pathHeight)) continue;
+                        if (flatten > bestFlatten)
+                        {
+                            bestFlatten = flatten;
+                            bestCarve = flatten * path.flattenStrength;
+                            bestHeight = pathHeight;
+                        }
+                        if (paint > bestPaint)
+                        {
+                            bestPaint = paint;
+                            bestColor = path.surfaceColor;
+                        }
+                    }
+
+                    if (bestCarve > 0f)
+                        _worldHeights[x, z] = Mathf.Lerp(_worldHeights[x, z], bestHeight, bestCarve);
+                    if (bestPaint > 0f)
+                    {
+                        bestColor.a = 1f;
+                        _pathPaintMask[x, z] = bestPaint;
+                        _pathPaintColor[x, z] = bestColor;
+                    }
+                }
+            }
         }
 
-        int ScatterRule(EnvironmentAssetRule rule, int ruleIndex, Transform root, ScatterOccupancy occupancy)
+        bool PathsBlockScatter(Vector2 localPosition, float footprintRadius)
+        {
+            if (_bakedPaths == null) return false;
+            foreach (TerrainPath path in _bakedPaths)
+                if (path.BlocksScatter(localPosition, footprintRadius)) return true;
+            return false;
+        }
+
+        // ------------------------------------------------------------------
+        // Water
+        // ------------------------------------------------------------------
+
+        /// <summary>
+        /// Builds (or hides) the translucent water sheet. One low-resolution grid
+        /// covering the whole terrain, with each vertex at the biome-blended
+        /// height the Water threshold maps to there. Skipped entirely when the
+        /// terrain never dips near the waterline — no overdraw where no water
+        /// shows.
+        /// </summary>
+        void BuildWater()
+        {
+            Transform existing = transform.Find(WaterRootName);
+
+            Material material = waterEnabled ? TerrainWaterMaterial.Resolve(waterMaterial, ref _autoWaterMaterial) : null;
+            if (!waterEnabled || material == null)
+            {
+                if (existing != null) existing.gameObject.SetActive(false);
+                return;
+            }
+
+            int res = Mathf.Clamp(waterResolution, 2, 128);
+            int vertsPerLine = res + 1;
+            Vector2 size = SafeSize;
+
+            var vertices = new Vector3[vertsPerLine * vertsPerLine];
+            var normals = new Vector3[vertices.Length];
+            var uvs = new Vector2[vertices.Length];
+            float maxWater = float.NegativeInfinity;
+
+            for (int z = 0; z <= res; z++)
+            {
+                for (int x = 0; x <= res; x++)
+                {
+                    int i = z * vertsPerLine + x;
+                    float nx = x / (float)res;
+                    float nz = z / (float)res;
+                    float surface = SampleWaterSurfaceHeight(nx * size.x, nz * size.y);
+                    if (surface > maxWater) maxWater = surface;
+                    vertices[i] = new Vector3((nx - 0.5f) * size.x, surface, (nz - 0.5f) * size.y);
+                    normals[i] = Vector3.up;
+                    uvs[i] = new Vector2(nx, nz);
+                }
+            }
+
+            float minTerrain = float.PositiveInfinity;
+            foreach (float height in _worldHeights)
+                if (height < minTerrain) minTerrain = height;
+
+            if (minTerrain > maxWater + 0.5f)
+            {
+                if (existing != null) existing.gameObject.SetActive(false);
+                return;
+            }
+
+            GameObject waterGo;
+            if (existing != null)
+            {
+                waterGo = existing.gameObject;
+                waterGo.SetActive(true);
+            }
+            else
+            {
+                waterGo = new GameObject(WaterRootName);
+                waterGo.transform.SetParent(transform, false);
+                RegisterCreated(waterGo);
+            }
+
+            var filter = waterGo.GetComponent<MeshFilter>();
+            if (filter == null) filter = waterGo.AddComponent<MeshFilter>();
+            var renderer = waterGo.GetComponent<MeshRenderer>();
+            if (renderer == null) renderer = waterGo.AddComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = ShadowCastingMode.Off;
+
+            Mesh mesh = filter.sharedMesh;
+            bool reusable = mesh != null && mesh.name == GeneratedWaterMeshName;
+#if UNITY_EDITOR
+            if (reusable && EditorUtility.IsPersistent(mesh)) reusable = false;
+#endif
+            if (!reusable)
+            {
+                mesh = new Mesh { name = GeneratedWaterMeshName };
+                filter.sharedMesh = mesh;
+            }
+
+            var triangles = new int[res * res * 6];
+            int t = 0;
+            for (int z = 0; z < res; z++)
+            {
+                for (int x = 0; x < res; x++)
+                {
+                    int i = z * vertsPerLine + x;
+                    triangles[t++] = i;
+                    triangles[t++] = i + vertsPerLine;
+                    triangles[t++] = i + 1;
+                    triangles[t++] = i + 1;
+                    triangles[t++] = i + vertsPerLine;
+                    triangles[t++] = i + vertsPerLine + 1;
+                }
+            }
+
+            mesh.Clear();
+            mesh.vertices = vertices;
+            mesh.normals = normals;
+            mesh.uv = uvs;
+            mesh.triangles = triangles;
+            mesh.RecalculateBounds();
+        }
+
+        // ------------------------------------------------------------------
+        // Scattering
+        // ------------------------------------------------------------------
+
+        struct RuleEntry
+        {
+            public EnvironmentAssetRule rule;
+            public int biomeIndex; // -1 = global rule, appears in every biome
+        }
+
+        /// <summary>
+        /// Global and per-biome rules flattened into one table. Rule index in this
+        /// table seeds each rule's random stream, so with no biomes defined the
+        /// table equals the global list and old scatter layouts are reproduced
+        /// exactly.
+        /// </summary>
+        List<RuleEntry> BuildRuleTable()
+        {
+            var table = new List<RuleEntry>();
+            AppendRules(table, environmentAssets, -1);
+            if (UsesBiomes)
+                for (int b = 0; b < biomes.Count; b++)
+                    if (biomes[b] != null) AppendRules(table, biomes[b].environmentAssets, b);
+            return table;
+        }
+
+        void AppendRules(List<RuleEntry> table, List<EnvironmentAssetRule> rules, int biomeIndex)
+        {
+            if (rules == null) return;
+            foreach (EnvironmentAssetRule rule in rules)
+            {
+                if (rule == null || rule.prefab == null)
+                {
+                    if (rule != null)
+                        Debug.LogWarning($"[{name}] An environment asset rule has no prefab assigned, skipping.", this);
+                    continue;
+                }
+                table.Add(new RuleEntry { rule = rule, biomeIndex = biomeIndex });
+            }
+        }
+
+        Transform GroupRoot(Transform root, Dictionary<int, Transform> groupRoots, int biomeIndex)
+        {
+            if (biomeIndex < 0) return root;
+            if (groupRoots.TryGetValue(biomeIndex, out Transform existing)) return existing;
+
+            string biomeName = biomes[biomeIndex] != null && !string.IsNullOrWhiteSpace(biomes[biomeIndex].name)
+                ? biomes[biomeIndex].name : $"Biome {biomeIndex}";
+            var group = new GameObject(biomeName).transform;
+            group.SetParent(root, false);
+            RegisterCreated(group.gameObject);
+            groupRoots[biomeIndex] = group;
+            return group;
+        }
+
+        int ScatterRule(EnvironmentAssetRule rule, int tableIndex, int biomeIndex, Transform parent, ScatterOccupancy occupancy)
         {
             int target = Mathf.RoundToInt(rule.density * rule.maxInstances);
             if (target <= 0) return 0;
 
             string containerName = string.IsNullOrWhiteSpace(rule.displayName) ? rule.prefab.name : rule.displayName.Trim();
             var container = new GameObject(containerName).transform;
-            container.SetParent(root, false);
+            container.SetParent(parent, false);
             RegisterCreated(container.gameObject);
 
             string tag = PrepareTag(rule.instanceTag);
             // Seed offset by a prime so each rule gets an independent stream from
             // the shared scatter seed.
-            var rng = new System.Random(scatterSeed + ruleIndex * 7919);
+            var rng = new System.Random(scatterSeed + tableIndex * 7919);
             var placedPositions = new List<Vector2>(target);
             Vector3 prefabScale = rule.prefab.transform.localScale;
+            Vector2 size = SafeSize;
 
             float minHeight = Mathf.Min(rule.minHeight, rule.maxHeight);
             float maxHeight = Mathf.Max(rule.minHeight, rule.maxHeight);
@@ -816,7 +933,7 @@ namespace OtherwiseLabs.TerrainTools
 
             // Rejection tallies so a rule that places nothing can say why.
             int rejectedByZone = 0, rejectedByHeight = 0, rejectedBySlope = 0, rejectedBySpacing = 0;
-            int rejectedByWeight = 0, rejectedByOverlap = 0;
+            int rejectedByWeight = 0, rejectedByOverlap = 0, rejectedByBiome = 0, rejectedByPath = 0;
 
             // Normalizing by the heaviest allowed zone keeps the favourite zone at
             // 100% acceptance, so weighting changes the distribution without
@@ -830,13 +947,25 @@ namespace OtherwiseLabs.TerrainTools
             }
 
             int placed = 0;
-            // Weighted sampling discards candidates in the less-favoured zones, so
-            // it needs a bigger budget to still reach the target count.
-            int maxAttempts = target * (weighted ? 30 : 12);
+            // Weighted sampling discards candidates in the less-favoured zones, and
+            // a biome-owned rule discards candidates on foreign ground, so those
+            // need a bigger budget to still reach the target count.
+            int maxAttempts = target * (weighted ? 30 : 12) * (biomeIndex >= 0 ? 2 : 1);
             for (int attempt = 0; attempt < maxAttempts && placed < target; attempt++)
             {
                 float nx = (float)rng.NextDouble();
                 float nz = (float)rng.NextDouble();
+
+                // Biome gate: a rule owned by a biome only spawns where that biome
+                // holds ground. Acceptance follows the blend weight, so across a
+                // border winter trees thin out while forest trees thicken, instead
+                // of the two swapping at a hard line.
+                if (biomeIndex >= 0)
+                {
+                    float biomeWeight = BiomeWeightsAt(nx * size.x, nz * size.y)[biomeIndex];
+                    if (biomeWeight <= 0.0005f) { rejectedByBiome++; continue; }
+                    if (biomeWeight < 0.999f && rng.NextDouble() > biomeWeight) { rejectedByBiome++; continue; }
+                }
 
                 float normalizedHeight = SampleNormalizedHeight(nx, nz);
 
@@ -861,10 +990,12 @@ namespace OtherwiseLabs.TerrainTools
                 Vector3 normal = SampleLocalNormal(nx, nz);
                 if (Vector3.Angle(normal, Vector3.up) > rule.maxSlopeAngle) { rejectedBySlope++; continue; }
 
-                float localX = (nx - 0.5f) * terrainSize.x;
-                float localZ = (nz - 0.5f) * terrainSize.y;
+                float localX = (nx - 0.5f) * size.x;
+                float localZ = (nz - 0.5f) * size.y;
 
                 var candidate = new Vector2(localX, localZ);
+
+                if (PathsBlockScatter(candidate, rule.resolvedFootprint)) { rejectedByPath++; continue; }
 
                 if (rule.minSpacing > 0f)
                 {
@@ -914,11 +1045,14 @@ namespace OtherwiseLabs.TerrainTools
                 if (rejectedByHeight > worstCount) { worst = $"height band ({minHeight:0.##}-{maxHeight:0.##})"; worstCount = rejectedByHeight; }
                 if (rejectedBySpacing > worstCount) { worst = $"min spacing ({rule.minSpacing:0.##})"; worstCount = rejectedBySpacing; }
                 if (rejectedByOverlap > worstCount) { worst = $"other assets already occupying the ground (footprint {rule.resolvedFootprint:0.##})"; worstCount = rejectedByOverlap; }
+                if (rejectedByBiome > worstCount) { worst = "its biome owning too little ground here — grow that biome's Coverage or Biome Scale"; worstCount = rejectedByBiome; }
+                if (rejectedByPath > worstCount) { worst = "paths (candidates fell on a roadway)"; worstCount = rejectedByPath; }
 
                 Debug.LogWarning(
                     $"[{name}] '{containerName}': placed {placed}/{target}. Mostly rejected by {worst}. " +
                     $"(zone {rejectedByZone}, weight {rejectedByWeight}, height {rejectedByHeight}, " +
-                    $"slope {rejectedBySlope}, spacing {rejectedBySpacing}, overlap {rejectedByOverlap})", this);
+                    $"slope {rejectedBySlope}, spacing {rejectedBySpacing}, overlap {rejectedByOverlap}, " +
+                    $"biome {rejectedByBiome}, path {rejectedByPath})", this);
             }
 
             return placed;
@@ -996,7 +1130,7 @@ namespace OtherwiseLabs.TerrainTools
             Destroy(go);
         }
 
-            /// <summary>
+        /// <summary>
         /// True when the vertex color shader is present in the project. When it is
         /// missing the terrain falls back to URP/Lit, which ignores vertex colors
         /// and renders the height gradient as flat white.
