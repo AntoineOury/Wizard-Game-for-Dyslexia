@@ -291,6 +291,9 @@ namespace OtherwiseLabs.TerrainTools
             }
 
             EnsureTerrainData();
+            // Height caches can outlive a seed change within one session; the
+            // biome gate below samples climate directly, so re-stamp offsets.
+            EnsureSamplingState();
             if (zoneBands == null) zoneBands = new TerrainZoneBands();
             zoneBands.Sanitize();
 

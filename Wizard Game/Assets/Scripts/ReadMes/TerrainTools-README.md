@@ -108,6 +108,18 @@ height-sampling function at bake time — so the streamer could adopt it later
 (that needs per-chunk carving hooks and determinism care, which is why it is
 finite-only today).
 
+### Feature test suite
+
+`Tools > Otherwise Labs > Terrain > Run Feature Tests` runs the finite
+terrain's regression checks in the current editor (companion to the streamer's
+determinism test): legacy height identity against the pre-port formula, the
+neutral-biome identity, biome weight blending, scatter determinism and rule
+stream stability, water build/skip, `TerrainPath` geometry (falloff, end
+pinning, smoothing, closed loops), carve/paint/clearance integration, the
+`IBiomeSource` contract and the shared rule presets. Every test builds and
+destroys its own objects, so it is safe to run in any open scene. Failures log
+as errors naming the broken expectation; run it after touching terrain code.
+
 ---
 
 ## The infinite world
@@ -332,6 +344,27 @@ generator passes `0` here, preserving its original output exactly.
 4. Press Play and walk.
 
 Tune `View Distance` / `Asset Distance` against the Inspector's budget estimate.
+
+---
+
+## Suggested future features (not built)
+
+- **GPU grass on the finite terrain** — `TerrainGrassRenderer` is currently
+  chunk/streamer-driven; a bounded-area variant behind a small interface would
+  complete parity. Biggest visual win per effort.
+- **Paths on the streamer** — needs per-chunk carving hooks and determinism
+  care (a path is authored data, not seed-derived), which is why it's
+  finite-only today.
+- **Rivers** — a `TerrainPath` variant that carves a descending bed and lays a
+  water ribbon instead of paint; most of the machinery now exists.
+- **Swimmable water** — both waters are visual-only; a trigger volume +
+  slow-fall controller state would make lakes real gameplay.
+- **Texture splatting** — vertex-color terrain reads flat up close; blending
+  2–3 detail textures by zone in the terrain shader would be the next fidelity
+  step.
+- **Live path rebuild** — auto-regenerate while dragging waypoints (currently
+  you press Generate Terrain; kept manual to avoid mid-drag hitches on large
+  terrains).
 
 ---
 
