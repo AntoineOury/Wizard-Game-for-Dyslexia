@@ -1020,7 +1020,6 @@ GameObject:
   - component: {fileID: 1311917857}
   - component: {fileID: 1311917860}
   - component: {fileID: 1311917859}
-  - component: {fileID: 1311917858}
   m_Layer: 0
   m_Name: Body_Capsule
   m_TagString: Untagged
@@ -1044,29 +1043,6 @@ Transform:
   - {fileID: 330585546}
   m_Father: {fileID: 1830604987}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!136 &1311917858
-CapsuleCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1311917856}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 2
-  m_Radius: 0.5
-  m_Height: 2
-  m_Direction: 1
-  m_Center: {x: 0, y: 0, z: 0}
 --- !u!23 &1311917859
 MeshRenderer:
   m_ObjectHideFlags: 0
@@ -1762,7 +1738,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1830604987}
-  - component: {fileID: 1830604988}
   - component: {fileID: 1830604990}
   - component: {fileID: 1830604989}
   - component: {fileID: 1830604991}
@@ -1791,33 +1766,6 @@ Transform:
   - {fileID: 1182534826}
   m_Father: {fileID: 26218040}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!54 &1830604988
-Rigidbody:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1830604986}
-  serializedVersion: 4
-  m_Mass: 1
-  m_Drag: 0
-  m_AngularDrag: 0.05
-  m_CenterOfMass: {x: 0, y: 0, z: 0}
-  m_InertiaTensor: {x: 1, y: 1, z: 1}
-  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ImplicitCom: 1
-  m_ImplicitTensor: 1
-  m_UseGravity: 1
-  m_IsKinematic: 0
-  m_Interpolate: 1
-  m_Constraints: 112
-  m_CollisionDetection: 1
 --- !u!114 &1830604989
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1909,7 +1857,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   streamer: {fileID: 2106898795}
-  groundClearance: 1
+  groundClearance: 0.05
   readyTimeout: 8
   logSpawn: 1
 --- !u!1 &1850966339
@@ -2118,8 +2066,8 @@ MonoBehaviour:
   lod0Radius: 2
   lod1Radius: 3
   lodSkirtDepth: 3
-  seed: 859893
-  scatterSeed: 70795
+  seed: 492919
+  scatterSeed: 226989
   noiseScale: 90
   octaves: 4
   persistence: 0.5
@@ -2248,9 +2196,83 @@ MonoBehaviour:
       m_NumColorKeys: 5
       m_NumAlphaKeys: 2
     environmentAssets:
-    - prefab: {fileID: 1251518964109166263, guid: b9c68650d3c754b419610dc2b00d1bde,
+    - prefab: {fileID: 2357403118300381098, guid: 4c2012bc51015e8438152a82f7d7dc32,
         type: 3}
-      displayName: Pine_Tree
+      displayName: Mushroom2
+      instanceTag: 
+      density: 0.5
+      maxInstances: 100
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 0.6
+      embedDepth: 0.05
+      restrictToZones: 1
+      allowedZones: 4
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 0.5
+        grass: 1
+        rock: 0
+        snow: 0
+      maxSlopeAngle: 40
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 0.5
+      footprintRadius: 0.2
+    - prefab: {fileID: 5060596682829054874, guid: 1ceaf06647257394f8d75a1759c6be00,
+        type: 3}
+      displayName: Mushroom3
+      instanceTag: 
+      density: 0.9
+      maxInstances: 50
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 0.6
+      embedDepth: 0.05
+      restrictToZones: 1
+      allowedZones: 4
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 0
+        grass: 1
+        rock: 0
+        snow: 0
+      maxSlopeAngle: 40
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 0.5
+      footprintRadius: 0.2
+    - prefab: {fileID: 5121261594680611611, guid: 8f71c65da202a1548a8734589db5f6fa,
+        type: 3}
+      displayName: Mushroom5
+      instanceTag: 
+      density: 0.74
+      maxInstances: 100
+      minScale: 0.85
+      maxScale: 1.2
+      randomYRotation: 1
+      alignToNormal: 0.6
+      embedDepth: 0.05
+      restrictToZones: 1
+      allowedZones: 6
+      useZoneWeights: 1
+      zoneWeights:
+        water: 0
+        shore: 1
+        grass: 0.5
+        rock: 0
+        snow: 0
+      maxSlopeAngle: 40
+      minHeight: 0
+      maxHeight: 1
+      minSpacing: 0.5
+      footprintRadius: 0.2
+    - prefab: {fileID: 1951202686989992, guid: 5219ccfa3b129f645bfb105ac244e8f5, type: 3}
+      displayName: Birch_tree2
       instanceTag: 
       density: 0.5
       maxInstances: 40
@@ -2273,19 +2295,18 @@ MonoBehaviour:
       maxHeight: 1
       minSpacing: 4
       footprintRadius: 0
-    - prefab: {fileID: 7944522665443213417, guid: e9ce9aaec542ef14bb2fdf3a66c7921a,
-        type: 3}
-      displayName: Cedar_Tree_03
+    - prefab: {fileID: 1795183421160198, guid: 97c810fbbe2577a45863f4be151b599b, type: 3}
+      displayName: Oak_tree2
       instanceTag: 
       density: 0.5
-      maxInstances: 40
+      maxInstances: 200
       minScale: 0.85
       maxScale: 1.2
       randomYRotation: 1
       alignToNormal: 0.15
       embedDepth: 0.2
       restrictToZones: 1
-      allowedZones: 6
+      allowedZones: 4
       useZoneWeights: 1
       zoneWeights:
         water: 0
@@ -2298,56 +2319,30 @@ MonoBehaviour:
       maxHeight: 1
       minSpacing: 4
       footprintRadius: 0
-    - prefab: {fileID: 7390660841207776048, guid: 3006b37c2f6a43142b48b677fae87675,
-        type: 3}
-      displayName: Boletus_Edulis
+    - prefab: {fileID: 1693026570606076, guid: b68302d21e7061f4fb52903649a610f4, type: 3}
+      displayName: Pine_tree1
       instanceTag: 
-      density: 0.588
-      maxInstances: 9
+      density: 0.5
+      maxInstances: 60
       minScale: 0.85
       maxScale: 1.2
       randomYRotation: 1
-      alignToNormal: 0.6
-      embedDepth: 0.05
-      restrictToZones: 1
-      allowedZones: 6
-      useZoneWeights: 1
-      zoneWeights:
-        water: 0
-        shore: 0.5
-        grass: 1
-        rock: 0
-        snow: 0
-      maxSlopeAngle: 40
-      minHeight: 0
-      maxHeight: 1
-      minSpacing: 0.5
-      footprintRadius: 0.2
-    - prefab: {fileID: 1866796817763092657, guid: 5149bcbf3fd86e34a9d29fbb7daef8e9,
-        type: 3}
-      displayName: Fern
-      instanceTag: 
-      density: 0.797
-      maxInstances: 6
-      minScale: 0.85
-      maxScale: 1.2
-      randomYRotation: 1
-      alignToNormal: 0.6
-      embedDepth: 0.05
+      alignToNormal: 0.15
+      embedDepth: 0.2
       restrictToZones: 1
       allowedZones: 4
       useZoneWeights: 1
       zoneWeights:
         water: 0
-        shore: 0.5
+        shore: 0.35
         grass: 1
         rock: 0
         snow: 0
-      maxSlopeAngle: 40
+      maxSlopeAngle: 32
       minHeight: 0
       maxHeight: 1
-      minSpacing: 0.5
-      footprintRadius: 0.2
+      minSpacing: 4
+      footprintRadius: 0
     ambientLoop: {fileID: 8300000, guid: e46a1d7736373324db431bdb2f520005, type: 3}
     ambientVolume: 0.6
     overrideFogColor: 0
@@ -2439,7 +2434,7 @@ MonoBehaviour:
     - prefab: {fileID: 1220206043906976, guid: 86263e8355f96ba4ab9fdf4e96c2090f, type: 3}
       displayName: Rock2
       instanceTag: 
-      density: 0.5
+      density: 0.236
       maxInstances: 20
       minScale: 0.85
       maxScale: 1.2
@@ -2490,7 +2485,7 @@ MonoBehaviour:
     fogColor: {r: 0.7, g: 0.75, b: 0.8, a: 1}
   biomeScale: 600
   biomeBlend: 0.12
-  biomeSeed: 470108
+  biomeSeed: 974416
   waterEnabled: 1
   waterMaterial: {fileID: 2100000, guid: d70ec6bc7c8423b45a94e4a5aa3aad5f, type: 2}
   waterSurfaceOffset: -0.2
