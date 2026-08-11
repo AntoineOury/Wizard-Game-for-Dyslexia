@@ -45,6 +45,12 @@ namespace OtherwiseLabs.CreatureGame
         TMP_Text _traceFeedback;
         LetterCreature _tracing;
 
+        // Scene-authored booklet (styleable in the Hierarchy); found at startup.
+        CreatureBookletPanel _sceneBooklet;
+
+        // Live voice readout on the Call screen.
+        TMP_Text _voiceStatusLabel;
+
         static readonly Color Ink = new Color(0.16f, 0.16f, 0.28f);
         static readonly Color Paper = new Color(0.98f, 0.95f, 0.87f);
         static readonly Color Accent = new Color(0.3f, 0.55f, 0.85f);
@@ -54,7 +60,8 @@ namespace OtherwiseLabs.CreatureGame
             (_bookletPanel != null && _bookletPanel.gameObject.activeSelf)
             || (_gridPanel != null && _gridPanel.gameObject.activeSelf)
             || (_wordPanel != null && _wordPanel.gameObject.activeSelf)
-            || (_tracePanel != null && _tracePanel.gameObject.activeSelf);
+            || (_tracePanel != null && _tracePanel.gameObject.activeSelf)
+            || (_sceneBooklet != null && _sceneBooklet.IsOpen);
 
         public static CreatureGameUI Create(CreatureGameController game)
         {
@@ -72,6 +79,17 @@ namespace OtherwiseLabs.CreatureGame
 
         public void ToggleBooklet()
         {
+            // A booklet authored in the scene (CreatureBookletPanel) always
+            // wins over the code-built one, so its layout stays in the
+            // designer's hands.
+            if (_sceneBooklet != null)
+            {
+                bool wasOpen = _sceneBooklet.IsOpen;
+                CloseAllPanels();
+                if (!wasOpen) _sceneBooklet.Open();
+                return;
+            }
+
             bool open = _bookletPanel.gameObject.activeSelf;
             CloseAllPanels();
             if (!open) OpenBooklet();
@@ -131,11 +149,12 @@ namespace OtherwiseLabs.CreatureGame
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            // Scene-authored buttons win: when the scene provides
-            // CreatureGameButton objects (stylable in the Hierarchy), the
-            // code-built side buttons stay out of the way entirely.
+            // Scene-authored UI wins: when the scene provides its own buttons
+            // or booklet (stylable in the Hierarchy), the code-built versions
+            // stay out of the way entirely.
             if (FindObjectOfType<CreatureGameButton>(true) == null)
                 BuildSideButtons();
+            _sceneBooklet = FindObjectOfType<CreatureBookletPanel>(true);
             _hint = BuildBar(new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(760f, 46f), 24f);
             _toast = BuildBar(new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(700f, 52f), 26f);
             _toast.transform.parent.gameObject.SetActive(false);
@@ -212,7 +231,9 @@ namespace OtherwiseLabs.CreatureGame
             _gridPanel.gameObject.SetActive(false);
             _wordPanel.gameObject.SetActive(false);
             _tracePanel.gameObject.SetActive(false);
+            if (_sceneBooklet != null) _sceneBooklet.Close();
             _tracing = null;
+            _voiceStatusLabel = null;
             StopVoice();
         }
 
@@ -294,7 +315,7 @@ namespace OtherwiseLabs.CreatureGame
 
             VoiceLetterListener voice = _game.Voice;
             bool listening = false;
-            if (voice != null && voice.IsSupported)
+            if (voice != null)
             {
                 var letters = new List<char>();
                 foreach (CreatureDefinition definition in _game.creatures)
@@ -311,10 +332,16 @@ namespace OtherwiseLabs.CreatureGame
 
             TMP_Text status = MakeLabel(window,
                 listening
-                    ? "Say the creature's letter out loud!\n(or tap it below)"
-                    : "No microphone here — tap the letter to shout it:",
-                23f, listening ? Happy : new Color(0.35f, 0.35f, 0.45f), bold: listening);
-            Place(status, new Vector2(0.5f, 1f), new Vector2(0f, -88f), new Vector2(540f, 58f));
+                    ? $"Say the letter out loud!  {voice.ListeningSummary}\n(or tap it below)"
+                    : "Tap the letter to shout it:",
+                21f, listening ? Happy : new Color(0.35f, 0.35f, 0.45f), bold: listening);
+            Place(status, new Vector2(0.5f, 1f), new Vector2(0f, -88f), new Vector2(560f, 58f));
+
+            // Live voice readout: recognition events and errors show here as
+            // they happen, which is the debugging window when a machine's
+            // speech setup is the problem.
+            _voiceStatusLabel = MakeLabel(window, voice != null ? voice.StatusReport : "", 15f, new Color(0.45f, 0.45f, 0.55f));
+            Place(_voiceStatusLabel, new Vector2(0.5f, 0f), new Vector2(0f, 22f), new Vector2(560f, 40f));
 
             BuildLetterButtons(window, letter =>
             {
@@ -330,6 +357,13 @@ namespace OtherwiseLabs.CreatureGame
             Toast($"You said {letter}!");
             CloseAllPanels();
             _game.CallLetter(letter);
+        }
+
+        void Update()
+        {
+            // Keep the Call screen's voice readout live while it is open.
+            if (_voiceStatusLabel != null && _game != null && _game.Voice != null)
+                _voiceStatusLabel.text = _game.Voice.StatusReport;
         }
 
         // ------------------------------------------------------------------
@@ -388,35 +422,25 @@ namespace OtherwiseLabs.CreatureGame
             TMP_Text ask = MakeLabel(window, $"Tap the word with the MOST  {letter} {char.ToLowerInvariant(letter)}  letters:", 25f, Ink);
             Place(ask, new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(580f, 36f));
 
-            TMP_Text feedback = MakeLabel(window, "", 24f, Happy, bold: true);
-            Place(feedback, new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(580f, 36f));
+            // Every word is accepted — the consequence teaches instead of a
+            // gate: more of the letter means a stickier, more tempting paper,
+            // fewer means a weak one a creature can wriggle off. The choice is
+            // real strategy, not a quiz answer.
+            TMP_Text note = MakeLabel(window, "More letters = a stickier trap!", 20f, new Color(0.35f, 0.35f, 0.45f));
+            Place(note, new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(580f, 30f));
 
             for (int i = 0; i < challenge.words.Length; i++)
             {
-                int optionIndex = i;
                 string word = challenge.words[i];
-                Button button = MakeButton(window, word, new Vector2(420f, 74f), Color.white, 40f, null);
+                Button button = MakeButton(window, word, new Vector2(420f, 74f), Color.white, 40f, () =>
+                {
+                    CloseAllPanels();
+                    _game.BeginTrapPlacement(letter, word);
+                });
                 var rect = (RectTransform)button.transform;
                 rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 1f);
                 rect.anchoredPosition = new Vector2(0f, -166f - i * 90f);
                 button.GetComponentInChildren<TMP_Text>().color = Ink;
-
-                Button captured = button;
-                button.onClick.AddListener(() =>
-                {
-                    if (optionIndex == challenge.correctIndex)
-                    {
-                        int count = WordBank.CountLetter(word, letter);
-                        Toast($"Yes! \"{word}\" has {count} {letter}'{(count == 1 ? "" : "s")}. Now tap the ground to lay it!");
-                        CloseAllPanels();
-                        _game.BeginTrapPlacement(letter, word);
-                    }
-                    else
-                    {
-                        feedback.text = $"Almost! Count the {letter}'s in each word again.";
-                        captured.interactable = false;
-                    }
-                });
             }
 
             _wordPanel.gameObject.SetActive(true);

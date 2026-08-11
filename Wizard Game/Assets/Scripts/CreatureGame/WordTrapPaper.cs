@@ -8,12 +8,13 @@ namespace OtherwiseLabs.CreatureGame
     /// A word written on a paper sheet, lying on the ground as a trap. Built
     /// entirely in code — a flat quad, the word in 3D text, and a trigger box.
     ///
-    /// The WORD decides who the paper can hold: only creatures whose letter
-    /// appears the MOST in it. "willow" (two w's, two l's) can snare Creature W
-    /// or Creature L — and nobody else. Both are drawn toward it too, so which
-    /// one you actually catch comes down to hunting craft: lay the paper in
-    /// the right habitat and call the letter you want. Reading the word well
-    /// and trapping well are the same skill.
+    /// The WORD is the trap's whole character. A creature is only interested if
+    /// its letter appears in the word at all, and HOW OFTEN it appears is the
+    /// hold strength: "willow" (two w's) glues Creature W down for good, while
+    /// "water" (one w) attracts and holds it — loosely, with a real chance of
+    /// wriggling free. Every offered word therefore "works"; the better-read
+    /// choice simply hunts better. Pull toward the paper scales with the same
+    /// count, so reading skill, bait strength and stickiness are one number.
     /// </summary>
     public class WordTrapPaper : MonoBehaviour
     {
@@ -26,10 +27,20 @@ namespace OtherwiseLabs.CreatureGame
         public string Word { get; private set; }
         public LetterCreature Snared { get; private set; }
 
-        /// <summary>Letters tied for the most occurrences in the word — the only ones this paper can hold.</summary>
+        /// <summary>Letters present in the word, strongest hold first — the only ones this paper can catch.</summary>
         public IReadOnlyList<char> EligibleLetters => _eligible;
 
         public bool IsEligible(char letter) => _eligible.Contains(char.ToUpperInvariant(letter));
+
+        /// <summary>
+        /// How firmly this paper holds a letter: its occurrence count in the
+        /// word. 0 = walks straight over; 1 = held but can wriggle free;
+        /// 2+ = glued for good.
+        /// </summary>
+        public int HoldCount(char letter) => WordBank.CountLetter(Word, letter);
+
+        /// <summary>A loosely-held creature broke free — the paper is open for business again.</summary>
+        public void NotifyEscaped() => Snared = null;
 
         public static int ActiveCount => Active.Count;
 
@@ -110,26 +121,18 @@ namespace OtherwiseLabs.CreatureGame
         }
 
         /// <summary>
-        /// The eligibility rule: count each letter in the word; whoever is tied
-        /// for the top count owns the paper. Simple enough to say to a child —
-        /// "the biggest letters in the word win it".
+        /// Every letter in the word can be caught by this paper — sorted so the
+        /// strongest-held letters come first for messages ("it can catch W or L").
         /// </summary>
         void ComputeEligibility()
         {
             _eligible.Clear();
-            int best = 0;
             foreach (char raw in Word)
             {
-                if (!char.IsLetter(raw)) continue;
                 char letter = char.ToUpperInvariant(raw);
-                int count = WordBank.CountLetter(Word, letter);
-                if (count > best)
-                {
-                    best = count;
-                    _eligible.Clear();
-                }
-                if (count == best && !_eligible.Contains(letter)) _eligible.Add(letter);
+                if (char.IsLetter(letter) && !_eligible.Contains(letter)) _eligible.Add(letter);
             }
+            _eligible.Sort((a, b) => HoldCount(b).CompareTo(HoldCount(a)));
         }
 
         void OnTriggerEnter(Collider other)

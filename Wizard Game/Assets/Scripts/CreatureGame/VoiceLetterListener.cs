@@ -30,6 +30,16 @@ namespace OtherwiseLabs.CreatureGame
 
         public bool IsListening { get; private set; }
 
+        /// <summary>
+        /// Human-readable state of the voice pipeline, shown on the Call screen
+        /// and written to the Console — the debugging window into why speech
+        /// is or isn't working on a given machine.
+        /// </summary>
+        public string StatusReport { get; private set; } = "Voice not started yet.";
+
+        /// <summary>What to say, e.g. "W (\"double u\" / \"wuh\")  S (\"ess\" / \"sss\")".</summary>
+        public string ListeningSummary { get; private set; } = "";
+
         readonly Dictionary<string, char> _phraseToLetter = new Dictionary<string, char>();
 
         // How each letter may be spoken. Names first (how letters are usually
@@ -83,7 +93,19 @@ namespace OtherwiseLabs.CreatureGame
         {
             StopListening();
             BuildPhraseTable(letters);
-            if (!IsSupported || _phraseToLetter.Count == 0) return;
+
+            if (!IsSupported)
+            {
+                SetStatus("Windows says speech recognition is unavailable — check the Windows " +
+                          "(system) Settings app: Privacy & security > Microphone, and that a " +
+                          "speech language pack is installed under Time & language.");
+                return;
+            }
+            if (_phraseToLetter.Count == 0)
+            {
+                SetStatus("No letters to listen for.");
+                return;
+            }
 
             try
             {
@@ -94,14 +116,18 @@ namespace OtherwiseLabs.CreatureGame
                 // only calls the wrong creature — a shrug, not a failure.
                 _recognizer = new KeywordRecognizer(phrases, ConfidenceLevel.Low);
                 _recognizer.OnPhraseRecognized += OnPhraseRecognized;
+                PhraseRecognitionSystem.OnError += OnSystemError;
                 _recognizer.Start();
-                IsListening = true;
+                IsListening = _recognizer.IsRunning;
+                SetStatus(IsListening
+                    ? $"Listening! {ListeningSummary}"
+                    : "Recognizer created but did not start — see the Console.");
             }
             catch (Exception exception)
             {
                 // Typically a missing speech language pack; the letter buttons
-                // still work, so log and carry on rather than break the flow.
-                Debug.LogWarning($"[VoiceLetterListener] Speech recognition unavailable: {exception.Message}");
+                // still work, so report loudly and carry on rather than break.
+                SetStatus($"Speech failed to start: {exception.Message}");
                 StopListening();
             }
         }
@@ -110,6 +136,7 @@ namespace OtherwiseLabs.CreatureGame
         {
             IsListening = false;
             if (_recognizer == null) return;
+            PhraseRecognitionSystem.OnError -= OnSystemError;
             _recognizer.OnPhraseRecognized -= OnPhraseRecognized;
             if (_recognizer.IsRunning) _recognizer.Stop();
             _recognizer.Dispose();
@@ -118,7 +145,13 @@ namespace OtherwiseLabs.CreatureGame
 
         void OnPhraseRecognized(PhraseRecognizedEventArgs args)
         {
+            SetStatus($"Heard \"{args.text}\" (confidence: {args.confidence})");
             ReportPhrase(args.text);
+        }
+
+        void OnSystemError(SpeechError error)
+        {
+            SetStatus($"Windows speech error: {error}");
         }
 
         void OnDestroy() => StopListening();
@@ -128,6 +161,8 @@ namespace OtherwiseLabs.CreatureGame
         public void StartListening(IEnumerable<char> letters)
         {
             BuildPhraseTable(letters);
+            SetStatus("Voice needs the Windows editor or a Windows build here — " +
+                      "or a cloud speech backend plugged into VoiceLetterListener.");
         }
 
         public void StopListening()
@@ -150,6 +185,7 @@ namespace OtherwiseLabs.CreatureGame
         void BuildPhraseTable(IEnumerable<char> letters)
         {
             _phraseToLetter.Clear();
+            var summary = new List<string>();
             foreach (char raw in letters)
             {
                 char letter = char.ToUpperInvariant(raw);
@@ -157,7 +193,19 @@ namespace OtherwiseLabs.CreatureGame
                 foreach (string form in forms)
                     if (!_phraseToLetter.ContainsKey(form))
                         _phraseToLetter[form] = letter;
+
+                // Skip the bare character; show the sayable forms.
+                summary.Add(forms.Length > 1
+                    ? $"{letter} (say \"{forms[1]}\")"
+                    : letter.ToString());
             }
+            ListeningSummary = string.Join("   ", summary);
+        }
+
+        void SetStatus(string status)
+        {
+            StatusReport = status;
+            Debug.Log($"[VoiceLetterListener] {status}");
         }
     }
 }

@@ -34,6 +34,8 @@ namespace OtherwiseLabs.CreatureGame
         float _waitUntil;
         float _luredUntil;
         float _dizzyRefreshAt;
+        float _nextEscapeAttempt;
+        int _holdCount;
         string _playingState;
 
         const float ArriveDistance = 0.6f;
@@ -88,6 +90,15 @@ namespace OtherwiseLabs.CreatureGame
                     break;
 
                 case State.Stuck:
+                    // A loosely-held creature (one occurrence of its letter in
+                    // the word) periodically tries to wriggle free. Two or more
+                    // means glued: no escape attempts at all.
+                    if (_holdCount <= 1 && Time.time >= _nextEscapeAttempt)
+                    {
+                        if (Random.value < 0.5f) { Escape(); return; }
+                        _nextEscapeAttempt = Time.time + Random.Range(5f, 9f);
+                    }
+
                     // The Dizzy clip does not loop on these controllers, so
                     // nudge it back now and then to keep the creature wobbling.
                     if (Time.time >= _dizzyRefreshAt)
@@ -124,10 +135,32 @@ namespace OtherwiseLabs.CreatureGame
             StuckOn = paper;
             _dizzyRefreshAt = 0f;
 
+            // The word decides the grip: one occurrence of our letter can be
+            // wriggled out of after a while, two or more never lets go.
+            _holdCount = paper.HoldCount(Letter);
+            _nextEscapeAttempt = Time.time + Random.Range(6f, 11f);
+
             // Stand on the paper itself so the tableau reads clearly.
             Vector3 center = paper.transform.position;
             center.y = transform.position.y;
             transform.position = center;
+        }
+
+        /// <summary>Wriggled off a weak paper: dash clear and go back to roaming.</summary>
+        void Escape()
+        {
+            WordTrapPaper paper = StuckOn;
+            if (paper != null) paper.NotifyEscaped();
+            StuckOn = null;
+            CurrentState = State.Wandering;
+            _waitUntil = 0f;
+            _playingState = null;
+            Play("GetHit");
+
+            Vector3 away = paper != null ? (transform.position - paper.transform.position) : Random.insideUnitSphere;
+            away.y = 0f;
+            if (away.sqrMagnitude < 0.01f) away = new Vector3(1f, 0f, 0f);
+            _target = transform.position + away.normalized * 8f;
         }
 
         /// <summary>Trap destroyed without a capture — free to roam again.</summary>
@@ -187,14 +220,19 @@ namespace OtherwiseLabs.CreatureGame
 
         void PickWanderTarget()
         {
-            // A word paper bearing our letter is genuinely interesting: often
-            // wander toward one in range instead of a random point. This is what
-            // makes picking the RIGHT word matter for catch speed.
+            // A word paper containing our letter is interesting — and the MORE
+            // of our letter it has, the harder it pulls. But creatures are shy:
+            // a player standing over the paper keeps them away, so hunters
+            // learn to lay the trap and step back.
             WordTrapPaper bait = WordTrapPaper.FindBaitFor(Letter, transform.position, _game.trapAttractRadius);
-            if (bait != null && Random.value < 0.6f)
+            if (bait != null && !_game.PlayerIsNear(bait.transform.position, _game.playerShyRadius))
             {
-                _target = bait.transform.position;
-                return;
+                float pull = Mathf.Min(0.9f, 0.35f + 0.25f * bait.HoldCount(Letter));
+                if (Random.value < pull)
+                {
+                    _target = bait.transform.position;
+                    return;
+                }
             }
 
             _target = _game.PickWanderPoint(Definition, transform.position);

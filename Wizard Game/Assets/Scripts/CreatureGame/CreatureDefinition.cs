@@ -48,6 +48,9 @@ namespace OtherwiseLabs.CreatureGame
         [Tooltip("Wander speed in m/s. Kept gentle so young players can follow one on foot.")]
         [Range(0.2f, 5f)] public float walkSpeed = 1.4f;
 
+        [Tooltip("How far THIS creature hears its letter called, in meters. 0 = use the controller's global Call Radius.")]
+        [Min(0f)] public float callResponseRadius = 0f;
+
         [Tooltip("Uniform scale applied to the spawned model.")]
         [Range(0.2f, 4f)] public float modelScale = 1f;
 

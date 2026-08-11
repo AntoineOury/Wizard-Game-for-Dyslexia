@@ -34,7 +34,7 @@ namespace OtherwiseLabs.CreatureGame
         [Min(1f)] public float respawnDelay = 25f;
 
         [Header("Calling")]
-        [Tooltip("How far a called letter carries. Creatures of that letter within range come to the player.")]
+        [Tooltip("How far a called letter carries, in meters. Creatures of that letter within range come to the player. Each creature type can override this with its own Call Response Radius.")]
         [Min(5f)] public float callRadius = 60f;
 
         [Tooltip("Seconds a called creature keeps approaching before losing interest.")]
@@ -43,6 +43,9 @@ namespace OtherwiseLabs.CreatureGame
         [Header("Traps")]
         [Tooltip("Creatures notice a word paper bearing their letter from this far away.")]
         [Min(5f)] public float trapAttractRadius = 30f;
+
+        [Tooltip("Creatures are shy: while the player stands within this range of a paper, they won't approach it. Lay the trap, then step back.")]
+        [Min(0f)] public float playerShyRadius = 7f;
 
         [Tooltip("Papers on the ground at once. Placing more removes the oldest.")]
         [Range(1, 8)] public int maxActivePapers = 3;
@@ -135,6 +138,7 @@ namespace OtherwiseLabs.CreatureGame
             if (_ui.AnyPanelOpen) return;
 
             if (Input.GetKeyDown(KeyCode.T)) OpenTrapFlow();
+            if (Input.GetKeyDown(KeyCode.Q)) OpenCallFlow();
             if (Input.GetKeyDown(KeyCode.E))
             {
                 LetterCreature creature = NearestStuckInRange();
@@ -240,12 +244,23 @@ namespace OtherwiseLabs.CreatureGame
 
             WordTrapPaper paper = WordTrapPaper.Place(point, _placingLetter, _placingWord);
 
-            // Say out loud who this paper can actually hold — "willow" can
-            // catch W or L, and knowing that is part of learning the word.
-            string who = string.Join(" or ", paper.EligibleLetters);
-            _ui.Toast(paper.EligibleLetters.Count > 1
-                ? $"Paper set! It can catch Creature {who} — call the one YOU want."
-                : $"Paper set! Only Creature {who} can stick to it.");
+            // Teach the strength rule out loud: more of the letter = stickier.
+            int hold = paper.HoldCount(_placingLetter);
+            if (hold >= 2)
+            {
+                _ui.Toast($"Great bait! \"{paper.Word}\" is EXTRA sticky — Creature {_placingLetter} won't wriggle free.");
+            }
+            else if (hold == 1)
+            {
+                _ui.Toast($"\"{paper.Word}\" can hold Creature {_placingLetter}... loosely. Words with more {_placingLetter}'s grip tighter!");
+            }
+            else
+            {
+                var others = new List<string>();
+                for (int i = 0; i < paper.EligibleLetters.Count && i < 3; i++)
+                    others.Add(paper.EligibleLetters[i].ToString());
+                _ui.Toast($"\"{paper.Word}\" has no {_placingLetter} at all! It can still catch Creature {string.Join(" or ", others)}.");
+            }
         }
 
         /// <summary>Player picked a letter on the Call panel: shout it into the world.</summary>
@@ -258,7 +273,10 @@ namespace OtherwiseLabs.CreatureGame
             foreach (LetterCreature creature in _alive)
             {
                 if (creature == null || creature.Letter != letter) continue;
-                if ((creature.transform.position - Player.position).sqrMagnitude > callRadius * callRadius) continue;
+                float radius = creature.Definition.callResponseRadius > 0f
+                    ? creature.Definition.callResponseRadius
+                    : callRadius;
+                if ((creature.transform.position - Player.position).sqrMagnitude > radius * radius) continue;
 
                 Vector3 offset = new Vector3(Random.Range(-3f, 3f), 0f, Random.Range(-3f, 3f));
                 creature.Lure(Player.position + offset, callDuration);
@@ -316,6 +334,15 @@ namespace OtherwiseLabs.CreatureGame
         // ------------------------------------------------------------------
         // World queries for creatures
         // ------------------------------------------------------------------
+
+        /// <summary>True when the player stands within the given range of a point — the trap-shyness test.</summary>
+        public bool PlayerIsNear(Vector3 point, float radius)
+        {
+            if (Player == null || radius <= 0f) return false;
+            Vector3 flat = Player.position - point;
+            flat.y = 0f;
+            return flat.sqrMagnitude < radius * radius;
+        }
 
         /// <summary>Ground height by raycast — solid geometry only, so any scene with colliders works.</summary>
         public bool SampleGround(float x, float z, out float groundY)

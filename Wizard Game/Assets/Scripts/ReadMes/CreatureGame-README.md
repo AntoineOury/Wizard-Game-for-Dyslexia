@@ -18,12 +18,15 @@ players aged 6-8 who are practicing letter recognition and formation.
    three words: **tap the word with the most of that creature's letter**
    ("willow" beats "cat" for W). The right word becomes a paper sheet laid on
    the ground wherever the player taps. *Letter counting inside real words.*
-4. **Snare** — the word decides who the paper can hold: **only creatures
-   whose letter is tied for the most occurrences in it**. "willow" (two w's,
-   two l's) can snare Creature W *or* Creature L — nobody else sticks. Both
-   are drawn toward it, so which one you catch is hunting craft: lay the
-   paper in the right habitat and call the letter you want. The rule is
-   child-sayable — "the biggest letters in the word win the paper."
+4. **Snare** — the word is the trap's whole character. A creature cares only
+   if its letter is IN the word, and the count is the grip: **"willow" (two
+   w's) glues Creature W down for good; "water" (one w) attracts and holds it
+   loosely, with a real chance it wriggles free**; a word with no w at all is
+   simply not Creature W's trap (but still works for its own letters). Pull
+   toward the paper scales with the same count. Every offered word "works" —
+   the better-read choice just hunts better. Creatures are also **shy**:
+   while the player stands within Player Shy Radius of a paper they won't
+   approach it, so hunters learn to lay the trap and step back.
 5. **Capture** — walk up to the stuck creature (`E` or tap it) and **trace its
    letter** over a dotted guide. Scoring is the worse of "ink on the letter"
    and "letter covered by ink", so neither scribbling nor half a letter
@@ -38,7 +41,7 @@ players aged 6-8 who are practicing letter recognition and formation.
 | --- | --- | --- |
 | Booklet | `B` | Book button (left edge) |
 | Make a trap | `T` | Trap button (left edge) |
-| Call a creature | Call button, then **speak the letter** | same (tap-a-letter fallback on screen) |
+| Call a creature | `Q`, then **speak the letter** | Call button (tap-a-letter fallback on screen) |
 | Trace a stuck creature | `E` near it | tap the creature |
 | Place / cancel a paper | click ground / `Esc` | tap ground / X |
 
@@ -48,6 +51,24 @@ editor. Each is an ordinary UI Button plus a `CreatureGameButton` component
 (pick the action in its dropdown); the runtime only builds its own fallback
 buttons in scenes that contain none. To add them to another scene: duplicate a
 button, or make any Button + `CreatureGameButton`.
+
+**The booklet is scene-authored too**: `Booklet_Panel` under ` Canvas
+Overlay` (kept inactive; the game activates it). Restyle the window, title
+and close button directly; style the **Row Template** child and every
+creature's entry clones it — `CreatureBookletPanel` only fills in the words
+(letter, name, count, blurb) at runtime, never the layout. `Row Spacing` on
+the panel sets the distance between rows. Delete the panel from a scene and
+the game falls back to its code-built booklet.
+
+### Call and Trap have no required order
+
+Calling lures creatures toward the PLAYER; papers pull eligible creatures
+toward the PAPER, on their own timers — the two systems never wait on each
+other. Call first and drop a paper where the crowd gathers, or lay papers
+first and call a creature across them: both are equally valid hunts, and the
+shyness rule adds the third move (step away so they dare approach). `Call
+Radius` on the controller sets how far a call carries; each creature type can
+override it with its own `Call Response Radius` in the creatures list.
 
 ## Voice calling
 
@@ -62,6 +83,29 @@ file: replace the platform block in `VoiceLetterListener` — start streaming in
 `StartListening`, and pass each transcript to `ReportPhrase()`, which already
 maps spoken forms to letters. Confidence is deliberately lenient: a misheard
 letter merely calls a different creature, which is a shrug, not a failure.
+
+### Troubleshooting voice (Windows)
+
+The Call screen shows a live grey status line fed by `VoiceLetterListener`
+(also logged to the Console as `[VoiceLetterListener] ...`). What it says is
+the diagnosis:
+
+- **"Listening! ..."** — the recognizer is running. Speak clearly, close to
+  the microphone; letter NAMES ("double u", "ess") match far more reliably
+  than phonic sounds.
+- **"Windows says speech recognition is unavailable"** — this is about the
+  WINDOWS system settings app, not Unity's Project Settings: press
+  `Win + I` → **Privacy & security → Microphone** → enable *"Let desktop
+  apps access your microphone"* (the Unity editor is a desktop app). Then
+  check **Time & language → Language & region**: the Windows display
+  language needs its speech pack installed (English works out of the box on
+  most machines).
+- **"Speech failed to start: ..."** / **"Windows speech error: ..."** — the
+  exact engine error, usually a missing language pack or the microphone in
+  use by another app.
+- **"Voice needs the Windows editor or a Windows build"** — you are on
+  macOS/Linux/mobile, where the built-in backend does not exist; the letter
+  buttons carry the flow until a cloud backend is plugged in.
 
 While any mini-game panel is open the cursor is freed and gameplay input
 pauses via `PlayerControlScheme.UiMode` — the same flag the controllers
