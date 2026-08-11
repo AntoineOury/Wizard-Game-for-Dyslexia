@@ -24439,6 +24439,77 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 2141104442}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &990001001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 990001002}
+  - component: {fileID: 990001003}
+  m_Layer: 0
+  m_Name: Creature Mini-Game
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &990001002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 990001001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 27.34375, y: 14.5, z: 3.90625}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &990001003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 990001001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 97c9698ba1bb428a85fdbe5cc738cfd0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  creatures:
+  - letter: S
+    displayName: Creature S
+    blurb: A bouncy slime who loves soft grass and sunny snoozes.
+    prefab: {fileID: 7153141402127884706, guid: a4ec793513574cd49719c4055b630e2b, type: 3}
+    habitat: 2
+    maxAlive: 4
+    walkSpeed: 1.6
+    modelScale: 1
+  - letter: W
+    displayName: Creature W
+    blurb: A shy water turtle. Call its name near a lake and watch the ripples!
+    prefab: {fileID: 6753617674297473082, guid: 24a0663f813d4beb91fc0c6b1e8fef36, type: 3}
+    habitat: 0
+    maxAlive: 4
+    walkSpeed: 1.1
+    modelScale: 1
+  spawnRadius: 130
+  respawnDelay: 25
+  callRadius: 60
+  callDuration: 12
+  trapAttractRadius: 30
+  maxActivePapers: 3
+  maxPlaceDistance: 25
+  interactRange: 4.5
+  traceAccuracyThreshold: 0.6
+  waterSurfaceY: -10000
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -24446,3 +24517,4 @@ SceneRoots:
   - {fileID: 990000002}
   - {fileID: 222744960}
   - {fileID: 877239133}
+  - {fileID: 990001002}
