@@ -55,6 +55,18 @@ namespace OtherwiseLabs.TerrainTools
     }
 
     /// <summary>
+    /// Anything that can say which biome owns a world position. Implemented by
+    /// both terrain systems so shared atmosphere components (BiomeAmbience) can
+    /// serve either without referencing one specifically — the streamer and the
+    /// finite generator must never depend on each other.
+    /// </summary>
+    public interface IBiomeSource
+    {
+        /// <summary>Dominant biome at a world position, or null when no biomes are defined.</summary>
+        BiomeDefinition DominantBiomeAt(Vector3 worldPosition);
+    }
+
+    /// <summary>
     /// Turns a climate value into per-biome blend weights.
     /// </summary>
     public static class BiomeField
@@ -117,6 +129,30 @@ namespace OtherwiseLabs.TerrainTools
 
             float inverse = 1f / sum;
             for (int i = 0; i < count; i++) weights[i] *= inverse;
+        }
+
+        /// <summary>
+        /// A list element freshly added in the Inspector arrives zeroed rather
+        /// than with field-initializer defaults, which would mean a flat black
+        /// biome. Treat that state as "give me sensible defaults". Shared by both
+        /// terrain systems so their biome lists behave identically.
+        /// </summary>
+        public static void Sanitize(List<BiomeDefinition> biomes)
+        {
+            if (biomes == null) return;
+            foreach (BiomeDefinition biome in biomes)
+            {
+                if (biome == null) continue;
+                if (string.IsNullOrWhiteSpace(biome.name)) biome.name = "Biome";
+                biome.coverage = Mathf.Max(0.01f, biome.coverage);
+                if (biome.heightCurve == null || biome.heightCurve.length == 0)
+                    biome.heightCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
+                if (biome.colorByHeight == null || biome.colorByHeight.colorKeys == null || biome.colorByHeight.colorKeys.Length == 0)
+                    biome.colorByHeight = DefaultBiomeGradient();
+                if (biome.heightMultiplier <= 0f && biome.heightOffset == 0f)
+                    biome.heightMultiplier = 30f;
+                biome.environmentAssets ??= new List<EnvironmentAssetRule>();
+            }
         }
 
         /// <summary>Neutral green-ish default so a fresh biome isn't black.</summary>

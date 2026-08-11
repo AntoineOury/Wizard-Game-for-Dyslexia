@@ -29,7 +29,7 @@ namespace OtherwiseLabs.TerrainTools
     /// </summary>
     [DisallowMultipleComponent]
     [AddComponentMenu("Otherwise Labs/Infinite Terrain Streamer")]
-    public class InfiniteTerrainStreamer : MonoBehaviour
+    public class InfiniteTerrainStreamer : MonoBehaviour, IBiomeSource
     {
         [Header("Viewer")]
         [Tooltip("Transform the world streams around — usually the player. Falls back to the main camera.")]
@@ -387,15 +387,7 @@ namespace OtherwiseLabs.TerrainTools
         }
 
         public Material ResolveWaterMaterial()
-        {
-            if (waterMaterial != null) return waterMaterial;
-            if (_autoWaterMaterial == null)
-            {
-                Shader shader = Shader.Find("OtherwiseLabs/Terrain Water");
-                if (shader != null) _autoWaterMaterial = new Material(shader) { name = "Terrain Water (auto)" };
-            }
-            return _autoWaterMaterial;
-        }
+            => TerrainWaterMaterial.Resolve(waterMaterial, ref _autoWaterMaterial);
 
         /// <summary>
         /// Flattens the global and per-biome asset rules into one indexed table
@@ -420,7 +412,7 @@ namespace OtherwiseLabs.TerrainTools
                 if (rule == null || rule.prefab == null) continue;
                 float footprint = rule.footprintRadius > 0f
                     ? rule.footprintRadius
-                    : ProceduralTerrainGenerator.EstimateFootprintRadius(rule.prefab);
+                    : ScatterRules.EstimateFootprintRadius(rule.prefab);
 
                 // Folding same-rule spacing into the radius means one collision pass
                 // handles both "not inside another asset" and "not too close to my
@@ -430,28 +422,9 @@ namespace OtherwiseLabs.TerrainTools
             }
         }
 
-        /// <summary>
-        /// A list element freshly added in the Inspector arrives zeroed rather
-        /// than with field-initializer defaults, which would mean a flat black
-        /// biome. Treat that state as "give me sensible defaults".
-        /// </summary>
-        void SanitizeBiomes()
-        {
-            if (biomes == null) return;
-            foreach (BiomeDefinition biome in biomes)
-            {
-                if (biome == null) continue;
-                if (string.IsNullOrWhiteSpace(biome.name)) biome.name = "Biome";
-                biome.coverage = Mathf.Max(0.01f, biome.coverage);
-                if (biome.heightCurve == null || biome.heightCurve.length == 0)
-                    biome.heightCurve = AnimationCurve.Linear(0f, 0f, 1f, 1f);
-                if (biome.colorByHeight == null || biome.colorByHeight.colorKeys == null || biome.colorByHeight.colorKeys.Length == 0)
-                    biome.colorByHeight = BiomeField.DefaultBiomeGradient();
-                if (biome.heightMultiplier <= 0f && biome.heightOffset == 0f)
-                    biome.heightMultiplier = 30f;
-                biome.environmentAssets ??= new List<EnvironmentAssetRule>();
-            }
-        }
+        // Fresh Inspector-added biome entries arrive zeroed; the shared sanitizer
+        // turns that state into sensible defaults for both terrain systems.
+        void SanitizeBiomes() => BiomeField.Sanitize(biomes);
 
         void Update()
         {
