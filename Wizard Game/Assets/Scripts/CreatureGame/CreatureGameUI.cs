@@ -88,12 +88,7 @@ namespace OtherwiseLabs.CreatureGame
         public void OpenCallFlow()
         {
             CloseAllPanels();
-            OpenLetterGrid("Call a creature! Whose name will you shout?",
-                letter =>
-                {
-                    CloseAllPanels();
-                    _game.CallLetter(letter);
-                });
+            OpenCallPanel();
         }
 
         public void OpenTrace(LetterCreature creature)
@@ -136,7 +131,11 @@ namespace OtherwiseLabs.CreatureGame
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            BuildSideButtons();
+            // Scene-authored buttons win: when the scene provides
+            // CreatureGameButton objects (stylable in the Hierarchy), the
+            // code-built side buttons stay out of the way entirely.
+            if (FindObjectOfType<CreatureGameButton>(true) == null)
+                BuildSideButtons();
             _hint = BuildBar(new Vector2(0.5f, 0f), new Vector2(0f, 70f), new Vector2(760f, 46f), 24f);
             _toast = BuildBar(new Vector2(0.5f, 1f), new Vector2(0f, -60f), new Vector2(700f, 52f), 26f);
             _toast.transform.parent.gameObject.SetActive(false);
@@ -214,6 +213,18 @@ namespace OtherwiseLabs.CreatureGame
             _wordPanel.gameObject.SetActive(false);
             _tracePanel.gameObject.SetActive(false);
             _tracing = null;
+            StopVoice();
+        }
+
+        void StopVoice()
+        {
+            if (_game == null || _game.Voice == null) return;
+            if (_voiceAttached)
+            {
+                _game.Voice.LetterHeard -= OnVoiceLetter;
+                _voiceAttached = false;
+            }
+            _game.Voice.StopListening();
         }
 
         static RectTransform Window(RectTransform panel) => (RectTransform)panel.GetChild(0);
@@ -268,7 +279,61 @@ namespace OtherwiseLabs.CreatureGame
         }
 
         // ------------------------------------------------------------------
-        // Letter grid (shared by Trap step 1 and Call)
+        // Calling — voice first, letter buttons as the everywhere-fallback
+        // ------------------------------------------------------------------
+
+        bool _voiceAttached;
+
+        void OpenCallPanel()
+        {
+            ClearWindow(_gridPanel);
+            RectTransform window = Window(_gridPanel);
+
+            TMP_Text title = MakeLabel(window, "Call a creature!", 30f, Ink, bold: true);
+            Place(title, new Vector2(0.5f, 1f), new Vector2(0f, -36f), new Vector2(520f, 40f));
+
+            VoiceLetterListener voice = _game.Voice;
+            bool listening = false;
+            if (voice != null && voice.IsSupported)
+            {
+                var letters = new List<char>();
+                foreach (CreatureDefinition definition in _game.creatures)
+                    if (definition != null) letters.Add(definition.Letter);
+
+                voice.StartListening(letters);
+                listening = voice.IsListening;
+                if (listening)
+                {
+                    voice.LetterHeard += OnVoiceLetter;
+                    _voiceAttached = true;
+                }
+            }
+
+            TMP_Text status = MakeLabel(window,
+                listening
+                    ? "Say the creature's letter out loud!\n(or tap it below)"
+                    : "No microphone here — tap the letter to shout it:",
+                23f, listening ? Happy : new Color(0.35f, 0.35f, 0.45f), bold: listening);
+            Place(status, new Vector2(0.5f, 1f), new Vector2(0f, -88f), new Vector2(540f, 58f));
+
+            BuildLetterButtons(window, letter =>
+            {
+                CloseAllPanels();
+                _game.CallLetter(letter);
+            });
+
+            _gridPanel.gameObject.SetActive(true);
+        }
+
+        void OnVoiceLetter(char letter)
+        {
+            Toast($"You said {letter}!");
+            CloseAllPanels();
+            _game.CallLetter(letter);
+        }
+
+        // ------------------------------------------------------------------
+        // Letter grid (Trap step 1)
         // ------------------------------------------------------------------
 
         void OpenLetterGrid(string titleText, System.Action<char> onPick)
@@ -279,6 +344,13 @@ namespace OtherwiseLabs.CreatureGame
             TMP_Text title = MakeLabel(window, titleText, 28f, Ink, bold: true);
             Place(title, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(520f, 70f));
 
+            BuildLetterButtons(window, onPick);
+            _gridPanel.gameObject.SetActive(true);
+        }
+
+        /// <summary>One big letter button per defined creature, laid out 3 per row.</summary>
+        void BuildLetterButtons(RectTransform window, System.Action<char> onPick)
+        {
             int index = 0;
             foreach (CreatureDefinition definition in _game.creatures)
             {
@@ -290,14 +362,12 @@ namespace OtherwiseLabs.CreatureGame
                 var rect = (RectTransform)button.transform;
                 rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
                 int column = index % 3, row = index / 3;
-                rect.anchoredPosition = new Vector2(-150f + column * 150f, 10f - row * 150f);
+                rect.anchoredPosition = new Vector2(-150f + column * 150f, -10f - row * 150f);
 
                 TMP_Text caption = MakeLabel(window, definition.DisplayName, 18f, Ink);
                 Place(caption, new Vector2(0.5f, 0.5f), rect.anchoredPosition + new Vector2(0f, -76f), new Vector2(150f, 24f));
                 index++;
             }
-
-            _gridPanel.gameObject.SetActive(true);
         }
 
         // ------------------------------------------------------------------

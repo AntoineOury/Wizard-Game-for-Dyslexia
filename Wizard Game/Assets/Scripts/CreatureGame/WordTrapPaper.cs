@@ -8,33 +8,42 @@ namespace OtherwiseLabs.CreatureGame
     /// A word written on a paper sheet, lying on the ground as a trap. Built
     /// entirely in code — a flat quad, the word in 3D text, and a trigger box.
     ///
-    /// Any creature that steps on the paper is snared (one per paper). The
-    /// WORD decides how quickly that happens: creatures are drawn toward papers
-    /// bearing their own letter, so a paper full of Ws catches Creature W far
-    /// sooner than a poor word choice would — the literacy challenge and the
-    /// hunting strategy are the same thing.
+    /// The WORD decides who the paper can hold: only creatures whose letter
+    /// appears the MOST in it. "willow" (two w's, two l's) can snare Creature W
+    /// or Creature L — and nobody else. Both are drawn toward it too, so which
+    /// one you actually catch comes down to hunting craft: lay the paper in
+    /// the right habitat and call the letter you want. Reading the word well
+    /// and trapping well are the same skill.
     /// </summary>
     public class WordTrapPaper : MonoBehaviour
     {
         static readonly List<WordTrapPaper> Active = new List<WordTrapPaper>();
 
+        readonly List<char> _eligible = new List<char>();
+
+        /// <summary>The letter this trap was baited for (the word challenge's target).</summary>
         public char Letter { get; private set; }
         public string Word { get; private set; }
         public LetterCreature Snared { get; private set; }
+
+        /// <summary>Letters tied for the most occurrences in the word — the only ones this paper can hold.</summary>
+        public IReadOnlyList<char> EligibleLetters => _eligible;
+
+        public bool IsEligible(char letter) => _eligible.Contains(char.ToUpperInvariant(letter));
 
         public static int ActiveCount => Active.Count;
 
         /// <summary>Oldest paper first, for enforcing a small maximum.</summary>
         public static WordTrapPaper Oldest => Active.Count > 0 ? Active[0] : null;
 
-        /// <summary>Nearest unoccupied paper bearing this letter, or null.</summary>
+        /// <summary>Nearest unoccupied paper this letter could stick to, or null.</summary>
         public static WordTrapPaper FindBaitFor(char letter, Vector3 position, float radius)
         {
             WordTrapPaper best = null;
             float bestSqr = radius * radius;
             foreach (WordTrapPaper paper in Active)
             {
-                if (paper.Snared != null || paper.Letter != letter) continue;
+                if (paper.Snared != null || !paper.IsEligible(letter)) continue;
                 float sqr = (paper.transform.position - position).sqrMagnitude;
                 if (sqr < bestSqr)
                 {
@@ -53,6 +62,7 @@ namespace OtherwiseLabs.CreatureGame
             var paper = root.AddComponent<WordTrapPaper>();
             paper.Letter = char.ToUpperInvariant(letter);
             paper.Word = word;
+            paper.ComputeEligibility();
             paper.BuildVisual();
 
             var trigger = root.AddComponent<BoxCollider>();
@@ -99,12 +109,39 @@ namespace OtherwiseLabs.CreatureGame
             text.rectTransform.sizeDelta = new Vector2(1.6f, 1.05f);
         }
 
+        /// <summary>
+        /// The eligibility rule: count each letter in the word; whoever is tied
+        /// for the top count owns the paper. Simple enough to say to a child —
+        /// "the biggest letters in the word win it".
+        /// </summary>
+        void ComputeEligibility()
+        {
+            _eligible.Clear();
+            int best = 0;
+            foreach (char raw in Word)
+            {
+                if (!char.IsLetter(raw)) continue;
+                char letter = char.ToUpperInvariant(raw);
+                int count = WordBank.CountLetter(Word, letter);
+                if (count > best)
+                {
+                    best = count;
+                    _eligible.Clear();
+                }
+                if (count == best && !_eligible.Contains(letter)) _eligible.Add(letter);
+            }
+        }
+
         void OnTriggerEnter(Collider other)
         {
             if (Snared != null) return;
             var creature = other.GetComponentInParent<LetterCreature>();
             if (creature == null || creature.CurrentState == LetterCreature.State.Stuck
                 || creature.CurrentState == LetterCreature.State.Captured) return;
+
+            // Only a creature whose letter rules this word can stick; anyone
+            // else just wanders across the paper unbothered.
+            if (!IsEligible(creature.Letter)) return;
 
             Snared = creature;
             creature.BecomeStuck(this);

@@ -65,6 +65,9 @@ namespace OtherwiseLabs.CreatureGame
         public bool HasWater => waterSurfaceY > -9999f;
         public Transform Player { get; private set; }
 
+        /// <summary>The ear behind "call the creature's name" — see VoiceLetterListener.</summary>
+        public VoiceLetterListener Voice { get; private set; }
+
         CreatureGameUI _ui;
         readonly List<LetterCreature> _alive = new List<LetterCreature>();
         readonly List<PendingSpawn> _pending = new List<PendingSpawn>();
@@ -93,8 +96,15 @@ namespace OtherwiseLabs.CreatureGame
 
             if (!HasWater) waterSurfaceY = DetectWaterSurface();
 
+            Voice = gameObject.AddComponent<VoiceLetterListener>();
             _ui = CreatureGameUI.Create(this);
         }
+
+        // Public entry points for scene-authored buttons (CreatureGameButton)
+        // and the keyboard alike — the UI is an implementation detail.
+        public void ToggleBooklet() => _ui.ToggleBooklet();
+        public void OpenTrapFlow() => _ui.OpenTrapFlow();
+        public void OpenCallFlow() => _ui.OpenCallFlow();
 
         void Start()
         {
@@ -121,10 +131,10 @@ namespace OtherwiseLabs.CreatureGame
 
         void HandleKeys()
         {
-            if (Input.GetKeyDown(KeyCode.B)) _ui.ToggleBooklet();
+            if (Input.GetKeyDown(KeyCode.B)) ToggleBooklet();
             if (_ui.AnyPanelOpen) return;
 
-            if (Input.GetKeyDown(KeyCode.T)) _ui.OpenTrapFlow();
+            if (Input.GetKeyDown(KeyCode.T)) OpenTrapFlow();
             if (Input.GetKeyDown(KeyCode.E))
             {
                 LetterCreature creature = NearestStuckInRange();
@@ -228,8 +238,14 @@ namespace OtherwiseLabs.CreatureGame
             if (WordTrapPaper.ActiveCount >= maxActivePapers)
                 WordTrapPaper.Oldest.Remove(freeCreature: true);
 
-            WordTrapPaper.Place(point, _placingLetter, _placingWord);
-            _ui.Toast($"Word paper set! Creature {_placingLetter} loves all those {_placingLetter}'s...");
+            WordTrapPaper paper = WordTrapPaper.Place(point, _placingLetter, _placingWord);
+
+            // Say out loud who this paper can actually hold — "willow" can
+            // catch W or L, and knowing that is part of learning the word.
+            string who = string.Join(" or ", paper.EligibleLetters);
+            _ui.Toast(paper.EligibleLetters.Count > 1
+                ? $"Paper set! It can catch Creature {who} — call the one YOU want."
+                : $"Paper set! Only Creature {who} can stick to it.");
         }
 
         /// <summary>Player picked a letter on the Call panel: shout it into the world.</summary>
