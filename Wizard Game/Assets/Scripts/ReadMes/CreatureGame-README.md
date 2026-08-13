@@ -8,12 +8,14 @@ players aged 6-8 who are practicing letter recognition and formation.
 1. **Find** — each creature type IS a letter (Creature W, Creature S, ...) and
    has a home terrain: Creature W lives in the water and sometimes strolls up
    the beach; Creature S roams the meadows.
-2. **Call** (optional) — the Call button opens the calling screen and starts
-   **listening: say the creature's letter out loud** — its name ("double u")
-   or its sound ("wuh") — and every creature of that letter within earshot
-   comes toward the player, including out of the water onto the shore. Letter
-   buttons remain on the same screen as the everywhere-fallback (no mic, loud
-   classroom, non-Windows build). *Letter naming and letter-sound production.*
+2. **Call** (optional) — the Call screen (`Q`) starts **listening: say the
+   creature's letter out loud** — its name ("double u") or its sound ("wuh")
+   — and every creature of that letter within earshot heads for the player's
+   area, including out of the water onto the shore. Calling DRAWS OUT; it
+   does not catch: a called creature that comes across a word paper it could
+   stick to redirects to the paper. Letter buttons remain on the same screen
+   as the everywhere-fallback (no mic, loud classroom, non-Windows build).
+   *Letter naming and letter-sound production.*
 3. **Trap** — the Trap button (or `T`) asks which creature to hunt, then deals
    three words: **tap the word with the most of that creature's letter**
    ("willow" beats "cat" for W). The right word becomes a paper sheet laid on
@@ -26,11 +28,21 @@ players aged 6-8 who are practicing letter recognition and formation.
    toward the paper scales with the same count. Every offered word "works" —
    the better-read choice just hunts better. Creatures are also **shy**:
    while the player stands within Player Shy Radius of a paper they won't
-   approach it, so hunters learn to lay the trap and step back.
-5. **Capture** — walk up to the stuck creature (`E` or tap it) and **trace its
-   letter** over a dotted guide. Scoring is the worse of "ink on the letter"
-   and "letter covered by ink", so neither scribbling nor half a letter
-   passes, but wobbly lines do (threshold 60%, tunable). *Letter formation.*
+   approach it, so hunters learn to lay the trap and step back. Shyness is
+   visible in the wild too: walk up to any roaming creature and it startles
+   and scurries away (called creatures trust the voice and skip the fear).
+5. **Capture** — walk up to the stuck creature and press `E` (or the Capture
+   button). The camera glides from third person down into the player's eyes,
+   and a dotted letter hangs **in the air above the creature**: trace it by
+   drawing in the world — no panel, no canvas, just the hint bar. Multi-
+   stroke letters work naturally (grading waits a moment after each stroke
+   for the next one). Correct → the creature celebrates, joins the booklet,
+   and the camera glides back out to third person. Wrong → the creature
+   TAUNTS, the ink clears, and the player tries again; `Esc` (or the Capture
+   button again) steps back out without catching. Scoring is the worse of
+   "ink on the letter" and "letter covered by ink" (threshold 60%, tunable).
+   This is the moment that will later be skinned as the **butterfly-net
+   swing**. *Letter formation.*
 6. **Collect** — captures land in the **booklet** (`B`, or the Book button on
    the left edge): caught counts and a friendly line per creature, persisted
    between sessions.
@@ -42,7 +54,7 @@ players aged 6-8 who are practicing letter recognition and formation.
 | Booklet | `B` | Book button (left edge) |
 | Make a trap | `T` | Trap button (left edge) |
 | Call a creature | `Q`, then **speak the letter** | Call button (tap-a-letter fallback on screen) |
-| Trace a stuck creature | `E` near it | tap the creature |
+| Capture a stuck creature | `E` near it | Capture button, or tap the creature |
 | Place / cancel a paper | click ground / `Esc` | tap ground / X |
 
 The **Book / Trap / Call buttons live in the scene Hierarchy** (under
@@ -59,6 +71,16 @@ creature's entry clones it — `CreatureBookletPanel` only fills in the words
 (letter, name, count, blurb) at runtime, never the layout. `Row Spacing` on
 the panel sets the distance between rows. Delete the panel from a scene and
 the game falls back to its code-built booklet.
+
+### The capture camera (no controller changes)
+
+`CaptureSequence` runs at script execution order 200 — after both player
+controllers — so each frame it overwrites the camera pose they wrote:
+blending from "whatever the controller wants this frame" into the head view
+and back again is what makes both ends seamless in either view mode, without
+touching a line of controller code. Gameplay input freezes through the same
+UiMode flag the panels use; the touch joystick (which UiMode does not gate)
+is put to sleep by deactivating the TouchControls object for the duration.
 
 ### Call and Trap have no required order
 

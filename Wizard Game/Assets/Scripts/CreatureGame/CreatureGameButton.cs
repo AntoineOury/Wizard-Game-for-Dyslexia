@@ -22,6 +22,7 @@ namespace OtherwiseLabs.CreatureGame
             Booklet = 0,
             Trap = 1,
             Call = 2,
+            Capture = 3,
         }
 
         [Tooltip("Which mini-game screen this button opens.")]
@@ -49,6 +50,7 @@ namespace OtherwiseLabs.CreatureGame
                 case GameAction.Booklet: _controller.ToggleBooklet(); break;
                 case GameAction.Trap: _controller.OpenTrapFlow(); break;
                 case GameAction.Call: _controller.OpenCallFlow(); break;
+                case GameAction.Capture: _controller.TryCaptureNearby(); break;
             }
 
             // Clicked buttons stay "selected" and Space (jump) would re-press

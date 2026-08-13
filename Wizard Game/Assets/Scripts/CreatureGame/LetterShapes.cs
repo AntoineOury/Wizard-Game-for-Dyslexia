@@ -49,6 +49,38 @@ namespace OtherwiseLabs.CreatureGame
             return points;
         }
 
+        /// <summary>
+        /// Grades a trace against a letter, both in unit-box coordinates. The
+        /// score is the worse of "how much ink sits on the letter" and "how
+        /// much of the letter got covered" — neither scribbling everywhere nor
+        /// tracing half the shape passes, but wobbly lines do. Shared by the
+        /// 2D panel and the in-world air-tracing so they can never disagree.
+        /// </summary>
+        public static float ScoreTrace(IReadOnlyList<Vector2> drawnUnit, char letter, float tolerance = 0.14f)
+        {
+            List<Vector2> template = SamplePath(letter, 0.04f);
+            float toleranceSqr = tolerance * tolerance;
+
+            int drawnOnPath = 0;
+            for (int i = 0; i < drawnUnit.Count; i++)
+                if (NearAny(drawnUnit[i], template, toleranceSqr)) drawnOnPath++;
+
+            int covered = 0;
+            for (int i = 0; i < template.Count; i++)
+                if (NearAny(template[i], drawnUnit, toleranceSqr)) covered++;
+
+            float onPath = drawnUnit.Count > 0 ? drawnOnPath / (float)drawnUnit.Count : 0f;
+            float coverage = template.Count > 0 ? covered / (float)template.Count : 0f;
+            return Mathf.Min(onPath, coverage);
+        }
+
+        static bool NearAny(Vector2 point, IReadOnlyList<Vector2> others, float toleranceSqr)
+        {
+            for (int i = 0; i < others.Count; i++)
+                if ((others[i] - point).sqrMagnitude <= toleranceSqr) return true;
+            return false;
+        }
+
         // ------------------------------------------------------------------
         // Shape table
         // ------------------------------------------------------------------

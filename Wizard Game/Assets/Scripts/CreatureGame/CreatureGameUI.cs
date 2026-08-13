@@ -501,11 +501,13 @@ namespace OtherwiseLabs.CreatureGame
                 return;
             }
 
+            // Normalize the board's pixels back to the letter's unit box, then
+            // grade with the shared scorer (same one the in-world trace uses).
             float scale = 460f * 0.8f;
-            List<Vector2> template = LetterShapes.SamplePath(_tracing.Letter, 0.04f);
-            for (int i = 0; i < template.Count; i++) template[i] *= scale;
+            var drawnUnit = new List<Vector2>(_traceSurface.PointCount);
+            foreach (Vector2 point in _traceSurface.AllPoints) drawnUnit.Add(point / scale);
 
-            float accuracy = OverlapAccuracy(_traceSurface.AllPoints, template, tolerance: scale * 0.14f);
+            float accuracy = LetterShapes.ScoreTrace(drawnUnit, _tracing.Letter);
 
             if (accuracy >= _game.traceAccuracyThreshold)
             {
@@ -517,36 +519,6 @@ namespace OtherwiseLabs.CreatureGame
             {
                 _traceFeedback.text = $"So close ({Mathf.RoundToInt(accuracy * 100f)}%)! Start over and stay on the dots.";
             }
-        }
-
-        /// <summary>
-        /// The overlap score proven out by the project's ShapeRecognizer demo:
-        /// the worse of "how much of the drawing sits on the letter" and "how
-        /// much of the letter got covered" — so neither scribbling everywhere
-        /// nor tracing only half the shape can pass.
-        /// </summary>
-        static float OverlapAccuracy(IReadOnlyList<Vector2> drawn, List<Vector2> template, float tolerance)
-        {
-            float toleranceSqr = tolerance * tolerance;
-
-            int drawnOnPath = 0;
-            foreach (Vector2 point in drawn)
-                if (NearAny(point, template, toleranceSqr)) drawnOnPath++;
-
-            int covered = 0;
-            foreach (Vector2 point in template)
-                if (NearAny(point, drawn, toleranceSqr)) covered++;
-
-            float onPath = drawn.Count > 0 ? drawnOnPath / (float)drawn.Count : 0f;
-            float coverage = template.Count > 0 ? covered / (float)template.Count : 0f;
-            return Mathf.Min(onPath, coverage);
-        }
-
-        static bool NearAny(Vector2 point, IReadOnlyList<Vector2> others, float toleranceSqr)
-        {
-            for (int i = 0; i < others.Count; i++)
-                if ((others[i] - point).sqrMagnitude <= toleranceSqr) return true;
-            return false;
         }
 
         // ------------------------------------------------------------------

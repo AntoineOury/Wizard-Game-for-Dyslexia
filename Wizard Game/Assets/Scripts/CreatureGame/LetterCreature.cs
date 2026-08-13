@@ -35,6 +35,9 @@ namespace OtherwiseLabs.CreatureGame
         float _luredUntil;
         float _dizzyRefreshAt;
         float _nextEscapeAttempt;
+        float _nextBaitScanAt;
+        float _nextShyReactAt;
+        float _fleeUntil;
         int _holdCount;
         string _playingState;
 
@@ -72,8 +75,9 @@ namespace OtherwiseLabs.CreatureGame
             switch (CurrentState)
             {
                 case State.Wandering:
+                    ReactToNearbyPlayer();
                     if (Time.time < _waitUntil) { Play("IdleNormal"); return; }
-                    if (MoveTowards(_target, Definition.walkSpeed))
+                    if (MoveTowards(_target, Time.time < _fleeUntil ? Definition.walkSpeed * 1.7f : Definition.walkSpeed))
                     {
                         _waitUntil = Time.time + Random.Range(1.5f, 4f);
                         PickWanderTarget();
@@ -81,6 +85,17 @@ namespace OtherwiseLabs.CreatureGame
                     break;
 
                 case State.Lured:
+                    // The call draws the creature INTO the area; a word paper it
+                    // could stick to takes over from there. This is the intended
+                    // hunt: shout to bring them close, let the paper do the rest.
+                    if (Time.time >= _nextBaitScanAt)
+                    {
+                        _nextBaitScanAt = Time.time + 0.7f;
+                        WordTrapPaper bait = WordTrapPaper.FindBaitFor(Letter, transform.position, _game.trapAttractRadius);
+                        if (bait != null && !_game.PlayerIsNear(bait.transform.position, _game.playerShyRadius))
+                            _target = bait.transform.position;
+                    }
+
                     if (Time.time > _luredUntil || MoveTowards(_target, Definition.walkSpeed * 1.6f))
                     {
                         CurrentState = State.Wandering;
@@ -179,6 +194,36 @@ namespace OtherwiseLabs.CreatureGame
             CurrentState = State.Captured;
             StuckOn = null;
             Play("Victory");
+        }
+
+        /// <summary>A failed trace: the stuck creature teases the player before wobbling on.</summary>
+        public void TauntWhileStuck()
+        {
+            if (CurrentState != State.Stuck) return;
+            _playingState = null;
+            Play("Taunt");
+            _dizzyRefreshAt = Time.time + 2.2f;
+        }
+
+        /// <summary>
+        /// Wild creatures visibly shy away from a close player: startle, then
+        /// scurry off at a trot. This is what makes standing next to your own
+        /// trap counterproductive — and stepping back part of the hunt. A
+        /// called (lured) creature trusts the voice and skips the fear.
+        /// </summary>
+        void ReactToNearbyPlayer()
+        {
+            if (Time.time < _nextShyReactAt) return;
+            if (!_game.PlayerIsNear(transform.position, _game.playerShyRadius)) return;
+
+            _nextShyReactAt = Time.time + 1.2f;
+            _fleeUntil = Time.time + 2f;
+            _waitUntil = 0f; // no standing around while spooked
+
+            Vector3 away = transform.position - _game.Player.position;
+            away.y = 0f;
+            if (away.sqrMagnitude < 0.01f) away = new Vector3(1f, 0f, 0f);
+            _target = transform.position + away.normalized * (_game.playerShyRadius + 4f);
         }
 
         // ------------------------------------------------------------------

@@ -72,6 +72,7 @@ namespace OtherwiseLabs.CreatureGame
         public VoiceLetterListener Voice { get; private set; }
 
         CreatureGameUI _ui;
+        CaptureSequence _capture;
         readonly List<LetterCreature> _alive = new List<LetterCreature>();
         readonly List<PendingSpawn> _pending = new List<PendingSpawn>();
         System.Random _rng;
@@ -100,6 +101,8 @@ namespace OtherwiseLabs.CreatureGame
             if (!HasWater) waterSurfaceY = DetectWaterSurface();
 
             Voice = gameObject.AddComponent<VoiceLetterListener>();
+            _capture = gameObject.AddComponent<CaptureSequence>();
+            _capture.Init(this);
             _ui = CreatureGameUI.Create(this);
         }
 
@@ -108,6 +111,27 @@ namespace OtherwiseLabs.CreatureGame
         public void ToggleBooklet() => _ui.ToggleBooklet();
         public void OpenTrapFlow() => _ui.OpenTrapFlow();
         public void OpenCallFlow() => _ui.OpenCallFlow();
+
+        /// <summary>
+        /// Start the in-world capture on the nearest stuck creature — or, if
+        /// the capture moment is already running, back out of it (the button
+        /// works as a toggle for touch players).
+        /// </summary>
+        public void TryCaptureNearby()
+        {
+            if (_capture.IsActive) { _capture.Cancel(); return; }
+
+            LetterCreature creature = NearestStuckInRange();
+            if (creature != null) BeginCapture(creature);
+            else _ui.Toast("No stuck creature close by — trap one first, then walk up to it!");
+        }
+
+        /// <summary>The first-person air-trace; the 2D panel remains only as a no-camera fallback.</summary>
+        public void BeginCapture(LetterCreature creature)
+        {
+            if (Camera.main == null) { _ui.OpenTrace(creature); return; }
+            _capture.Begin(creature);
+        }
 
         void Start()
         {
@@ -134,6 +158,9 @@ namespace OtherwiseLabs.CreatureGame
 
         void HandleKeys()
         {
+            // During the capture moment the sequence owns input (Esc backs out).
+            if (_capture.IsActive) return;
+
             if (Input.GetKeyDown(KeyCode.B)) ToggleBooklet();
             if (_ui.AnyPanelOpen) return;
 
@@ -142,12 +169,13 @@ namespace OtherwiseLabs.CreatureGame
             if (Input.GetKeyDown(KeyCode.E))
             {
                 LetterCreature creature = NearestStuckInRange();
-                if (creature != null) _ui.OpenTrace(creature);
+                if (creature != null) BeginCapture(creature);
             }
         }
 
         void HandlePointer()
         {
+            if (_capture.IsActive) return; // the sequence reads the pointer itself
             if (!Input.GetMouseButtonDown(0) || _ui.AnyPanelOpen) return;
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
             Camera camera = Camera.main;
@@ -177,7 +205,7 @@ namespace OtherwiseLabs.CreatureGame
                 if (creature != null && creature.CurrentState == LetterCreature.State.Stuck
                     && WithinInteractRange(creature))
                 {
-                    _ui.OpenTrace(creature);
+                    BeginCapture(creature);
                 }
             }
         }
@@ -190,7 +218,7 @@ namespace OtherwiseLabs.CreatureGame
         /// </summary>
         void HandleUiModeClaim()
         {
-            if (_ui.AnyPanelOpen)
+            if (_ui.AnyPanelOpen || _capture.IsActive)
             {
                 PlayerControlScheme.UiMode = true;
                 _uiModeClaimed = true;
@@ -204,6 +232,7 @@ namespace OtherwiseLabs.CreatureGame
 
         void UpdateHint()
         {
+            if (_capture.IsActive) { _ui.SetHint(_capture.HintText); return; }
             if (_ui.AnyPanelOpen) { _ui.SetHint(""); return; }
             if (_placing)
             {
@@ -214,7 +243,7 @@ namespace OtherwiseLabs.CreatureGame
 
             LetterCreature nearby = NearestStuckInRange();
             _ui.SetHint(nearby != null
-                ? $"{nearby.Definition.DisplayName} is stuck! Press E or tap it to trace its letter"
+                ? $"{nearby.Definition.DisplayName} is stuck! Press E (or Capture) to trace its letter"
                 : "");
         }
 
