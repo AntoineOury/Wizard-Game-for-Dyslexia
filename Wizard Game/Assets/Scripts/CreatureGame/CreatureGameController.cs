@@ -71,6 +71,9 @@ namespace OtherwiseLabs.CreatureGame
         /// <summary>The ear behind "call the creature's name" — see VoiceLetterListener.</summary>
         public VoiceLetterListener Voice { get; private set; }
 
+        /// <summary>The in-world capture moment; the butterfly net reads its aim from here.</summary>
+        public CaptureSequence Capture => _capture;
+
         CreatureGameUI _ui;
         CaptureSequence _capture;
         readonly List<LetterCreature> _alive = new List<LetterCreature>();
@@ -104,6 +107,26 @@ namespace OtherwiseLabs.CreatureGame
             _capture = gameObject.AddComponent<CaptureSequence>();
             _capture.Init(this);
             _ui = CreatureGameUI.Create(this);
+            AttachNetBrain();
+        }
+
+        /// <summary>
+        /// The butterfly net is authored in the scene as any player child named
+        /// like a net (e.g. "SM_Net"). If none carries a CaptureNet yet, give
+        /// it the follow/visibility brain here so the art setup stays a pure
+        /// drag-and-drop. Adding the component by hand instead exposes its
+        /// tuning fields in the Inspector.
+        /// </summary>
+        void AttachNetBrain()
+        {
+            if (Player == null || FindObjectOfType<CaptureNet>(true) != null) return;
+            foreach (Transform child in Player.GetComponentsInChildren<Transform>(true))
+            {
+                if (child == Player) continue;
+                if (!child.name.ToLowerInvariant().Contains("net")) continue;
+                child.gameObject.AddComponent<CaptureNet>();
+                return;
+            }
         }
 
         // Public entry points for scene-authored buttons (CreatureGameButton)
@@ -177,7 +200,7 @@ namespace OtherwiseLabs.CreatureGame
         {
             if (_capture.IsActive) return; // the sequence reads the pointer itself
             if (!Input.GetMouseButtonDown(0) || _ui.AnyPanelOpen) return;
-            if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
+            if (PointerOverBlockingUi()) return;
             Camera camera = Camera.main;
             if (camera == null) return;
 
@@ -363,6 +386,29 @@ namespace OtherwiseLabs.CreatureGame
         // ------------------------------------------------------------------
         // World queries for creatures
         // ------------------------------------------------------------------
+
+        /// <summary>
+        /// True when the pointer sits over UI that should block a world tap.
+        /// The touch scheme's own control surfaces (the invisible look area,
+        /// the joystick) cover most of the screen but are NOT blocking UI —
+        /// filtering them out is what lets taps place papers and pick
+        /// creatures in touch mode. EventSystem.IsPointerOverGameObject was
+        /// wrong twice here: with a mouse it counted the look surface (so the
+        /// editor blocked placement), and on device its parameterless form
+        /// misses touches entirely (so builds allowed it) — this raycast
+        /// treats every pointer the same.
+        /// </summary>
+        public bool PointerOverBlockingUi()
+        {
+            if (EventSystem.current == null) return false;
+
+            var pointer = new PointerEventData(EventSystem.current) { position = Input.mousePosition };
+            var hits = new List<RaycastResult>();
+            EventSystem.current.RaycastAll(pointer, hits);
+            foreach (RaycastResult hit in hits)
+                if (hit.gameObject.GetComponentInParent<TouchControls>() == null) return true;
+            return false;
+        }
 
         /// <summary>True when the player stands within the given range of a point — the trap-shyness test.</summary>
         public bool PlayerIsNear(Vector3 point, float radius)

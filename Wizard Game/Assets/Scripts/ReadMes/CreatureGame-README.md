@@ -31,6 +31,11 @@ players aged 6-8 who are practicing letter recognition and formation.
    approach it, so hunters learn to lay the trap and step back. Shyness is
    visible in the wild too: walk up to any roaming creature and it startles
    and scurries away (called creatures trust the voice and skip the fear).
+   Temperament is data: each creature type has a `Shyness` scale and a
+   `Taming Per Capture` — every capture of a letter calms the whole species
+   a little, until they stop running from you. One method,
+   `LetterCreature.CurrentShyRadius()`, computes it all; a future training
+   system plugs in there and nowhere else.
 5. **Capture** — walk up to the stuck creature and press `E` (or the Capture
    button). The camera glides from third person down into the player's eyes,
    and a dotted letter hangs **in the air above the creature**: trace it by
@@ -72,6 +77,17 @@ creature's entry clones it — `CreatureBookletPanel` only fills in the words
 the panel sets the distance between rows. Delete the panel from a scene and
 the game falls back to its code-built booklet.
 
+### The butterfly net
+
+Add a net model anywhere under the Player (any name containing "net", e.g.
+the Island Pack's `SM_Net`) and it becomes the capture tool automatically:
+`CaptureNet` drives it in camera space like an FPS-held item — visible in
+first person and during the capture moment, hidden in third person — and
+while tracing it leans and points toward the player's drawing, sweeping the
+letter's shape through the air. Add the `CaptureNet` component to the net by
+hand to tune its rest position/tilt, follow lag and sway in the Inspector
+(the auto-attach only runs when no CaptureNet exists in the scene).
+
 ### The capture camera (no controller changes)
 
 `CaptureSequence` runs at script execution order 200 — after both player
@@ -91,6 +107,15 @@ first and call a creature across them: both are equally valid hunts, and the
 shyness rule adds the third move (step away so they dare approach). `Call
 Radius` on the controller sets how far a call carries; each creature type can
 override it with its own `Call Response Radius` in the creatures list.
+
+### Landscape builds
+
+The project is set to Auto Rotation with portrait disabled (Player settings),
+so Android/iOS builds run landscape in both directions and never flip
+vertical. WebGL ignores those flags — the page decides: the itch.io/embed
+canvas size should be wide (e.g. 1280x720), and for a hard lock call the
+browser's `screen.orientation.lock('landscape')` from the page after a
+user gesture / fullscreen.
 
 ## Voice calling
 
