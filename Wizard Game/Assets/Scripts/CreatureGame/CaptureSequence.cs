@@ -35,7 +35,11 @@ namespace OtherwiseLabs.CreatureGame
         const float EvaluateDelay = 1.6f;   // idle time after a stroke before grading (multi-stroke letters)
 
         public bool IsActive => _phase != Phase.Idle;
+        public bool IsTracing => _phase == Phase.Tracing;
         public string HintText { get; private set; } = "";
+
+        /// <summary>Where on the letter plane the player is aiming right now — the net's follow target.</summary>
+        public Vector3 CurrentAimWorld { get; private set; }
 
         CreatureGameController _game;
         Camera _camera;
@@ -88,6 +92,7 @@ namespace OtherwiseLabs.CreatureGame
             _planeRight = _planeRotation * Vector3.right;
             _planeUp = _planeRotation * Vector3.up;
             _plane = new Plane((head - _planeCenter).normalized, _planeCenter);
+            CurrentAimWorld = _planeCenter;
 
             HidePlayerBody();
             SleepTouchControls();
@@ -171,7 +176,13 @@ namespace OtherwiseLabs.CreatureGame
 
         void HandleDrawing()
         {
-            bool overUi = EventSystem.current != null && EventSystem.current.IsPointerOverGameObject();
+            // Keep the aim point live even between strokes: the net follows
+            // the player's hand the whole time, not only while ink flows.
+            Ray aimRay = _camera.ScreenPointToRay(Input.mousePosition);
+            if (_plane.Raycast(aimRay, out float aimDistance))
+                CurrentAimWorld = aimRay.GetPoint(aimDistance);
+
+            bool overUi = _game.PointerOverBlockingUi();
 
             if (Input.GetMouseButtonDown(0) && !overUi)
             {
@@ -298,9 +309,12 @@ namespace OtherwiseLabs.CreatureGame
             => (_game.Player != null ? _game.Player.position : transform.position) + Vector3.up * 1.7f;
 
         /// <summary>
-        /// First person from inside the body means hiding the body, exactly as
-        /// the first-person controller does. Local copy of that idea so the
-        /// mini-game keeps its single touch-point with the control scripts.
+        /// First person from inside the body means hiding the body. Done with
+        /// forceRenderingOff rather than Renderer.enabled, because the
+        /// third-person controller re-enables body renderers every frame while
+        /// its view mode is active — forceRenderingOff is a channel nothing
+        /// else touches, so there is no per-frame fight. The butterfly net is
+        /// exempt: it is exactly the thing that SHOULD be in view.
         /// </summary>
         void HidePlayerBody()
         {
@@ -308,9 +322,10 @@ namespace OtherwiseLabs.CreatureGame
             if (_game.Player == null) return;
             foreach (Renderer renderer in _game.Player.GetComponentsInChildren<Renderer>())
             {
-                if (renderer == null || !renderer.enabled) continue;
+                if (renderer == null || renderer.forceRenderingOff) continue;
                 if (renderer is CanvasRenderer || renderer.GetComponentInParent<Canvas>() != null) continue;
-                renderer.enabled = false;
+                if (renderer.GetComponentInParent<CaptureNet>() != null) continue;
+                renderer.forceRenderingOff = true;
                 _hiddenBody.Add(renderer);
             }
         }
@@ -318,7 +333,7 @@ namespace OtherwiseLabs.CreatureGame
         void RestorePlayerBody()
         {
             foreach (Renderer renderer in _hiddenBody)
-                if (renderer != null) renderer.enabled = true;
+                if (renderer != null) renderer.forceRenderingOff = false;
             _hiddenBody.Clear();
         }
 

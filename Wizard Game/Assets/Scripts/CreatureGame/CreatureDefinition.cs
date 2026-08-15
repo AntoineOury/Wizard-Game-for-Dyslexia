@@ -51,6 +51,13 @@ namespace OtherwiseLabs.CreatureGame
         [Tooltip("How far THIS creature hears its letter called, in meters. 0 = use the controller's global Call Radius.")]
         [Min(0f)] public float callResponseRadius = 0f;
 
+        [Header("Temperament")]
+        [Tooltip("How skittish this creature is around the player, scaling the controller's Player Shy Radius. 0 = fearless, 1 = normal, 2 = extra jumpy.")]
+        [Range(0f, 2f)] public float shyness = 1f;
+
+        [Tooltip("Familiarity: fraction of shyness each capture of this letter removes from the whole species. At 0.15, seven captures make them fearless. 0 = wild forever. A future training system drives the same number further.")]
+        [Range(0f, 1f)] public float tamingPerCapture = 0.15f;
+
         [Tooltip("Uniform scale applied to the spawned model.")]
         [Range(0.2f, 4f)] public float modelScale = 1f;
 

@@ -92,7 +92,7 @@ namespace OtherwiseLabs.CreatureGame
                     {
                         _nextBaitScanAt = Time.time + 0.7f;
                         WordTrapPaper bait = WordTrapPaper.FindBaitFor(Letter, transform.position, _game.trapAttractRadius);
-                        if (bait != null && !_game.PlayerIsNear(bait.transform.position, _game.playerShyRadius))
+                        if (bait != null && !_game.PlayerIsNear(bait.transform.position, CurrentShyRadius()))
                             _target = bait.transform.position;
                     }
 
@@ -206,6 +206,21 @@ namespace OtherwiseLabs.CreatureGame
         }
 
         /// <summary>
+        /// THE shyness number, in meters — every shy behavior (fleeing the
+        /// player, refusing a player-guarded paper) asks this one method, so
+        /// temperament features plug in here and nowhere else. Today it is:
+        /// the controller's base radius, scaled by the species' Shyness, scaled
+        /// down by familiarity — every capture of this letter tames the whole
+        /// species a little (Taming Per Capture), until they stop running at
+        /// all. A training system later just deepens the same discount.
+        /// </summary>
+        public float CurrentShyRadius()
+        {
+            float familiarity = 1f - Definition.tamingPerCapture * CaptureJournal.CountOf(Letter);
+            return _game.playerShyRadius * Definition.shyness * Mathf.Clamp01(familiarity);
+        }
+
+        /// <summary>
         /// Wild creatures visibly shy away from a close player: startle, then
         /// scurry off at a trot. This is what makes standing next to your own
         /// trap counterproductive — and stepping back part of the hunt. A
@@ -213,8 +228,10 @@ namespace OtherwiseLabs.CreatureGame
         /// </summary>
         void ReactToNearbyPlayer()
         {
+            float shyRadius = CurrentShyRadius();
+            if (shyRadius <= 0.05f) return; // tamed (or fearless species): no reaction
             if (Time.time < _nextShyReactAt) return;
-            if (!_game.PlayerIsNear(transform.position, _game.playerShyRadius)) return;
+            if (!_game.PlayerIsNear(transform.position, shyRadius)) return;
 
             _nextShyReactAt = Time.time + 1.2f;
             _fleeUntil = Time.time + 2f;
@@ -223,7 +240,7 @@ namespace OtherwiseLabs.CreatureGame
             Vector3 away = transform.position - _game.Player.position;
             away.y = 0f;
             if (away.sqrMagnitude < 0.01f) away = new Vector3(1f, 0f, 0f);
-            _target = transform.position + away.normalized * (_game.playerShyRadius + 4f);
+            _target = transform.position + away.normalized * (shyRadius + 4f);
         }
 
         // ------------------------------------------------------------------
@@ -270,7 +287,7 @@ namespace OtherwiseLabs.CreatureGame
             // a player standing over the paper keeps them away, so hunters
             // learn to lay the trap and step back.
             WordTrapPaper bait = WordTrapPaper.FindBaitFor(Letter, transform.position, _game.trapAttractRadius);
-            if (bait != null && !_game.PlayerIsNear(bait.transform.position, _game.playerShyRadius))
+            if (bait != null && !_game.PlayerIsNear(bait.transform.position, CurrentShyRadius()))
             {
                 float pull = Mathf.Min(0.9f, 0.35f + 0.25f * bait.HoldCount(Letter));
                 if (Random.value < pull)
