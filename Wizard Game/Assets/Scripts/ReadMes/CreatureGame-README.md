@@ -31,11 +31,10 @@ players aged 6-8 who are practicing letter recognition and formation.
    approach it, so hunters learn to lay the trap and step back. Shyness is
    visible in the wild too: walk up to any roaming creature and it startles
    and scurries away (called creatures trust the voice and skip the fear).
-   Temperament is data: each creature type has a `Shyness` scale and a
-   `Taming Per Capture` — every capture of a letter calms the whole species
-   a little, until they stop running from you. One method,
-   `LetterCreature.CurrentShyRadius()`, computes it all; a future training
-   system plugs in there and nowhere else.
+   Wild creatures ALWAYS behave this way — by design, catching some of a
+   letter never calms the species. When trained companions arrive later,
+   tameness will belong to the captured individual (its own saved state),
+   not to the wild population.
 5. **Capture** — walk up to the stuck creature and press `E` (or the Capture
    button). The camera glides from third person down into the player's eyes,
    and a dotted letter hangs **in the air above the creature**: trace it by
