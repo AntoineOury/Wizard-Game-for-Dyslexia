@@ -111,10 +111,55 @@ override it with its own `Call Response Radius` in the creatures list.
 
 The project is set to Auto Rotation with portrait disabled (Player settings),
 so Android/iOS builds run landscape in both directions and never flip
-vertical. WebGL ignores those flags — the page decides: the itch.io/embed
-canvas size should be wide (e.g. 1280x720), and for a hard lock call the
-browser's `screen.orientation.lock('landscape')` from the page after a
-user gesture / fullscreen.
+vertical. In the browser the custom web template handles it (below).
+
+### Browser builds for itch.io (touchscreen)
+
+Yes — the WebGL build plays with touch in mobile/tablet browsers: single
+touches drive the same pointer path as the mouse, the joystick/look surface
+and all panels are EventSystem-driven, letter tracing works with a finger,
+and voice calling (not available in browsers) already falls back to the
+letter buttons. The booklet persists via PlayerPrefs (IndexedDB). No game
+code differs per platform.
+
+**Project setup already committed** (Player settings):
+
+- Compression **Gzip + Decompression Fallback ON** — loads on itch.io no
+  matter how its CDN sets headers (Brotli without the right headers is the
+  classic infinite-loading screen).
+- **IL2CPP "faster (smaller) builds"** and **Medium managed stripping** for
+  WebGL only — a noticeably smaller wasm; TMP carries its own link.xml and
+  the game code uses no reflection, so stripping is safe.
+- WebGL default quality = the **Performant** URP tier (other platforms
+  keep theirs).
+- Default web canvas 1280x720, and a custom template
+  (`Assets/WebGLTemplates/OtherwiseItch`, auto-selected) that: blocks
+  browser scroll/zoom from stealing finger drags (`touch-action: none`),
+  suppresses the scary "mobile not supported" banner, caps render
+  resolution at 2x DPI so phones don't melt, shows a friendly loader and a
+  "turn your device sideways" overlay in portrait, focuses the canvas for
+  keyboard keys inside the itch iframe, and tries a landscape orientation
+  lock on the first tap.
+
+**Building and uploading:**
+
+1. File > Build Settings > **WebGL** > Switch Platform.
+2. Same window: set **Texture Compression = ASTC** for a mobile-first
+   build (crisp and small on phones/tablets; desktop browsers then pay a
+   little extra load-time transcoding). Leave DXT if desktop players are
+   the majority.
+3. Build to a folder. Zip the folder's **contents** (index.html at the zip
+   root, next to Build/ and StreamingAssets/) — not the folder itself.
+4. itch.io project: Kind = **HTML**, upload the zip, tick **"This file
+   will be played in the browser"**. Embed size 1280x720, enable the
+   fullscreen button, and tick **"Mobile friendly"**. SharedArrayBuffer
+   support is NOT needed (threads are off).
+
+**Reality notes for small hardware:** recent phones/tablets run it well;
+very old devices can hit browser memory limits on the open world. Audio
+starts after the first tap (a browser rule — the first UI touch unlocks
+it). If the first load feels heavy, the biggest wins are texture sizes on
+the third-party packs, not code.
 
 ## Voice calling
 
