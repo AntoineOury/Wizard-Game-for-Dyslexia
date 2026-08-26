@@ -14,8 +14,8 @@ players aged 6-8 who are practicing letter recognition and formation.
    area, including out of the water onto the shore. Calling DRAWS OUT; it
    does not catch: a called creature that comes across a word paper it could
    stick to redirects to the paper. Letter buttons remain on the same screen
-   as the everywhere-fallback (no mic, loud classroom, non-Windows build).
-   *Letter naming and letter-sound production.*
+   as the everywhere-fallback (no mic, loud classroom, a browser without
+   speech support). *Letter naming and letter-sound production.*
 3. **Trap** — the Trap button (or `T`) asks which creature to hunt, then deals
    three words: **tap the word with the most of that creature's letter**
    ("willow" beats "cat" for W). The right word becomes a paper sheet laid on
@@ -118,9 +118,9 @@ vertical. In the browser the custom web template handles it (below).
 Yes — the WebGL build plays with touch in mobile/tablet browsers: single
 touches drive the same pointer path as the mouse, the joystick/look surface
 and all panels are EventSystem-driven, letter tracing works with a finger,
-and voice calling (not available in browsers) already falls back to the
-letter buttons. The booklet persists via PlayerPrefs (IndexedDB). No game
-code differs per platform.
+and voice calling runs on the browser's own speech engine (see **Voice
+calling** below) with the letter buttons as backup. The booklet persists via
+PlayerPrefs (IndexedDB). No game code differs per platform.
 
 **Project setup already committed** (Player settings):
 
@@ -165,15 +165,52 @@ the third-party packs, not code.
 
 `VoiceLetterListener` listens for each active letter's spoken NAME ("ess",
 "double u") and, where a word engine can plausibly match one, its phonic
-SOUND ("sss", "wuh"). Backend today: Unity's built-in Windows speech keyword
-recognizer — offline, keyless, works in the editor. On other platforms it
-reports unsupported and the call screen leans on the letter buttons.
+SOUND ("sss", "wuh"). Two keyless backends cover the places the game ships:
 
-Swapping in a cloud engine (e.g. Google Cloud Speech-to-Text) touches ONE
-file: replace the platform block in `VoiceLetterListener` — start streaming in
-`StartListening`, and pass each transcript to `ReportPhrase()`, which already
-maps spoken forms to letters. Confidence is deliberately lenient: a misheard
-letter merely calls a different creature, which is a shrug, not a failure.
+- **Browser (WebGL) builds** — the browser's own **Web Speech API**, bridged
+  by `Assets/Plugins/WebGL/WebSpeech.jslib` (the same engine the earlier
+  HTML prototypes used). Chrome and Edge — desktop and Android — recognize
+  through Google's speech service (needs internet); Safari on Mac, iPhone
+  and iPad uses Siri's. So the itch.io build hears voice on laptops,
+  tablets and phones alike; Firefox has no speech API and falls back to the
+  letter buttons.
+- **Windows editor and Windows builds** — Unity's built-in keyword
+  recognizer: offline, works while play-testing in the editor.
+
+Everywhere else (macOS editor, native Android/iOS apps) it reports
+unsupported and the call screen leans on the letter buttons. Free-form
+engines dress letters up — "Double U.", "the letter w" — so the phrase
+mapper strips punctuation and also accepts a spoken form standing as its
+own word inside a short utterance.
+
+Swapping in a cloud engine (e.g. Google Cloud Speech-to-Text) still touches
+ONE file: replace a platform block in `VoiceLetterListener` — start streaming
+in `StartListening`, and pass each transcript to `ReportPhrase()`, which
+already maps spoken forms to letters. Confidence is deliberately lenient: a
+misheard letter merely calls a different creature, which is a shrug, not a
+failure.
+
+### Troubleshooting voice (browser / WebGL)
+
+The Call screen's live grey status line diagnoses the browser build too:
+
+- **"Waking the microphone..." then "Listening! ..."** — working. The first
+  Call ever pops the browser's microphone permission — tap **Allow**. Speak
+  the letter's NAME clearly ("double u", "ess"); the line echoes whatever
+  the engine heard, matched or not, so you can watch it listen.
+- **"The browser blocked the microphone"** — permission was denied: click
+  the mic/lock icon by the address bar, allow it, then tap the game once (a
+  tap is also what wakes the mic again if the browser pauses it).
+- **"This browser has no built-in speech recognition"** — Firefox and a few
+  niche browsers; the letter buttons carry the flow there. Chrome, Edge and
+  Safari all work.
+- **Works elsewhere but not on itch.io** — the itch player embeds the game
+  in an iframe that must pass microphone permission through (current itch
+  pages do). If the permission prompt never appears there, verify the same
+  zip outside an iframe (a quick Netlify drop) to prove the build, then
+  re-check the itch page's embed options.
+- Speech needs HTTPS (itch.io and Netlify both are), and on Chrome it needs
+  internet — the audio is recognized by Google's speech servers.
 
 ### Troubleshooting voice (Windows)
 
@@ -194,9 +231,10 @@ the diagnosis:
 - **"Speech failed to start: ..."** / **"Windows speech error: ..."** — the
   exact engine error, usually a missing language pack or the microphone in
   use by another app.
-- **"Voice needs the Windows editor or a Windows build"** — you are on
-  macOS/Linux/mobile, where the built-in backend does not exist; the letter
-  buttons carry the flow until a cloud backend is plugged in.
+- **"Voice here needs a Windows build or a BROWSER (WebGL) build"** — you
+  are on the macOS/Linux editor or a native mobile app, where neither
+  built-in backend exists; the letter buttons carry the flow until a cloud
+  backend is plugged in.
 
 While any mini-game panel is open the cursor is freed and gameplay input
 pauses via `PlayerControlScheme.UiMode` — the same flag the controllers
@@ -232,10 +270,12 @@ it runs; delete the folder and nothing else breaks.
 
 ## Prototype simplifications (flagged for later)
 
-- Voice runs on the Windows keyword recognizer: great in the editor and on
-  Windows builds, unavailable on tablets until a cloud/native backend is
-  plugged into `VoiceLetterListener` (single swap point, see above). Phonic
-  sounds match best-effort — a phoneme-level engine would grade them properly.
+- Voice runs on built-in engines: the browser's Web Speech API in WebGL
+  builds, the Windows keyword recognizer in the editor and on Windows. The
+  browser build already covers phones and tablets; only native Android/iOS
+  APPS would need a cloud/native backend plugged into `VoiceLetterListener`
+  (single swap point, see above). Phonic sounds match best-effort — a
+  phoneme-level engine would grade them properly.
 - Tracing accepts any stroke order/direction — formation order would need
   per-stroke sequencing on top of `LetterShapes`.
 - No capture inventory items (paper supply is infinite), no sounds yet.
