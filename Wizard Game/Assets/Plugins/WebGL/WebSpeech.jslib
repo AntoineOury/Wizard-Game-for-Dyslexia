@@ -108,5 +108,33 @@ mergeInto(LibraryManager.library, {
     var buffer = _malloc(size);
     stringToUTF8(message, buffer, size);
     return buffer;
+  },
+
+  // --------------------------------------------------------------------
+  // Text-to-speech — the same Web Speech API, synthesis side. This is the
+  // brewing book's voice in browser builds. Utterances queue in the
+  // browser, so speaking a letter sequence one call at a time just works.
+
+  OtherwiseSpeech_TtsSupported: function () {
+    return (typeof window !== "undefined" &&
+            window.speechSynthesis && window.SpeechSynthesisUtterance) ? 1 : 0;
+  },
+
+  OtherwiseSpeech_Speak: function (textPtr, rate, pitch) {
+    if (!window.speechSynthesis || !window.SpeechSynthesisUtterance) return;
+    var utterance = new SpeechSynthesisUtterance(UTF8ToString(textPtr));
+    utterance.lang = "en-US";
+    utterance.rate = rate;
+    utterance.pitch = pitch;
+    window.speechSynthesis.speak(utterance);
+  },
+
+  OtherwiseSpeech_IsSpeaking: function () {
+    var synth = window.speechSynthesis;
+    return (synth && (synth.speaking || synth.pending)) ? 1 : 0;
+  },
+
+  OtherwiseSpeech_StopSpeaking: function () {
+    if (window.speechSynthesis) window.speechSynthesis.cancel();
   }
 });

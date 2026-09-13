@@ -88,6 +88,19 @@ namespace OtherwiseLabs.CreatureGame
             ['Z'] = new[] { "z", "zee", "zed", "zzz" },
         };
 
+        /// <summary>
+        /// How a letter may be spoken (name forms first, phonic sounds after) —
+        /// shared with the other mini-games so hearing and saying stay
+        /// consistent: the brewing book SPEAKS from the same table this
+        /// listener RECOGNIZES from.
+        /// </summary>
+        public static IReadOnlyList<string> SpokenFormsFor(char letter)
+        {
+            return SpokenForms.TryGetValue(char.ToUpperInvariant(letter), out string[] forms)
+                ? forms
+                : Array.Empty<string>();
+        }
+
 #if UNITY_WEBGL && !UNITY_EDITOR
         // Browser backend: the Web Speech API, bridged by WebSpeech.jslib.
         // Unity polls the bridge's message queue every frame — no SendMessage,

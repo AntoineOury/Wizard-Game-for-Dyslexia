@@ -5057,6 +5057,92 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 713732115}
   m_PrefabAsset: {fileID: 0}
+--- !u!4 &990003010 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5515190880370760086, guid: e683ca813dc110e408fcd5f326ec4dc6,
+    type: 3}
+  m_PrefabInstance: {fileID: 1748219726}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1 &990003001
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 990003002}
+  - component: {fileID: 990003003}
+  - component: {fileID: 990003004}
+  m_Layer: 0
+  m_Name: Brewing Mini-Game
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &990003002
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 990003001}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &990003003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 990003001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b7e01c44f2a94d5e8c63a1907d24f6b8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  book: {fileID: 990003010}
+  cauldron: {fileID: 1027135005}
+  shelfA: {fileID: 1391256507}
+  shelfB: {fileID: 1507901166}
+  speaker: {fileID: 990003004}
+  potionPrefabs:
+  - {fileID: 8597828511107596405, guid: 742f5899acc9d044daa4eada7cebab85, type: 3}
+  - {fileID: 6421125741917366589, guid: ea6934d79c32f9e49987b9dbfd48e81e, type: 3}
+  - {fileID: 1116690230162135290, guid: 11785e82102cc7e4c96096a72e055e13, type: 3}
+  - {fileID: 5404002023527722651, guid: 7a37452c0e680e643849409664a4da6e, type: 3}
+  tintPotions: 1
+  decoyCount: 2
+  startingLength: 3
+  maxLength: 5
+  brewsPerLengthUp: 2
+  gapBetweenLetters: 0.45
+  autoPlayRadius: 7
+  interactRange: 6
+  puffColor: {r: 0.85, g: 0.9, b: 1, a: 1}
+  alwaysShowLetters: 0
+--- !u!114 &990003004
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 990003001}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 93f7b2a8d0e14c6bb7452f81c9a06e35, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  letterClips: []
+  ttsRate: 0.8
+  ttsPitch: 1.05
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
@@ -5071,3 +5157,4 @@ SceneRoots:
   - {fileID: 1849893599}
   - {fileID: 1835904431}
   - {fileID: 1748219726}
+  - {fileID: 990003002}
