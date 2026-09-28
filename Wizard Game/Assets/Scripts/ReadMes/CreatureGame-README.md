@@ -79,13 +79,35 @@ the game falls back to its code-built booklet.
 
 ### The backpack (papers inventory)
 
-The **Bag (I)** button on the right edge opens the backpack: every word
-paper brewed in the alchemist store, with counts, persisted between
-sessions (`PaperInventory`). It works **the same in every scene with zero
-authoring** — `BackpackUI` bootstraps itself on play, survives scene
-changes, and hides its button in scenes without a player (the main menu).
-Gameplay pauses through the usual `PlayerControlScheme.UiMode` flag while
-it is open, and it refuses to open on top of another panel.
+The **Bag (I)** button on the right edge opens the backpack: a
+Minecraft-style grid with one slot per letter A-Z. Letters backed by brewed
+papers glow with a count badge; letters with nothing collected sit greyed
+out. Tap any slot and the line below explains it — the words behind a
+stocked letter, or "brew a word with X at the Alchemist Store" for an
+empty one. Counts persist between sessions (`PaperInventory`). It works
+**the same in every scene with zero authoring** — `BackpackUI` bootstraps
+itself on play, survives scene changes, and hides its button in scenes
+without a player (the main menu). Gameplay pauses through the usual
+`PlayerControlScheme.UiMode` flag while it is open, and it refuses to open
+on top of another panel.
+
+**Traps are supplies now.** The trap flow's letter grid shows each
+creature's supply (`x3`) and greys out letters with none, with the restock
+message right under the tile; placing a paper spends one matching paper
+from the bag (the chosen word itself when it's in there, otherwise the
+loosest paper with that letter). Swapping a trap out by placing a new one
+refunds the old trap's paper if it caught nothing — repositioning is never
+punished. Calling stays free: only trapping consumes.
+
+### Traveling: store door and world map
+
+Walking up to the **door in the Alchemist Store** takes the player to the
+PCG World (a `ScenePortal` on the "Door Portal" object — retarget or move
+it freely, it arms only after the player has been away from it once). In
+PCG World, a temporary **"Map: Store" button in the top-right corner**
+teleports back to the Alchemist Store (`TravelUI`, self-bootstrapped, only
+shows in that scene). Both scenes are enabled in Build Settings — a scene
+must be listed there for travel to work.
 
 Prefer a hand-styled button? Make any UI Button and add the
 **`BackpackButton`** component — in scenes that author one, the floating

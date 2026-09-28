@@ -378,28 +378,66 @@ namespace OtherwiseLabs.CreatureGame
             TMP_Text title = MakeLabel(window, titleText, 28f, Ink, bold: true);
             Place(title, new Vector2(0.5f, 1f), new Vector2(0f, -40f), new Vector2(520f, 70f));
 
-            BuildLetterButtons(window, onPick);
+            // Only the trap flow opens this grid, and traps run on brewed
+            // supplies — so this grid shows counts and greys empty letters.
+            BuildLetterButtons(window, onPick, withSupplies: true);
             _gridPanel.gameObject.SetActive(true);
         }
 
-        /// <summary>One big letter button per defined creature, laid out 3 per row.</summary>
-        void BuildLetterButtons(RectTransform window, System.Action<char> onPick)
+        /// <summary>
+        /// One big letter button per defined creature, laid out 3 per row.
+        /// Traps are crafted supplies: a letter with no brewed papers behind
+        /// it shows greyed out with its restock message underneath, and
+        /// tapping it explains instead of proceeding (used only by the trap
+        /// flow; the Call grid passes withSupplies: false and stays free).
+        /// </summary>
+        void BuildLetterButtons(RectTransform window, System.Action<char> onPick, bool withSupplies = false)
         {
             int index = 0;
             foreach (CreatureDefinition definition in _game.creatures)
             {
                 if (definition == null) continue;
                 char letter = definition.Letter;
+                int supply = withSupplies ? PaperInventory.CountForLetter(letter) : -1;
+                bool stocked = supply != 0;
 
                 Button button = MakeButton(window, letter.ToString(), new Vector2(120f, 120f),
-                    new Color(0.95f, 0.8f, 0.35f), 62f, () => onPick(letter));
+                    stocked ? new Color(0.95f, 0.8f, 0.35f) : new Color(0.45f, 0.45f, 0.5f), 62f,
+                    stocked
+                        ? (System.Action)(() => onPick(letter))
+                        : () => Toast($"No {letter} traps in your bag yet — brew some at the Alchemist Store!"));
                 var rect = (RectTransform)button.transform;
                 rect.anchorMin = rect.anchorMax = new Vector2(0.5f, 0.5f);
                 int column = index % 3, row = index / 3;
                 rect.anchoredPosition = new Vector2(-150f + column * 150f, -10f - row * 150f);
 
-                TMP_Text caption = MakeLabel(window, definition.DisplayName, 18f, Ink);
-                Place(caption, new Vector2(0.5f, 0.5f), rect.anchoredPosition + new Vector2(0f, -76f), new Vector2(150f, 24f));
+                if (!stocked)
+                {
+                    TMP_Text face = button.GetComponentInChildren<TMP_Text>();
+                    if (face != null)
+                    {
+                        Color faded = face.color;
+                        faded.a = 0.35f;
+                        face.color = faded;
+                    }
+                }
+
+                if (supply >= 0)
+                {
+                    // Supply badge in the tile's corner, red when empty.
+                    TMP_Text badge = MakeLabel(window, $"x{supply}", 18f,
+                        stocked ? Ink : new Color(0.78f, 0.3f, 0.25f), bold: true);
+                    Place(badge, new Vector2(0.5f, 0.5f),
+                        rect.anchoredPosition + new Vector2(38f, -40f), new Vector2(70f, 24f));
+                }
+
+                // Caption: the creature's name — or where to restock its traps.
+                TMP_Text caption = stocked
+                    ? MakeLabel(window, definition.DisplayName, 18f, Ink)
+                    : MakeLabel(window, $"No {letter} traps — brew more\nat the Alchemist Store!", 14f,
+                        new Color(0.78f, 0.42f, 0.3f));
+                Place(caption, new Vector2(0.5f, 0.5f),
+                    rect.anchoredPosition + new Vector2(0f, -80f), new Vector2(190f, 36f));
                 index++;
             }
         }

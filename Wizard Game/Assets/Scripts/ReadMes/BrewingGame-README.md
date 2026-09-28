@@ -37,11 +37,13 @@ traps use, so everything brewed is a word the hunting game understands.
 
 Brewed papers land in **`PaperInventory`** (word → count, persisted like the
 capture journal) and show up in the **backpack** — the "Bag (I)" button on
-the right edge of the screen, present in every scene (see the backpack
-section of the CreatureGame README). The creature game does not consume
-papers YET — its trap supply is still infinite — so brewing is purely
-additive today. When hunts should start spending papers,
-`PaperInventory.TryConsume(word)` is the one call the trap flow needs.
+the right edge of the screen, present in every scene. And they MATTER now:
+**the creature hunts run on them.** A letter's trap supply is the number of
+papers whose word contains that letter, placing a trap spends one (the
+exact word when the satchel has it, otherwise the loosest match — sticky
+papers are saved for hunts that need them), and the trap letter-grid greys
+out letters whose supply is empty. Brew → walk out the door → hunt →
+return through the map button for more: the loop from the design sheet.
 
 ## The scene setup (Alchemist Store)
 

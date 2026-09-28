@@ -14,4 +14,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/PCG World.unity
     guid: 815616ef21722ad48a934d8a7dd4a144
+  - enabled: 1
+    path: Assets/Scenes/Alchemist Store.unity
+    guid: 5d21c7f4a9e64b23b7f01c68e4a2d915
   m_configObjects: {}

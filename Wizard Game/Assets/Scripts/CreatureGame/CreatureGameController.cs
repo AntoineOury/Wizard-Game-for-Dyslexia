@@ -291,10 +291,28 @@ namespace OtherwiseLabs.CreatureGame
         void PlacePaper(Vector3 point)
         {
             _placing = false;
+
+            // Traps are crafted supplies now: placing one spends a brewed
+            // paper that contains the letter (the exact word when the satchel
+            // has it). The letter grid already greys out empty letters; this
+            // is the belt-and-braces check at the moment of truth.
+            if (!PaperInventory.TryConsumeForLetter(_placingLetter, _placingWord, out string spentWord))
+            {
+                _ui.Toast($"No {_placingLetter} traps left in your bag — brew more at the Alchemist Store!");
+                return;
+            }
+
             if (WordTrapPaper.ActiveCount >= maxActivePapers)
-                WordTrapPaper.Oldest.Remove(freeCreature: true);
+            {
+                // The trap being swapped out caught nothing: hand back the
+                // paper it consumed so repositioning is never punished.
+                WordTrapPaper oldest = WordTrapPaper.Oldest;
+                if (!string.IsNullOrEmpty(oldest.SourceWord)) PaperInventory.Add(oldest.SourceWord);
+                oldest.Remove(freeCreature: true);
+            }
 
             WordTrapPaper paper = WordTrapPaper.Place(point, _placingLetter, _placingWord);
+            paper.SourceWord = spentWord;
 
             // Teach the strength rule out loud: more of the letter = stickier.
             int hold = paper.HoldCount(_placingLetter);

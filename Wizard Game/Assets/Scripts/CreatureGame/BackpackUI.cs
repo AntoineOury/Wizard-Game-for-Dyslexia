@@ -37,9 +37,10 @@ namespace OtherwiseLabs.CreatureGame
         GameObject _floatingButton;
         GameObject _panel;
         RectTransform _window;
-        readonly List<GameObject> _rows = new List<GameObject>();
+        readonly List<GameObject> _slots = new List<GameObject>();
         TMP_Text _totalLabel;
-        TMP_Text _emptyLabel;
+        TMP_Text _detailLabel;
+        char _selectedLetter = '\0';
         bool _claimedUiMode;
         bool _uiAvailable;
 
@@ -108,6 +109,7 @@ namespace OtherwiseLabs.CreatureGame
             if (_panel.activeSelf || !_uiAvailable) return;
             if (PlayerControlScheme.UiMode) return;   // another panel (booklet, capture) owns the screen
             _panel.SetActive(true);
+            _selectedLetter = '\0';
             Rebuild();
             PaperInventory.Changed += OnInventoryChanged;
             PlayerControlScheme.UiMode = true;
@@ -178,14 +180,12 @@ namespace OtherwiseLabs.CreatureGame
             TMP_Text title = MakeText(_window, "Backpack", 34f, Gold, FontStyles.Bold);
             Place(title.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -46f), new Vector2(480f, 50f));
 
-            TMP_Text subtitle = MakeText(_window, "Word papers for your hunting trips", 18f,
+            TMP_Text subtitle = MakeText(_window, "Letter food for the creatures you'll catch in the wild", 18f,
                 new Color(0.75f, 0.75f, 0.85f, 1f), FontStyles.Normal);
-            Place(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(500f, 30f));
+            Place(subtitle.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -84f), new Vector2(520f, 30f));
 
-            _emptyLabel = MakeText(_window,
-                "Nothing in here yet!\n\nBrew word papers at the alchemist store\nand they will wait here for the hunt.",
-                21f, Paper, FontStyles.Normal);
-            Place(_emptyLabel.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(0f, 10f), new Vector2(480f, 220f));
+            _detailLabel = MakeText(_window, "", 19f, Paper, FontStyles.Normal);
+            Place(_detailLabel.rectTransform, new Vector2(0.5f, 1f), new Vector2(0f, -348f), new Vector2(508f, 76f));
 
             _totalLabel = MakeText(_window, "", 20f, new Color(0.75f, 0.75f, 0.85f, 1f), FontStyles.Normal);
             Place(_totalLabel.rectTransform, new Vector2(0.5f, 0f), new Vector2(0f, 34f), new Vector2(480f, 32f));
@@ -200,45 +200,85 @@ namespace OtherwiseLabs.CreatureGame
             _panel.SetActive(false);
         }
 
+        /// <summary>
+        /// The Minecraft-style grid: one slot per letter A-Z, 9 to a row.
+        /// Stocked letters glow with a count badge; letters with nothing
+        /// collected yet sit greyed out. Tapping a slot explains it below —
+        /// including where to go when it's empty.
+        /// </summary>
         void Rebuild()
         {
-            foreach (GameObject row in _rows) Destroy(row);
-            _rows.Clear();
+            foreach (GameObject slot in _slots) Destroy(slot);
+            _slots.Clear();
 
-            var entries = new List<KeyValuePair<string, int>>(PaperInventory.All);
-            entries.Sort((a, b) => string.CompareOrdinal(a.Key, b.Key));
-
-            _emptyLabel.gameObject.SetActive(entries.Count == 0);
-            _totalLabel.text = entries.Count == 0 ? "" : $"Papers in the bag: {PaperInventory.TotalCount}";
-
-            // Rows stack under the subtitle; spacing shrinks if the bag is full.
-            float top = -122f;
-            float bottom = 70f;
-            float available = _window.sizeDelta.y - (-top) - bottom;
-            float spacing = Mathf.Min(52f, entries.Count > 0 ? available / entries.Count : 52f);
-
-            for (int i = 0; i < entries.Count; i++)
+            for (int i = 0; i < 26; i++)
             {
-                var rowGo = new GameObject($"Row {entries[i].Key}", typeof(RectTransform));
-                rowGo.transform.SetParent(_window, false);
-                var rect = (RectTransform)rowGo.transform;
-                Place(rect, new Vector2(0.5f, 1f), new Vector2(0f, top - spacing * i - spacing * 0.5f),
-                    new Vector2(470f, spacing - 6f));
+                char letter = (char)('A' + i);
+                int supply = PaperInventory.CountForLetter(letter);
+                bool stocked = supply > 0;
 
-                var stripe = rowGo.AddComponent<Image>();
-                stripe.color = new Color(1f, 1f, 1f, i % 2 == 0 ? 0.05f : 0.09f);
-                stripe.raycastTarget = false;
+                var slotGo = new GameObject($"Slot {letter}", typeof(RectTransform));
+                slotGo.transform.SetParent(_window, false);
+                var rect = (RectTransform)slotGo.transform;
+                int column = i % 9, row = i / 9;
+                Place(rect, new Vector2(0.5f, 1f),
+                    new Vector2(-224f + column * 56f, -150f - row * 60f), new Vector2(50f, 54f));
 
-                TMP_Text word = MakeText(rect, entries[i].Key, 26f, Paper, FontStyles.Bold);
-                word.alignment = TextAlignmentOptions.MidlineLeft;
-                Place(word.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(14f, 0f), new Vector2(440f, 40f));
+                var background = slotGo.AddComponent<Image>();
+                background.color = stocked ? new Color(1f, 1f, 1f, 0.13f) : new Color(0f, 0f, 0f, 0.38f);
+                var button = slotGo.AddComponent<Button>();
+                button.targetGraphic = background;
+                char captured = letter;
+                button.onClick.AddListener(() => SelectSlot(captured));
 
-                TMP_Text count = MakeText(rect, $"x{entries[i].Value}", 24f, Gold, FontStyles.Bold);
-                count.alignment = TextAlignmentOptions.MidlineRight;
-                Place(count.rectTransform, new Vector2(0.5f, 0.5f), new Vector2(-14f, 0f), new Vector2(440f, 40f));
+                TMP_Text glyph = MakeText(rect, letter.ToString(), 27f,
+                    stocked ? Paper : new Color(1f, 1f, 1f, 0.18f), FontStyles.Bold);
+                Stretch(glyph.rectTransform);
 
-                _rows.Add(rowGo);
+                if (stocked)
+                {
+                    TMP_Text badge = MakeText(rect, $"x{supply}", 13f, Gold, FontStyles.Bold);
+                    badge.alignment = TextAlignmentOptions.BottomRight;
+                    Stretch(badge.rectTransform);
+                    badge.rectTransform.offsetMax = new Vector2(-3f, 0f);
+                }
+
+                _slots.Add(slotGo);
             }
+
+            _totalLabel.text = $"Papers in the bag: {PaperInventory.TotalCount}";
+            RefreshDetail();
+        }
+
+        void SelectSlot(char letter)
+        {
+            _selectedLetter = letter;
+            RefreshDetail();
+        }
+
+        void RefreshDetail()
+        {
+            if (_selectedLetter == '\0')
+            {
+                _detailLabel.text = PaperInventory.TotalCount == 0
+                    ? "Nothing collected yet — brew letter food at the Alchemist Store!"
+                    : "Tap a square to see its words.";
+                return;
+            }
+
+            var words = PaperInventory.WordsFor(_selectedLetter);
+            if (words.Count == 0)
+            {
+                _detailLabel.text =
+                    $"No {_selectedLetter} food yet — brew a word with {_selectedLetter} in it at the Alchemist Store!";
+                return;
+            }
+
+            var parts = new List<string>();
+            foreach (KeyValuePair<string, int> pair in words)
+                parts.Add(pair.Value > 1 ? $"{pair.Key} x{pair.Value}" : pair.Key);
+            _detailLabel.text =
+                $"{_selectedLetter} traps: {PaperInventory.CountForLetter(_selectedLetter)}  —  {string.Join(", ", parts)}";
         }
 
         // ------------------------------------------------------------------

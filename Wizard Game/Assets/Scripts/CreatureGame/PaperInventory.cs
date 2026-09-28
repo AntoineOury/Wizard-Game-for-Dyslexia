@@ -46,6 +46,71 @@ namespace OtherwiseLabs.CreatureGame
             get { Load(); return _counts; }
         }
 
+        /// <summary>
+        /// The letter's trap supply: how many papers contain this letter.
+        /// One paper can serve any letter inside its word — flexible ammo.
+        /// </summary>
+        public static int CountForLetter(char letter)
+        {
+            Load();
+            letter = char.ToUpperInvariant(letter);
+            int total = 0;
+            foreach (KeyValuePair<string, int> pair in _counts)
+                if (pair.Key.IndexOf(letter) >= 0) total += pair.Value;
+            return total;
+        }
+
+        /// <summary>The words (with counts) backing a letter's supply, for UI.</summary>
+        public static List<KeyValuePair<string, int>> WordsFor(char letter)
+        {
+            Load();
+            letter = char.ToUpperInvariant(letter);
+            var words = new List<KeyValuePair<string, int>>();
+            foreach (KeyValuePair<string, int> pair in _counts)
+                if (pair.Key.IndexOf(letter) >= 0) words.Add(pair);
+            words.Sort((a, b) => string.CompareOrdinal(a.Key, b.Key));
+            return words;
+        }
+
+        /// <summary>
+        /// Spends one paper containing the letter and reports which word was
+        /// spent. Prefers the exact word when the satchel has it, otherwise
+        /// the paper with the FEWEST of the letter — sticky papers stay saved
+        /// for hunts that need them. False (and null) when the supply is dry.
+        /// </summary>
+        public static bool TryConsumeForLetter(char letter, string preferredWord, out string consumedWord)
+        {
+            Load();
+            letter = char.ToUpperInvariant(letter);
+            consumedWord = null;
+
+            if (!string.IsNullOrEmpty(preferredWord))
+            {
+                string exact = Normalize(preferredWord);
+                if (exact.IndexOf(letter) >= 0 && _counts.TryGetValue(exact, out int have) && have > 0)
+                    consumedWord = exact;
+            }
+
+            if (consumedWord == null)
+            {
+                int loosest = int.MaxValue;
+                foreach (KeyValuePair<string, int> pair in _counts)
+                {
+                    int occurrences = 0;
+                    foreach (char c in pair.Key)
+                        if (c == letter) occurrences++;
+                    if (occurrences > 0 && occurrences < loosest)
+                    {
+                        loosest = occurrences;
+                        consumedWord = pair.Key;
+                    }
+                }
+            }
+
+            if (consumedWord == null) return false;
+            return TryConsume(consumedWord);
+        }
+
         public static void Add(string word, int amount = 1)
         {
             Load();
