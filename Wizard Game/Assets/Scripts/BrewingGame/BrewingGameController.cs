@@ -84,6 +84,7 @@ namespace OtherwiseLabs.BrewingGame
 
         // Input tracking
         PotionIngredient _held;
+        PotionIngredient _hover;
         float _holdDistance;
         Vector2 _pressScreen;
         float _pressTime;
@@ -464,7 +465,9 @@ namespace OtherwiseLabs.BrewingGame
 
         void Update()
         {
-            if (_phase == Phase.Resolving) { _held = null; return; }
+            if (_phase == Phase.Resolving) { SetHover(null); _held = null; return; }
+
+            UpdateHover();
 
             if (Input.GetMouseButtonDown(0) && !PointerOverBlockingUi())
                 BeginPress();
@@ -485,6 +488,34 @@ namespace OtherwiseLabs.BrewingGame
                 if (IsTap() && _phase != Phase.Speaking)
                     StartCoroutine(SpeakSequence());
             }
+        }
+
+        /// <summary>
+        /// Glow the bottle under the pointer so it's clear which one a click
+        /// would grab. Mouse hovers for real; on touch there is no hover until
+        /// a finger is down, so stale glows are suppressed there.
+        /// </summary>
+        void UpdateHover()
+        {
+            PotionIngredient hover = null;
+            bool pointerLive = !Input.touchSupported || Input.touchCount > 0 || Input.GetMouseButton(0);
+            if (_held == null && pointerLive && !PointerOverBlockingUi()
+                && Physics.Raycast(PointerRay(), out RaycastHit hit, 80f))
+            {
+                var potion = hit.collider.GetComponentInParent<PotionIngredient>();
+                if (potion != null && potion.CurrentState == PotionIngredient.State.Shelved
+                    && PlayerWithin(potion.transform.position, interactRange))
+                    hover = potion;
+            }
+            SetHover(hover);
+        }
+
+        void SetHover(PotionIngredient hover)
+        {
+            if (hover == _hover) return;
+            if (_hover != null) _hover.SetHovered(false);
+            _hover = hover;
+            if (_hover != null) _hover.SetHovered(true);
         }
 
         void BeginPress()

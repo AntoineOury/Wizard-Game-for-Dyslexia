@@ -27,6 +27,18 @@ namespace OtherwiseLabs.BrewingGame
         Transform _label;
         float _baseScale = 1f;
 
+        // Hover glow: a soft halo sprite plus a brightness lift, eased in and
+        // out so mousing across the shelf shimmers instead of flickering.
+        bool _hovered;
+        float _glow;
+        SpriteRenderer _halo;
+        float _haloScale = 1f;
+        Color _glowColor = Color.white;
+        Renderer[] _renderers;
+        Color _appliedTint = Color.white;
+        bool _tinted;
+        static Sprite _haloSprite;
+
         public void Setup(char letter, BrewingGameController game, Vector3 home, Color tint, bool applyTint)
         {
             Letter = char.ToUpperInvariant(letter);
@@ -44,18 +56,10 @@ namespace OtherwiseLabs.BrewingGame
             grab.radius = Mathf.Max(bounds.extents.magnitude, 0.18f) * 1.25f;
             grab.isTrigger = true;
 
-            if (applyTint)
-            {
-                var block = new MaterialPropertyBlock();
-                Color soft = Color.Lerp(Color.white, tint, 0.45f);
-                foreach (Renderer renderer in GetComponentsInChildren<Renderer>())
-                {
-                    renderer.GetPropertyBlock(block);
-                    block.SetColor("_BaseColor", soft);
-                    block.SetColor("_Color", soft);
-                    renderer.SetPropertyBlock(block);
-                }
-            }
+            _renderers = GetComponentsInChildren<Renderer>();
+            _tinted = applyTint;
+            _appliedTint = applyTint ? Color.Lerp(Color.white, tint, 0.45f) : Color.white;
+            if (applyTint) ApplyBodyColor(_appliedTint);
 
             // The floating letter so players know which potion is which.
             var labelGo = new GameObject($"Letter {Letter}");
@@ -71,6 +75,85 @@ namespace OtherwiseLabs.BrewingGame
             text.rectTransform.sizeDelta = new Vector2(2f, 1f);
             labelGo.AddComponent<BillboardLabel>();
             _label = labelGo.transform;
+
+            // The selection halo: an additive-feeling radial sprite behind the
+            // bottle, invisible until hovered or held.
+            var haloGo = new GameObject("Halo");
+            haloGo.transform.SetParent(transform, false);
+            haloGo.transform.localPosition = bounds.center;
+            _halo = haloGo.AddComponent<SpriteRenderer>();
+            _halo.sprite = HaloSprite();
+            _glowColor = Color.Lerp(tint, Color.white, 0.35f);
+            _halo.color = new Color(_glowColor.r, _glowColor.g, _glowColor.b, 0f);
+            _haloScale = Mathf.Max(bounds.size.magnitude, 0.35f) * 1.9f;
+            haloGo.transform.localScale = Vector3.zero;
+            haloGo.AddComponent<BillboardLabel>();
+        }
+
+        /// <summary>Controller tells us when the pointer rests on this bottle.</summary>
+        public void SetHovered(bool hovered) => _hovered = hovered;
+
+        void ApplyBodyColor(Color color)
+        {
+            if (_renderers == null) return;
+            var block = new MaterialPropertyBlock();
+            foreach (Renderer renderer in _renderers)
+            {
+                if (renderer == null || renderer == _halo) continue;
+                renderer.GetPropertyBlock(block);
+                block.SetColor("_BaseColor", color);
+                block.SetColor("_Color", color);
+                renderer.SetPropertyBlock(block);
+            }
+        }
+
+        void UpdateGlow()
+        {
+            bool lit = (CurrentState == State.Shelved && _hovered) || CurrentState == State.Held;
+            float target = lit ? 1f : 0f;
+            if (Mathf.Approximately(_glow, target) && _glow == 0f) return;
+            _glow = Mathf.MoveTowards(_glow, target, Time.deltaTime * 7f);
+
+            if (_halo != null)
+            {
+                float pulse = 0.9f + 0.1f * Mathf.Sin(Time.time * 5.5f + _bobSeed);
+                Color c = _glowColor;
+                c.a = 0.62f * _glow * pulse;
+                _halo.color = c;
+                _halo.transform.localScale = Vector3.one * (_haloScale * (0.82f + 0.18f * pulse) * _glow);
+            }
+
+            // Lift the bottle color toward white and grow it slightly.
+            if (_tinted)
+                ApplyBodyColor(Color.Lerp(_appliedTint, Color.white, 0.5f * _glow));
+            if (CurrentState == State.Shelved || CurrentState == State.Held)
+                transform.localScale = Vector3.one * (_baseScale * (1f + 0.09f * _glow));
+        }
+
+        /// <summary>Soft radial gradient, generated once — the glow texture.</summary>
+        static Sprite HaloSprite()
+        {
+            if (_haloSprite != null) return _haloSprite;
+            const int size = 96;
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false)
+            {
+                wrapMode = TextureWrapMode.Clamp
+            };
+            var pixels = new Color[size * size];
+            float half = (size - 1) / 2f;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float dx = (x - half) / half;
+                    float dy = (y - half) / half;
+                    float d = Mathf.Sqrt(dx * dx + dy * dy);
+                    float a = Mathf.Pow(Mathf.Clamp01(1f - d), 2.2f);
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, a);
+                }
+            texture.SetPixels(pixels);
+            texture.Apply();
+            _haloSprite = Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), size);
+            return _haloSprite;
         }
 
         Bounds ComputeLocalBounds()
@@ -85,6 +168,7 @@ namespace OtherwiseLabs.BrewingGame
 
         void Update()
         {
+            UpdateGlow();
             if (CurrentState != State.Shelved) return;
             // A gentle shelf bob so the ingredients read as magical and alive.
             Vector3 pos = _home;

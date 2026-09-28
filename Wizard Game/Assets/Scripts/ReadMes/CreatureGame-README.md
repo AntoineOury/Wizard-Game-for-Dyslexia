@@ -56,6 +56,7 @@ players aged 6-8 who are practicing letter recognition and formation.
 | Action | Laptop | Touch |
 | --- | --- | --- |
 | Booklet | `B` | Book button (left edge) |
+| Backpack (brewed papers) | `I` | Bag button (right edge) |
 | Make a trap | `T` | Trap button (left edge) |
 | Call a creature | `Q`, then **speak the letter** | Call button (tap-a-letter fallback on screen) |
 | Capture a stuck creature | `E` near it | Capture button, or tap the creature |
@@ -75,6 +76,20 @@ creature's entry clones it — `CreatureBookletPanel` only fills in the words
 (letter, name, count, blurb) at runtime, never the layout. `Row Spacing` on
 the panel sets the distance between rows. Delete the panel from a scene and
 the game falls back to its code-built booklet.
+
+### The backpack (papers inventory)
+
+The **Bag (I)** button on the right edge opens the backpack: every word
+paper brewed in the alchemist store, with counts, persisted between
+sessions (`PaperInventory`). It works **the same in every scene with zero
+authoring** — `BackpackUI` bootstraps itself on play, survives scene
+changes, and hides its button in scenes without a player (the main menu).
+Gameplay pauses through the usual `PlayerControlScheme.UiMode` flag while
+it is open, and it refuses to open on top of another panel.
+
+Prefer a hand-styled button? Make any UI Button and add the
+**`BackpackButton`** component — in scenes that author one, the floating
+button hides itself, same contract as the creature-game buttons.
 
 ### The butterfly net
 

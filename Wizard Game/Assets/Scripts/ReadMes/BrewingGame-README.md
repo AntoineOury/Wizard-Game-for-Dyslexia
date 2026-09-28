@@ -14,7 +14,10 @@ traps use, so everything brewed is a word the hunting game understands.
    flowchart's replay branch).
 2. **Pick** — letter potions float on the shelves, each with a big letter
    over the cork (and a letter-tinted bottle). The word's letters are all
-   there, shuffled, plus a couple of decoys.
+   there, shuffled, plus a couple of decoys. The bottle under the pointer
+   **glows** — a soft halo plus a brightness lift — so it is always clear
+   which one a click would grab (a held bottle keeps its glow; on touch
+   the glow rides under the dragging finger).
 3. **Drop** — get them into the cauldron **in the order the book said**:
    *tap* a potion and it flies in by itself, or *drag* it and let go over
    the pot (drop it anywhere else and it glides back to its shelf). Both
@@ -33,11 +36,12 @@ traps use, so everything brewed is a word the hunting game understands.
      another listen.
 
 Brewed papers land in **`PaperInventory`** (word → count, persisted like the
-capture journal). The creature game does not consume them YET — its trap
-supply is still infinite — so brewing is purely additive today. When hunts
-should start spending papers, `PaperInventory.TryConsume(word)` is the one
-call the trap flow needs, and the booklet can show the satchel through
-`PaperInventory.All`.
+capture journal) and show up in the **backpack** — the "Bag (I)" button on
+the right edge of the screen, present in every scene (see the backpack
+section of the CreatureGame README). The creature game does not consume
+papers YET — its trap supply is still infinite — so brewing is purely
+additive today. When hunts should start spending papers,
+`PaperInventory.TryConsume(word)` is the one call the trap flow needs.
 
 ## The scene setup (Alchemist Store)
 
