@@ -44,8 +44,13 @@
 
       // Keyboard (B/T/Q/E) needs canvas focus inside the itch.io iframe, and a
       // first gesture is also the moment browsers allow an orientation lock.
-      function grabFocus() {
+      // Capturing the pointer keeps a drag (letter tracing!) alive even when
+      // the finger or cursor slides past the canvas edge mid-stroke.
+      function grabFocus(e) {
         canvas.focus();
+        if (e && e.pointerId !== undefined && canvas.setPointerCapture) {
+          try { canvas.setPointerCapture(e.pointerId); } catch (ignored) {}
+        }
         if (screen.orientation && screen.orientation.lock)
           screen.orientation.lock("landscape").catch(function () {});
       }
@@ -69,10 +74,13 @@
         // The default template shows a "mobile browsers may not work" banner;
         // this game is built FOR touch, so log instead of scaring players.
         showBanner: function (msg, type) { console.log("[Unity " + (type || "log") + "] " + msg); },
-        matchWebGLToCanvasSize: true,
-        // Cap the render resolution on high-DPI phones: full 3x DPI is the
-        // main thing that melts tablets in browser play.
-        devicePixelRatio: Math.min(window.devicePixelRatio || 1, 2)
+        matchWebGLToCanvasSize: true
+        // Deliberately NO devicePixelRatio override: Unity scales pointer
+        // input by the browser's real pixel ratio, so capping the render
+        // ratio here skews every tap and drag down-right on high-DPI
+        // screens — it broke letter tracing. If old tablets ever run hot,
+        // lower the URP Render Scale on the Performant quality tier
+        // instead: that shrinks rendering without touching input.
       }, function (progress) {
         document.getElementById("progress-fill").style.width = (100 * progress) + "%";
       }).then(function (instance) {

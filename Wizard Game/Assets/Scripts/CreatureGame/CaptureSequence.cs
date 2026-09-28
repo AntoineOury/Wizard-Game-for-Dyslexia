@@ -91,7 +91,10 @@ namespace OtherwiseLabs.CreatureGame
             _planeRotation = Quaternion.LookRotation(toPlane.normalized);
             _planeRight = _planeRotation * Vector3.right;
             _planeUp = _planeRotation * Vector3.up;
-            _plane = new Plane((head - _planeCenter).normalized, _planeCenter);
+            // The ink raycast plane IS the visual plane (same rotation, its
+            // -Z face toward the viewer) — one surface for dots and ink, so
+            // what the finger touches is exactly where ink lands.
+            _plane = new Plane(_planeRotation * Vector3.back, _planeCenter);
             CurrentAimWorld = _planeCenter;
 
             HidePlayerBody();

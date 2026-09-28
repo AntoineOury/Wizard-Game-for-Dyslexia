@@ -172,11 +172,16 @@ PlayerPrefs (IndexedDB). No game code differs per platform.
 - Default web canvas 1280x720, and a custom template
   (`Assets/WebGLTemplates/OtherwiseItch`, auto-selected) that: blocks
   browser scroll/zoom from stealing finger drags (`touch-action: none`),
-  suppresses the scary "mobile not supported" banner, caps render
-  resolution at 2x DPI so phones don't melt, shows a friendly loader and a
-  "turn your device sideways" overlay in portrait, focuses the canvas for
-  keyboard keys inside the itch iframe, and tries a landscape orientation
-  lock on the first tap.
+  suppresses the scary "mobile not supported" banner, captures the
+  pointer during drags so tracing strokes survive sliding past the
+  canvas edge, shows a friendly loader and a "turn your device sideways"
+  overlay in portrait, focuses the canvas for keyboard keys inside the
+  itch iframe, and tries a landscape orientation lock on the first tap.
+  It deliberately does NOT override `devicePixelRatio`: Unity scales
+  pointer input by the browser's real pixel ratio, so a render-ratio cap
+  skews taps and tracing down-right on high-DPI screens. If old tablets
+  run hot, lower the URP **Render Scale** on the Performant quality tier
+  instead — that cheapens rendering without touching input accuracy.
 
 **Building and uploading:**
 
