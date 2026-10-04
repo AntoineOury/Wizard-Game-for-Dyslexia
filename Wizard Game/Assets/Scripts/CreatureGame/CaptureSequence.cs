@@ -213,7 +213,10 @@ namespace OtherwiseLabs.CreatureGame
             Vector3 world = ray.GetPoint(distance);
             Vector3 offset = world - _planeCenter;
             var unit = new Vector2(Vector3.Dot(offset, _planeRight), Vector3.Dot(offset, _planeUp)) / LetterScale;
-            if (Mathf.Abs(unit.x) > 0.75f || Mathf.Abs(unit.y) > 0.75f) return; // off the letter's slate
+            // Generous slate: on devices whose pointer mapping runs slightly
+            // large, stroke ends spill past the letter — record them anyway
+            // and let the best-fit grader sort placement out.
+            if (Mathf.Abs(unit.x) > 1.15f || Mathf.Abs(unit.y) > 1.15f) return; // truly off the slate
 
             if (!force && (unit - _lastInkUnit).sqrMagnitude < 0.0009f) return; // ~3 cm between ink dots
             _lastInkUnit = unit;
