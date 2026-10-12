@@ -13096,6 +13096,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 97c9698ba1bb428a85fdbe5cc738cfd0, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  trapVisualPrefab: {fileID: 8597828511107596405, guid: 742f5899acc9d044daa4eada7cebab85, type: 3}
   creatures:
   - letter: S
     displayName: Creature S

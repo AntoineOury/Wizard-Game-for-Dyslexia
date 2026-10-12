@@ -50,6 +50,9 @@ namespace OtherwiseLabs.CreatureGame
         [Tooltip("Papers on the ground at once. Placing more removes the oldest.")]
         [Range(1, 8)] public int maxActivePapers = 3;
 
+        [Tooltip("Optional model for placed traps (e.g. a letter-potion vial). Empty = the classic paper sheet. This is also the future hologram-visual hook.")]
+        public GameObject trapVisualPrefab;
+
         [Tooltip("How far from the player a paper can be placed.")]
         [Min(3f)] public float maxPlaceDistance = 25f;
 
@@ -311,7 +314,7 @@ namespace OtherwiseLabs.CreatureGame
                 oldest.Remove(freeCreature: true);
             }
 
-            WordTrapPaper paper = WordTrapPaper.Place(point, _placingLetter, _placingWord);
+            WordTrapPaper paper = WordTrapPaper.Place(point, _placingLetter, _placingWord, trapVisualPrefab);
             paper.SourceWord = spentWord;
 
             // Teach the strength rule out loud: more of the letter = stickier.
