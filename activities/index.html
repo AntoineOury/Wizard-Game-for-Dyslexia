@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <title>Activity Repository</title>
+  <meta name="description" content="Otherwise Labs activity repository: evidence-based reading exercises, digitized. Catalog and launcher for tutors, teachers and testers.">
+  <link rel="stylesheet" href="shared/css/tokens.css">
+  <style>
+    /* The catalog is a grown-up's page (tutor, teacher, tester); it still uses the shared tokens so the two feel like one product. */
+    * { box-sizing: border-box; }
+    html, body { margin: 0; background: var(--ol-ground); color: var(--ol-ink); font-family: var(--ol-font); letter-spacing: 0.02em; line-height: 1.5; }
+    main { max-width: 1120px; margin: 0 auto; padding: 32px 20px 64px; }
+    h1 { font-size: 30px; margin: 0 0 6px; font-weight: 700; }
+    h2 { font-size: 22px; margin: 32px 0 10px; font-weight: 700; }
+    p.lede { color: var(--ol-ink-soft); margin: 0 0 24px; max-width: 70ch; }
+    .card { background: var(--ol-card); border-radius: var(--ol-radius-sm); box-shadow: var(--ol-shadow); padding: 20px 22px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px 14px; color: var(--ol-ink-soft); font-size: 15px; margin: 6px 0 14px; }
+    .meta span::before { content: "·"; margin-right: 10px; color: var(--ol-ink-faint); }
+    .meta span:first-child::before { content: ""; margin: 0; }
+    fieldset { border: 0; padding: 0; margin: 0 0 14px; }
+    legend { font-weight: 700; margin-bottom: 8px; }
+    .chips { display: flex; flex-wrap: wrap; gap: 10px; }
+    .chip { position: relative; }
+    .chip input { position: absolute; inset: 0; opacity: 0; cursor: pointer; }
+    .chip span { display: inline-block; min-height: 44px; line-height: 44px; padding: 0 16px; border-radius: 999px; background: var(--ol-ground-2); border: 2px solid transparent; }
+    .chip input:checked + span { background: var(--ol-sky-soft); border-color: var(--ol-sky); }
+    .chip input:focus-visible + span { outline: 3px solid var(--ol-sky-soft); }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    input[type="text"] { font: inherit; letter-spacing: 0.1em; padding: 10px 14px; border-radius: 12px; border: 2px solid var(--ol-card-edge); background: #fff; min-width: 240px; }
+    button.primary, a.button { font: inherit; min-height: 48px; padding: 0 22px; border-radius: 999px; border: 0; background: var(--ol-sage); color: #fff; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+    button.secondary { font: inherit; min-height: 48px; padding: 0 18px; border-radius: 999px; border: 2px solid var(--ol-card-edge); background: var(--ol-card); color: var(--ol-ink); cursor: pointer; }
+    .stage { margin-top: 18px; background: #e9e1d2; border-radius: var(--ol-radius-sm); padding: 10px; }
+    .frame { aspect-ratio: 16 / 10; width: 100%; border: 0; border-radius: 12px; background: var(--ol-ground); display: block; }
+    .log { margin-top: 12px; font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, monospace; background: #3b3733; color: #f6f0e4; border-radius: 12px; padding: 12px 14px; max-height: 320px; overflow: auto; white-space: pre-wrap; }
+    .log:empty::before { content: "Item results from the activity appear here (postMessage from the activity: activity:start, activity:item, activity:complete)."; color: #c9c0b2; }
+    small { color: var(--ol-ink-soft); }
+    code { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; background: var(--ol-ground-2); padding: 1px 6px; border-radius: 6px; letter-spacing: 0; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>Activity Repository</h1>
+  <p class="lede">Evidence-based reading exercises for children aged 6–8, digitized one at a time. This page is the catalog and a test launcher; in a tutoring session the session layer chooses the phase and the units and launches the activity with the same link parameters.</p>
+
+  <section class="card" aria-labelledby="a1">
+    <h2 id="a1" style="margin-top:0">Hear the Letter, Tap the Letter</h2>
+    <div class="meta">
+      <span>Activity Corpus ORT-17 · Hear, See Tap - Target + Distractors</span>
+      <span>Model phase: ORT-15 · Hear, See, Tap - Single Target</span>
+      <span>Letter Unit: Group 1 (lower-case)</span>
+      <span>≈ 1½ minutes</span>
+    </div>
+    <p><strong>The tutor's exercise:</strong> letter cards on the table; "Point to the letter m." The child taps the letter they hear. A wrong tap is named, contrasted with the target by shape or by name, the right card is pointed out, the child taps it, and the letter comes back later in the drill.</p>
+
+    <form id="launcher">
+      <fieldset>
+        <legend>Phase</legend>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="phase" value="model"><span>Model · one letter at a time</span></label>
+          <label class="chip"><input type="radio" name="phase" value="guided" checked><span>Guided · 2 letters</span></label>
+          <label class="chip"><input type="radio" name="phase" value="independent"><span>Independent · 3–4 letters</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Units (3–7 letters, Group 1 order)</legend>
+        <div class="chips" id="unitChips">
+          <label class="chip"><input type="radio" name="preset" value="a,b,c,d,e" checked><span>a b c d e</span></label>
+          <label class="chip"><input type="radio" name="preset" value="f,g,h,i,j"><span>f g h i j</span></label>
+          <label class="chip"><input type="radio" name="preset" value="k,l,m,n,o"><span>k l m n o</span></label>
+          <label class="chip"><input type="radio" name="preset" value="p,q,r,s,t"><span>p q r s t</span></label>
+          <label class="chip"><input type="radio" name="preset" value="u,v,w,x,y,z"><span>u v w x y z</span></label>
+          <label class="chip"><input type="radio" name="preset" value="b,d,p,q"><span>b d p q · reversals</span></label>
+          <label class="chip"><input type="radio" name="preset" value="custom"><span>Custom</span></label>
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input type="text" id="custom" placeholder="e.g. m, n, h, r" aria-label="Custom letters" disabled>
+          <small>Distractors are drawn from the unit set; add <code>pool</code> letters below to widen them.</small>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Options</legend>
+        <div class="row">
+          <input type="text" id="pool" placeholder="extra distractor letters (optional)" aria-label="Extra distractor letters">
+          <label class="chip"><input type="checkbox" id="left"><span>Left-handed layout</span></label>
+          <label class="chip"><input type="checkbox" id="debug"><span>Debug drawer</span></label>
+        </div>
+      </fieldset>
+      <div class="row">
+        <button class="primary" type="submit">Launch below</button>
+        <a class="button" id="openFull" href="#" target="_blank" rel="noopener" style="background: var(--ol-sky)">Open full screen</a>
+        <button class="secondary" type="button" id="clearLog">Clear log</button>
+      </div>
+    </form>
+
+    <div class="stage">
+      <iframe class="frame" id="frame" title="Activity" allow="autoplay"></iframe>
+    </div>
+    <div class="log" id="log" aria-live="polite"></div>
+  </section>
+
+  <h2>How activities compose</h2>
+  <div class="card">
+    <p>Every activity is one phase of one corpus entry on 3–7 units, under two minutes, launched by link and reporting item-level results by <code>postMessage</code> (schema <code>telemetry v1</code>). It never decides mastery or what comes next; that belongs to the session layer. See <code>activities/README.md</code> for the contract, the build checklist and how to add the next activity.</p>
+  </div>
+</main>
+
+<script>
+  const form = document.getElementById("launcher");
+  const frame = document.getElementById("frame");
+  const log = document.getElementById("log");
+  const custom = document.getElementById("custom");
+  const openFull = document.getElementById("openFull");
+
+  function currentUnits() {
+    const preset = form.querySelector('input[name="preset"]:checked').value;
+    return preset === "custom" ? custom.value : preset;
+  }
+  function buildUrl(extra = {}) {
+    const q = new URLSearchParams();
+    q.set("phase", form.querySelector('input[name="phase"]:checked').value);
+    q.set("units", currentUnits().toLowerCase().replace(/[^a-z]+/g, ",").replace(/^,|,$/g, ""));
+    const pool = document.getElementById("pool").value.toLowerCase().replace(/[^a-z]+/g, ",").replace(/^,|,$/g, "");
+    if (pool) q.set("pool", pool);
+    if (document.getElementById("left").checked) q.set("hand", "left");
+    if (document.getElementById("debug").checked) q.set("debug", "1");
+    for (const [k, v] of Object.entries(extra)) q.set(k, v);
+    return `ort-17-hear-see-tap-letter-g1/index.html?${q}`;
+  }
+  function refreshLinks() {
+    custom.disabled = form.querySelector('input[name="preset"]:checked').value !== "custom";
+    openFull.href = buildUrl({ return: "../index.html" });
+  }
+  form.addEventListener("change", refreshLinks);
+  custom.addEventListener("input", refreshLinks);
+  form.addEventListener("submit", (e) => {
+    e.preventDefault();
+    log.textContent = "";
+    frame.src = buildUrl({ run: String(Date.now()) });
+    frame.focus();
+  });
+  document.getElementById("clearLog").addEventListener("click", () => { log.textContent = ""; });
+  window.addEventListener("message", (e) => {
+    const m = e.data;
+    if (!m || m.source !== "otherwise-labs-activity") return;
+    const p = m.payload || {};
+    let line;
+    if (m.type === "activity:item") {
+      line = `item ${p.item_index}  ${p.unit}  ${p.outcome}${p.first_tap && p.first_tap !== p.unit ? ` (tapped ${p.first_tap}, ${p.error_class}${p.fast_wrong ? ", fast" : ""})` : ""}  latency ${p.latency_ms} ms  scaffold ${p.scaffold}  options ${(p.options || []).join(" ")}${p.requeued ? "  → returns later" : ""}`;
+    } else if (m.type === "activity:complete") {
+      line = `complete  status=${p.status}  items=${(p.items || []).length}  active=${p.active_ms} ms  narration=${p.narration_mode}`;
+    } else {
+      line = `${m.type}  phase=${p.phase}  units=${(p.units || []).join(",")}  seed=${p.seed}  narration=${p.narration_mode}`;
+    }
+    log.textContent += (log.textContent ? "\n" : "") + line;
+    log.scrollTop = log.scrollHeight;
+  });
+  refreshLinks();
+</script>
+</body>
+</html>

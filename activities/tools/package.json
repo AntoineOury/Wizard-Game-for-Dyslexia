@@ -1,0 +1,18 @@
+{
+  "name": "@otherwise-labs/activity-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Build tooling for the activity repository: narration manifest, offline Kokoro narration generation, build-time narration check, headless browser test.",
+  "type": "module",
+  "scripts": {
+    "narration:manifest": "node build-narration-manifest.mjs",
+    "narration:generate": "node generate-narration.mjs",
+    "narration:check": "node check-narration.mjs",
+    "test": "node test/run.mjs",
+    "serve": "npx --yes http-server .. -p 8080 -c-1 -o /index.html"
+  },
+  "dependencies": {
+    "kokoro-js": "1.2.1",
+    "kokoro-q8-shards": "1.0.0"
+  }
+}

@@ -1,0 +1,1158 @@
+{
+  "engine": "Kokoro-82M v1.0 ONNX q8 via kokoro-js (offline)",
+  "voice": "af_heart",
+  "speed": 0.9,
+  "sample_rate": 24000,
+  "format": "mp3 64 kbps mono",
+  "generated_at": "2026-10-16T02:06:30.927Z",
+  "utterances": [
+    {
+      "key": "done.3",
+      "text": "That's all three.",
+      "tts_text": "That's all three.",
+      "phonemes": "ðæts ˈɔːl θɹˈiː",
+      "duration_s": 1.19
+    },
+    {
+      "key": "done.4",
+      "text": "That's all four.",
+      "tts_text": "That's all four.",
+      "phonemes": "ðæts ˈɔːl fˈoːɹ",
+      "duration_s": 1.13
+    },
+    {
+      "key": "done.5",
+      "text": "That's all five.",
+      "tts_text": "That's all five.",
+      "phonemes": "ðæts ˈɔːl fˈaɪv",
+      "duration_s": 1.21
+    },
+    {
+      "key": "done.6",
+      "text": "That's all six.",
+      "tts_text": "That's all six.",
+      "phonemes": "ðæts ˈɔːl sˈɪks",
+      "duration_s": 1.23
+    },
+    {
+      "key": "done.7",
+      "text": "That's all seven.",
+      "tts_text": "That's all seven.",
+      "phonemes": "ðæts ˈɔːl sˈɛvən",
+      "duration_s": 1.24
+    },
+    {
+      "key": "intro",
+      "text": "Listen, then tap the letter.",
+      "tts_text": "Listen, then tap the letter.",
+      "phonemes": "lˈɪsən ðˈɛn tˈæp ðə lˈɛɾɚ",
+      "duration_s": 1.84
+    },
+    {
+      "key": "listen.a",
+      "text": "Listen: a.",
+      "tts_text": "Listen. A.",
+      "phonemes": "lˈɪsən ˈeɪ",
+      "duration_s": 1.36
+    },
+    {
+      "key": "listen.b",
+      "text": "Listen: b.",
+      "tts_text": "Listen. B.",
+      "phonemes": "lˈɪsən bˈiː",
+      "duration_s": 1.38
+    },
+    {
+      "key": "listen.c",
+      "text": "Listen: c.",
+      "tts_text": "Listen. C.",
+      "phonemes": "lˈɪsən sˈiː",
+      "duration_s": 1.32
+    },
+    {
+      "key": "listen.d",
+      "text": "Listen: d.",
+      "tts_text": "Listen. D.",
+      "phonemes": "lˈɪsən dˈiː",
+      "duration_s": 1.42
+    },
+    {
+      "key": "listen.e",
+      "text": "Listen: e.",
+      "tts_text": "Listen. E.",
+      "phonemes": "lˈɪsən ˈiː",
+      "duration_s": 1.32
+    },
+    {
+      "key": "listen.f",
+      "text": "Listen: f.",
+      "tts_text": "Listen. F.",
+      "phonemes": "lˈɪsən ˈɛf",
+      "duration_s": 1.4
+    },
+    {
+      "key": "listen.g",
+      "text": "Listen: g.",
+      "tts_text": "Listen. G.",
+      "phonemes": "lˈɪsən dʒˈiː",
+      "duration_s": 1.42
+    },
+    {
+      "key": "listen.h",
+      "text": "Listen: h.",
+      "tts_text": "Listen. H.",
+      "phonemes": "lˈɪsən ˈeɪtʃ",
+      "duration_s": 1.44
+    },
+    {
+      "key": "listen.i",
+      "text": "Listen: i.",
+      "tts_text": "Listen. I.",
+      "phonemes": "lˈɪsən ˈaɪ",
+      "duration_s": 1.37
+    },
+    {
+      "key": "listen.j",
+      "text": "Listen: j.",
+      "tts_text": "Listen. J.",
+      "phonemes": "lˈɪsən dʒˈeɪ",
+      "duration_s": 1.36
+    },
+    {
+      "key": "listen.k",
+      "text": "Listen: k.",
+      "tts_text": "Listen. K.",
+      "phonemes": "lˈɪsən kˈeɪ",
+      "duration_s": 1.36
+    },
+    {
+      "key": "listen.l",
+      "text": "Listen: l.",
+      "tts_text": "Listen. L.",
+      "phonemes": "lˈɪsən ˈɛl",
+      "duration_s": 1.36
+    },
+    {
+      "key": "listen.m",
+      "text": "Listen: m.",
+      "tts_text": "Listen. M.",
+      "phonemes": "lˈɪsən ˈɛm",
+      "duration_s": 1.42
+    },
+    {
+      "key": "listen.n",
+      "text": "Listen: n.",
+      "tts_text": "Listen. N.",
+      "phonemes": "lˈɪsən ˈɛn",
+      "duration_s": 1.37
+    },
+    {
+      "key": "listen.o",
+      "text": "Listen: o.",
+      "tts_text": "Listen. O.",
+      "phonemes": "lˈɪsən ˈoʊ",
+      "duration_s": 1.37
+    },
+    {
+      "key": "listen.p",
+      "text": "Listen: p.",
+      "tts_text": "Listen. P.",
+      "phonemes": "lˈɪsən pˈiː",
+      "duration_s": 1.37
+    },
+    {
+      "key": "listen.q",
+      "text": "Listen: q.",
+      "tts_text": "Listen. Q.",
+      "phonemes": "lˈɪsən kjˈuː",
+      "duration_s": 1.36
+    },
+    {
+      "key": "listen.r",
+      "text": "Listen: r.",
+      "tts_text": "Listen. R.",
+      "phonemes": "lˈɪsən ˈɑːɹ",
+      "duration_s": 1.4
+    },
+    {
+      "key": "listen.s",
+      "text": "Listen: s.",
+      "tts_text": "Listen. S.",
+      "phonemes": "lˈɪsən ˈɛs",
+      "duration_s": 1.33
+    },
+    {
+      "key": "listen.t",
+      "text": "Listen: t.",
+      "tts_text": "Listen. T.",
+      "phonemes": "lˈɪsən tˈiː",
+      "duration_s": 1.33
+    },
+    {
+      "key": "listen.u",
+      "text": "Listen: u.",
+      "tts_text": "Listen. U.",
+      "phonemes": "lˈɪsən jˈuː",
+      "duration_s": 1.43
+    },
+    {
+      "key": "listen.v",
+      "text": "Listen: v.",
+      "tts_text": "Listen. V.",
+      "phonemes": "lˈɪsən vˈiː",
+      "duration_s": 1.36
+    },
+    {
+      "key": "listen.w",
+      "text": "Listen: w.",
+      "tts_text": "Listen. W.",
+      "phonemes": "lˈɪsən dˈʌbəljˌuː",
+      "duration_s": 1.47
+    },
+    {
+      "key": "listen.x",
+      "text": "Listen: x.",
+      "tts_text": "Listen. X.",
+      "phonemes": "lˈɪsən ˈɛks",
+      "duration_s": 1.43
+    },
+    {
+      "key": "listen.y",
+      "text": "Listen: y.",
+      "tts_text": "Listen. Y.",
+      "phonemes": "lˈɪsən wˈaɪ",
+      "duration_s": 1.39
+    },
+    {
+      "key": "listen.z",
+      "text": "Listen: z.",
+      "tts_text": "Listen. Z.",
+      "phonemes": "lˈɪsən zˈiː",
+      "duration_s": 1.35
+    },
+    {
+      "key": "name.a",
+      "text": "a.",
+      "tts_text": "A.",
+      "phonemes": "ˈeɪ",
+      "duration_s": 0.72
+    },
+    {
+      "key": "name.b",
+      "text": "b.",
+      "tts_text": "B.",
+      "phonemes": "bˈiː",
+      "duration_s": 0.76
+    },
+    {
+      "key": "name.c",
+      "text": "c.",
+      "tts_text": "C.",
+      "phonemes": "sˈiː",
+      "duration_s": 0.77
+    },
+    {
+      "key": "name.d",
+      "text": "d.",
+      "tts_text": "D.",
+      "phonemes": "dˈiː",
+      "duration_s": 0.76
+    },
+    {
+      "key": "name.e",
+      "text": "e.",
+      "tts_text": "E.",
+      "phonemes": "ˈiː",
+      "duration_s": 0.72
+    },
+    {
+      "key": "name.f",
+      "text": "f.",
+      "tts_text": "F.",
+      "phonemes": "ˈɛf",
+      "duration_s": 0.73
+    },
+    {
+      "key": "name.g",
+      "text": "g.",
+      "tts_text": "G.",
+      "phonemes": "dʒˈiː",
+      "duration_s": 0.78
+    },
+    {
+      "key": "name.h",
+      "text": "h.",
+      "tts_text": "H.",
+      "phonemes": "ˈeɪtʃ",
+      "duration_s": 0.81
+    },
+    {
+      "key": "name.i",
+      "text": "i.",
+      "tts_text": "I.",
+      "phonemes": "ˈaɪ",
+      "duration_s": 0.72
+    },
+    {
+      "key": "name.j",
+      "text": "j.",
+      "tts_text": "J.",
+      "phonemes": "dʒˈeɪ",
+      "duration_s": 0.77
+    },
+    {
+      "key": "name.k",
+      "text": "k.",
+      "tts_text": "K.",
+      "phonemes": "kˈeɪ",
+      "duration_s": 0.75
+    },
+    {
+      "key": "name.l",
+      "text": "l.",
+      "tts_text": "L.",
+      "phonemes": "ˈɛl",
+      "duration_s": 0.73
+    },
+    {
+      "key": "name.m",
+      "text": "m.",
+      "tts_text": "M.",
+      "phonemes": "ˈɛm",
+      "duration_s": 0.73
+    },
+    {
+      "key": "name.n",
+      "text": "n.",
+      "tts_text": "N.",
+      "phonemes": "ˈɛn",
+      "duration_s": 0.71
+    },
+    {
+      "key": "name.o",
+      "text": "o.",
+      "tts_text": "O.",
+      "phonemes": "ˈoʊ",
+      "duration_s": 0.74
+    },
+    {
+      "key": "name.p",
+      "text": "p.",
+      "tts_text": "P.",
+      "phonemes": "pˈiː",
+      "duration_s": 0.76
+    },
+    {
+      "key": "name.q",
+      "text": "q.",
+      "tts_text": "Q.",
+      "phonemes": "kjˈuː",
+      "duration_s": 0.78
+    },
+    {
+      "key": "name.r",
+      "text": "r.",
+      "tts_text": "R.",
+      "phonemes": "ˈɑːɹ",
+      "duration_s": 0.78
+    },
+    {
+      "key": "name.s",
+      "text": "s.",
+      "tts_text": "S.",
+      "phonemes": "ˈɛs",
+      "duration_s": 0.76
+    },
+    {
+      "key": "name.t",
+      "text": "t.",
+      "tts_text": "T.",
+      "phonemes": "tˈiː",
+      "duration_s": 0.79
+    },
+    {
+      "key": "name.u",
+      "text": "u.",
+      "tts_text": "U.",
+      "phonemes": "jˈuː",
+      "duration_s": 0.74
+    },
+    {
+      "key": "name.v",
+      "text": "v.",
+      "tts_text": "V.",
+      "phonemes": "vˈiː",
+      "duration_s": 0.73
+    },
+    {
+      "key": "name.w",
+      "text": "w.",
+      "tts_text": "W.",
+      "phonemes": "dˈʌbəljˌuː",
+      "duration_s": 0.95
+    },
+    {
+      "key": "name.x",
+      "text": "x.",
+      "tts_text": "X.",
+      "phonemes": "ˈɛks",
+      "duration_s": 0.77
+    },
+    {
+      "key": "name.y",
+      "text": "y.",
+      "tts_text": "Y.",
+      "phonemes": "wˈaɪ",
+      "duration_s": 0.76
+    },
+    {
+      "key": "name.z",
+      "text": "z.",
+      "tts_text": "Z.",
+      "phonemes": "zˈiː",
+      "duration_s": 0.77
+    },
+    {
+      "key": "prompt.a",
+      "text": "Tap the letter a.",
+      "tts_text": "Tap the letter A.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈeɪ",
+      "duration_s": 1.32
+    },
+    {
+      "key": "prompt.b",
+      "text": "Tap the letter b.",
+      "tts_text": "Tap the letter B.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ bˈiː",
+      "duration_s": 1.34
+    },
+    {
+      "key": "prompt.c",
+      "text": "Tap the letter c.",
+      "tts_text": "Tap the letter C.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ sˈiː",
+      "duration_s": 1.33
+    },
+    {
+      "key": "prompt.d",
+      "text": "Tap the letter d.",
+      "tts_text": "Tap the letter D.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ dˈiː",
+      "duration_s": 1.3
+    },
+    {
+      "key": "prompt.e",
+      "text": "Tap the letter e.",
+      "tts_text": "Tap the letter E.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈiː",
+      "duration_s": 1.37
+    },
+    {
+      "key": "prompt.f",
+      "text": "Tap the letter f.",
+      "tts_text": "Tap the letter F.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈɛf",
+      "duration_s": 1.37
+    },
+    {
+      "key": "prompt.g",
+      "text": "Tap the letter g.",
+      "tts_text": "Tap the letter G.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ dʒˈiː",
+      "duration_s": 1.36
+    },
+    {
+      "key": "prompt.h",
+      "text": "Tap the letter h.",
+      "tts_text": "Tap the letter H.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈeɪtʃ",
+      "duration_s": 1.37
+    },
+    {
+      "key": "prompt.i",
+      "text": "Tap the letter i.",
+      "tts_text": "Tap the letter I.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈaɪ",
+      "duration_s": 1.33
+    },
+    {
+      "key": "prompt.j",
+      "text": "Tap the letter j.",
+      "tts_text": "Tap the letter J.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ dʒˈeɪ",
+      "duration_s": 1.35
+    },
+    {
+      "key": "prompt.k",
+      "text": "Tap the letter k.",
+      "tts_text": "Tap the letter K.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ kˈeɪ",
+      "duration_s": 1.34
+    },
+    {
+      "key": "prompt.l",
+      "text": "Tap the letter l.",
+      "tts_text": "Tap the letter L.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈɛl",
+      "duration_s": 1.32
+    },
+    {
+      "key": "prompt.m",
+      "text": "Tap the letter m.",
+      "tts_text": "Tap the letter M.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈɛm",
+      "duration_s": 1.35
+    },
+    {
+      "key": "prompt.n",
+      "text": "Tap the letter n.",
+      "tts_text": "Tap the letter N.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈɛn",
+      "duration_s": 1.34
+    },
+    {
+      "key": "prompt.o",
+      "text": "Tap the letter o.",
+      "tts_text": "Tap the letter O.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈoʊ",
+      "duration_s": 1.31
+    },
+    {
+      "key": "prompt.p",
+      "text": "Tap the letter p.",
+      "tts_text": "Tap the letter P.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ pˈiː",
+      "duration_s": 1.36
+    },
+    {
+      "key": "prompt.q",
+      "text": "Tap the letter q.",
+      "tts_text": "Tap the letter Q.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ kjˈuː",
+      "duration_s": 1.35
+    },
+    {
+      "key": "prompt.r",
+      "text": "Tap the letter r.",
+      "tts_text": "Tap the letter R.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈɑːɹ",
+      "duration_s": 1.36
+    },
+    {
+      "key": "prompt.s",
+      "text": "Tap the letter s.",
+      "tts_text": "Tap the letter S.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈɛs",
+      "duration_s": 1.34
+    },
+    {
+      "key": "prompt.t",
+      "text": "Tap the letter t.",
+      "tts_text": "Tap the letter T.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ tˈiː",
+      "duration_s": 1.38
+    },
+    {
+      "key": "prompt.u",
+      "text": "Tap the letter u.",
+      "tts_text": "Tap the letter U.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ jˈuː",
+      "duration_s": 1.31
+    },
+    {
+      "key": "prompt.v",
+      "text": "Tap the letter v.",
+      "tts_text": "Tap the letter V.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ vˈiː",
+      "duration_s": 1.32
+    },
+    {
+      "key": "prompt.w",
+      "text": "Tap the letter w.",
+      "tts_text": "Tap the letter W.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ dˈʌbəljˌuː",
+      "duration_s": 1.51
+    },
+    {
+      "key": "prompt.x",
+      "text": "Tap the letter x.",
+      "tts_text": "Tap the letter X.",
+      "phonemes": "tˈæp ðə lˈɛɾɚɹ ˈɛks",
+      "duration_s": 1.36
+    },
+    {
+      "key": "prompt.y",
+      "text": "Tap the letter y.",
+      "tts_text": "Tap the letter Y.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ wˈaɪ",
+      "duration_s": 1.34
+    },
+    {
+      "key": "prompt.z",
+      "text": "Tap the letter z.",
+      "tts_text": "Tap the letter Z.",
+      "phonemes": "tˈæp ðə lˈɛɾɚ zˈiː",
+      "duration_s": 1.37
+    },
+    {
+      "key": "shape.a",
+      "text": "a is a round part with a line.",
+      "tts_text": "Eigh is a round part with a line.",
+      "phonemes": "ˈeɪ ɪz ɐ ɹˈaʊnd pˈɑːɹt wɪð ɐ lˈaɪn",
+      "duration_s": 1.93
+    },
+    {
+      "key": "shape.b",
+      "text": "b has a tall line, then a ball.",
+      "tts_text": "B has a tall line, then a ball.",
+      "phonemes": "bˈiː hɐz ɐ tˈɔːl lˈaɪn ðˈɛn ɐ bˈɔːl",
+      "duration_s": 2.07
+    },
+    {
+      "key": "shape.c",
+      "text": "c is a curve with a gap.",
+      "tts_text": "C is a curve with a gap.",
+      "phonemes": "sˈiː ɪz ɐ kˈɜːv wɪð ɐ ɡˈæp",
+      "duration_s": 1.64
+    },
+    {
+      "key": "shape.d",
+      "text": "d has a ball, then a tall line.",
+      "tts_text": "D has a ball, then a tall line.",
+      "phonemes": "dˈiː hɐz ɐ bˈɔːl ðˈɛn ɐ tˈɔːl lˈaɪn",
+      "duration_s": 2.06
+    },
+    {
+      "key": "shape.e",
+      "text": "e has a short line and a curve.",
+      "tts_text": "E has a short line and a curve.",
+      "phonemes": "ˈiː hɐz ɐ ʃˈɔːɹt lˈaɪn ænd ɐ kˈɜːv",
+      "duration_s": 1.96
+    },
+    {
+      "key": "shape.f",
+      "text": "f has a tall hook and a cross.",
+      "tts_text": "F has a tall hook and a cross.",
+      "phonemes": "ˈɛf hɐz ɐ tˈɔːl hˈʊk ænd ɐ kɹˈɔs",
+      "duration_s": 1.88
+    },
+    {
+      "key": "shape.g",
+      "text": "g has a ball, then a hook down.",
+      "tts_text": "G has a ball, then a hook down.",
+      "phonemes": "dʒˈiː hɐz ɐ bˈɔːl ðˈɛn ɐ hˈʊk dˈaʊn",
+      "duration_s": 2.04
+    },
+    {
+      "key": "shape.h",
+      "text": "h has a tall line and a bump.",
+      "tts_text": "H has a tall line and a bump.",
+      "phonemes": "ˈeɪtʃ hɐz ɐ tˈɔːl lˈaɪn ænd ɐ bˈʌmp",
+      "duration_s": 1.91
+    },
+    {
+      "key": "shape.i",
+      "text": "i is a short line with a dot.",
+      "tts_text": "Eye is a short line with a dot.",
+      "phonemes": "ˈaɪ ɪz ɐ ʃˈɔːɹt lˈaɪn wɪð ɐ dˈɑːt",
+      "duration_s": 1.88
+    },
+    {
+      "key": "shape.j",
+      "text": "j is a hook down with a dot.",
+      "tts_text": "J is a hook down with a dot.",
+      "phonemes": "dʒˈeɪ ɪz ɐ hˈʊk dˌaʊn wɪð ɐ dˈɑːt",
+      "duration_s": 1.9
+    },
+    {
+      "key": "shape.k",
+      "text": "k has a tall line and two kicks.",
+      "tts_text": "K has a tall line and two kicks.",
+      "phonemes": "kˈeɪ hɐz ɐ tˈɔːl lˈaɪn ænd tˈuː kˈɪks",
+      "duration_s": 2.05
+    },
+    {
+      "key": "shape.l",
+      "text": "l is one tall line.",
+      "tts_text": "L is one tall line.",
+      "phonemes": "ˈɛl ɪz wˈʌn tˈɔːl lˈaɪn",
+      "duration_s": 1.52
+    },
+    {
+      "key": "shape.m",
+      "text": "m has two bumps.",
+      "tts_text": "M has two bumps.",
+      "phonemes": "ˈɛm hɐz tˈuː bˈʌmps",
+      "duration_s": 1.41
+    },
+    {
+      "key": "shape.n",
+      "text": "n has one bump.",
+      "tts_text": "N has one bump.",
+      "phonemes": "ˈɛn hɐz wˈʌn bˈʌmp",
+      "duration_s": 1.32
+    },
+    {
+      "key": "shape.o",
+      "text": "o is a round ball.",
+      "tts_text": "O is a round ball.",
+      "phonemes": "ˈoʊ ɪz ɐ ɹˈaʊnd bˈɔːl",
+      "duration_s": 1.43
+    },
+    {
+      "key": "shape.p",
+      "text": "p has a line down, then a ball.",
+      "tts_text": "P has a line down, then a ball.",
+      "phonemes": "pˈiː hɐz ɐ lˈaɪn dˈaʊn ðˈɛn ɐ bˈɔːl",
+      "duration_s": 2.16
+    },
+    {
+      "key": "shape.q",
+      "text": "q has a ball, then a line down.",
+      "tts_text": "Q has a ball, then a line down.",
+      "phonemes": "kjˈuː hɐz ɐ bˈɔːl ðˈɛn ɐ lˈaɪn dˈaʊn",
+      "duration_s": 2.17
+    },
+    {
+      "key": "shape.r",
+      "text": "r is a short line with an arm.",
+      "tts_text": "R is a short line with an arm.",
+      "phonemes": "ˈɑːɹ ɪz ɐ ʃˈɔːɹt lˈaɪn wɪð ɐn ˈɑːɹm",
+      "duration_s": 1.92
+    },
+    {
+      "key": "shape.s",
+      "text": "s is a wiggly snake shape.",
+      "tts_text": "S is a wiggly snake shape.",
+      "phonemes": "ˈɛs ɪz ɐ wˈɪɡli snˈeɪk ʃˈeɪp",
+      "duration_s": 1.82
+    },
+    {
+      "key": "shape.t",
+      "text": "t is a tall line with a cross.",
+      "tts_text": "T is a tall line with a cross.",
+      "phonemes": "tˈiː ɪz ɐ tˈɔːl lˈaɪn wɪð ɐ kɹˈɔs",
+      "duration_s": 1.97
+    },
+    {
+      "key": "shape.u",
+      "text": "u is a cup with a line.",
+      "tts_text": "U is a cup with a line.",
+      "phonemes": "jˈuː ɪz ɐ kˈʌp wɪð ɐ lˈaɪn",
+      "duration_s": 1.61
+    },
+    {
+      "key": "shape.v",
+      "text": "v is a pointy dip.",
+      "tts_text": "V is a pointy dip.",
+      "phonemes": "vˈiː ɪz ɐ pˈɔɪnti dˈɪp",
+      "duration_s": 1.53
+    },
+    {
+      "key": "shape.w",
+      "text": "w has two pointy dips.",
+      "tts_text": "W has two pointy dips.",
+      "phonemes": "dˈʌbəljˌuː hɐz tˈuː pˈɔɪnti dˈɪps",
+      "duration_s": 1.96
+    },
+    {
+      "key": "shape.x",
+      "text": "x is two lines that cross.",
+      "tts_text": "X is two lines that cross.",
+      "phonemes": "ˈɛks ɪz tˈuː lˈaɪnz ðæt kɹˈɔs",
+      "duration_s": 1.89
+    },
+    {
+      "key": "shape.y",
+      "text": "y is a dip with a tail.",
+      "tts_text": "Y is a dip with a tail.",
+      "phonemes": "wˈaɪ ɪz ɐ dˈɪp wɪð ɐ tˈeɪl",
+      "duration_s": 1.65
+    },
+    {
+      "key": "shape.z",
+      "text": "z is a zigzag.",
+      "tts_text": "Z is a zigzag.",
+      "phonemes": "zˈiː ɪz ɐ zˈɪɡzæɡ",
+      "duration_s": 1.32
+    },
+    {
+      "key": "stop_now",
+      "text": "That's all for now.",
+      "tts_text": "That's all for now.",
+      "phonemes": "ðæts ˈɔːl fɔːɹ nˈaʊ",
+      "duration_s": 1.3
+    },
+    {
+      "key": "thats.a",
+      "text": "That's a.",
+      "tts_text": "That's A.",
+      "phonemes": "ðæts ˈeɪ",
+      "duration_s": 0.9
+    },
+    {
+      "key": "thats.b",
+      "text": "That's b.",
+      "tts_text": "That's B.",
+      "phonemes": "ðæts bˈiː",
+      "duration_s": 0.97
+    },
+    {
+      "key": "thats.c",
+      "text": "That's c.",
+      "tts_text": "That's C.",
+      "phonemes": "ðæts sˈiː",
+      "duration_s": 0.96
+    },
+    {
+      "key": "thats.d",
+      "text": "That's d.",
+      "tts_text": "That's D.",
+      "phonemes": "ðæts dˈiː",
+      "duration_s": 0.96
+    },
+    {
+      "key": "thats.e",
+      "text": "That's e.",
+      "tts_text": "That's E.",
+      "phonemes": "ðæts ˈiː",
+      "duration_s": 0.97
+    },
+    {
+      "key": "thats.f",
+      "text": "That's f.",
+      "tts_text": "That's F.",
+      "phonemes": "ðæts ˈɛf",
+      "duration_s": 0.98
+    },
+    {
+      "key": "thats.g",
+      "text": "That's g.",
+      "tts_text": "That's G.",
+      "phonemes": "ðæts dʒˈiː",
+      "duration_s": 1.01
+    },
+    {
+      "key": "thats.h",
+      "text": "That's h.",
+      "tts_text": "That's H.",
+      "phonemes": "ðæts ˈeɪtʃ",
+      "duration_s": 0.99
+    },
+    {
+      "key": "thats.i",
+      "text": "That's i.",
+      "tts_text": "That's I.",
+      "phonemes": "ðæts ˈaɪ",
+      "duration_s": 0.93
+    },
+    {
+      "key": "thats.j",
+      "text": "That's j.",
+      "tts_text": "That's J.",
+      "phonemes": "ðæts dʒˈeɪ",
+      "duration_s": 0.97
+    },
+    {
+      "key": "thats.k",
+      "text": "That's k.",
+      "tts_text": "That's K.",
+      "phonemes": "ðæts kˈeɪ",
+      "duration_s": 0.94
+    },
+    {
+      "key": "thats.l",
+      "text": "That's l.",
+      "tts_text": "That's L.",
+      "phonemes": "ðæts ˈɛl",
+      "duration_s": 0.93
+    },
+    {
+      "key": "thats.m",
+      "text": "That's m.",
+      "tts_text": "That's M.",
+      "phonemes": "ðæts ˈɛm",
+      "duration_s": 0.94
+    },
+    {
+      "key": "thats.n",
+      "text": "That's n.",
+      "tts_text": "That's N.",
+      "phonemes": "ðæts ˈɛn",
+      "duration_s": 0.93
+    },
+    {
+      "key": "thats.o",
+      "text": "That's o.",
+      "tts_text": "That's O.",
+      "phonemes": "ðæts ˈoʊ",
+      "duration_s": 0.92
+    },
+    {
+      "key": "thats.p",
+      "text": "That's p.",
+      "tts_text": "That's P.",
+      "phonemes": "ðæts pˈiː",
+      "duration_s": 1.04
+    },
+    {
+      "key": "thats.q",
+      "text": "That's q.",
+      "tts_text": "That's Q.",
+      "phonemes": "ðæts kjˈuː",
+      "duration_s": 0.93
+    },
+    {
+      "key": "thats.r",
+      "text": "That's r.",
+      "tts_text": "That's R.",
+      "phonemes": "ðæts ˈɑːɹ",
+      "duration_s": 0.91
+    },
+    {
+      "key": "thats.s",
+      "text": "That's s.",
+      "tts_text": "That's S.",
+      "phonemes": "ðæts ˈɛs",
+      "duration_s": 0.99
+    },
+    {
+      "key": "thats.t",
+      "text": "That's t.",
+      "tts_text": "That's T.",
+      "phonemes": "ðæts tˈiː",
+      "duration_s": 1.01
+    },
+    {
+      "key": "thats.u",
+      "text": "That's u.",
+      "tts_text": "That's U.",
+      "phonemes": "ðæts jˈuː",
+      "duration_s": 0.97
+    },
+    {
+      "key": "thats.v",
+      "text": "That's v.",
+      "tts_text": "That's V.",
+      "phonemes": "ðæts vˈiː",
+      "duration_s": 0.99
+    },
+    {
+      "key": "thats.w",
+      "text": "That's w.",
+      "tts_text": "That's W.",
+      "phonemes": "ðæts dˈʌbəljˌuː",
+      "duration_s": 1.25
+    },
+    {
+      "key": "thats.x",
+      "text": "That's x.",
+      "tts_text": "That's X.",
+      "phonemes": "ðæts ˈɛks",
+      "duration_s": 0.98
+    },
+    {
+      "key": "thats.y",
+      "text": "That's y.",
+      "tts_text": "That's Y.",
+      "phonemes": "ðæts wˈaɪ",
+      "duration_s": 0.95
+    },
+    {
+      "key": "thats.z",
+      "text": "That's z.",
+      "tts_text": "That's Z.",
+      "phonemes": "ðæts zˈiː",
+      "duration_s": 0.98
+    },
+    {
+      "key": "this_is.a",
+      "text": "This is a.",
+      "tts_text": "This is A.",
+      "phonemes": "ðɪs ɪz ˈeɪ",
+      "duration_s": 1.03
+    },
+    {
+      "key": "this_is.b",
+      "text": "This is b.",
+      "tts_text": "This is B.",
+      "phonemes": "ðɪs ɪz bˈiː",
+      "duration_s": 1.1
+    },
+    {
+      "key": "this_is.c",
+      "text": "This is c.",
+      "tts_text": "This is C.",
+      "phonemes": "ðɪs ɪz sˈiː",
+      "duration_s": 1.07
+    },
+    {
+      "key": "this_is.d",
+      "text": "This is d.",
+      "tts_text": "This is D.",
+      "phonemes": "ðɪs ɪz dˈiː",
+      "duration_s": 1.08
+    },
+    {
+      "key": "this_is.e",
+      "text": "This is e.",
+      "tts_text": "This is E.",
+      "phonemes": "ðɪs ɪz ˈiː",
+      "duration_s": 1.03
+    },
+    {
+      "key": "this_is.f",
+      "text": "This is f.",
+      "tts_text": "This is F.",
+      "phonemes": "ðɪs ɪz ˈɛf",
+      "duration_s": 1.07
+    },
+    {
+      "key": "this_is.g",
+      "text": "This is g.",
+      "tts_text": "This is G.",
+      "phonemes": "ðɪs ɪz dʒˈiː",
+      "duration_s": 1.15
+    },
+    {
+      "key": "this_is.h",
+      "text": "This is h.",
+      "tts_text": "This is H.",
+      "phonemes": "ðɪs ɪz ˈeɪtʃ",
+      "duration_s": 1.11
+    },
+    {
+      "key": "this_is.i",
+      "text": "This is i.",
+      "tts_text": "This is I.",
+      "phonemes": "ðɪs ɪz ˈaɪ",
+      "duration_s": 1.04
+    },
+    {
+      "key": "this_is.j",
+      "text": "This is j.",
+      "tts_text": "This is J.",
+      "phonemes": "ðɪs ɪz dʒˈeɪ",
+      "duration_s": 1.14
+    },
+    {
+      "key": "this_is.k",
+      "text": "This is k.",
+      "tts_text": "This is K.",
+      "phonemes": "ðɪs ɪz kˈeɪ",
+      "duration_s": 1.09
+    },
+    {
+      "key": "this_is.l",
+      "text": "This is l.",
+      "tts_text": "This is L.",
+      "phonemes": "ðɪs ɪz ˈɛl",
+      "duration_s": 1.01
+    },
+    {
+      "key": "this_is.m",
+      "text": "This is m.",
+      "tts_text": "This is M.",
+      "phonemes": "ðɪs ɪz ˈɛm",
+      "duration_s": 1.07
+    },
+    {
+      "key": "this_is.n",
+      "text": "This is n.",
+      "tts_text": "This is N.",
+      "phonemes": "ðɪs ɪz ˈɛn",
+      "duration_s": 1.06
+    },
+    {
+      "key": "this_is.o",
+      "text": "This is o.",
+      "tts_text": "This is O.",
+      "phonemes": "ðɪs ɪz ˈoʊ",
+      "duration_s": 1.04
+    },
+    {
+      "key": "this_is.p",
+      "text": "This is p.",
+      "tts_text": "This is P.",
+      "phonemes": "ðɪs ɪz pˈiː",
+      "duration_s": 1.16
+    },
+    {
+      "key": "this_is.q",
+      "text": "This is q.",
+      "tts_text": "This is Q.",
+      "phonemes": "ðɪs ɪz kjˈuː",
+      "duration_s": 1.15
+    },
+    {
+      "key": "this_is.r",
+      "text": "This is r.",
+      "tts_text": "This is R.",
+      "phonemes": "ðɪs ɪz ˈɑːɹ",
+      "duration_s": 1.05
+    },
+    {
+      "key": "this_is.s",
+      "text": "This is s.",
+      "tts_text": "This is S.",
+      "phonemes": "ðɪs ɪz ˈɛs",
+      "duration_s": 1.07
+    },
+    {
+      "key": "this_is.t",
+      "text": "This is t.",
+      "tts_text": "This is T.",
+      "phonemes": "ðɪs ɪz tˈiː",
+      "duration_s": 1.14
+    },
+    {
+      "key": "this_is.u",
+      "text": "This is u.",
+      "tts_text": "This is U.",
+      "phonemes": "ðɪs ɪz jˈuː",
+      "duration_s": 1.09
+    },
+    {
+      "key": "this_is.v",
+      "text": "This is v.",
+      "tts_text": "This is V.",
+      "phonemes": "ðɪs ɪz vˈiː",
+      "duration_s": 1.09
+    },
+    {
+      "key": "this_is.w",
+      "text": "This is w.",
+      "tts_text": "This is W.",
+      "phonemes": "ðɪs ɪz dˈʌbəljˌuː",
+      "duration_s": 1.43
+    },
+    {
+      "key": "this_is.x",
+      "text": "This is x.",
+      "tts_text": "This is X.",
+      "phonemes": "ðɪs ɪz ˈɛks",
+      "duration_s": 1.13
+    },
+    {
+      "key": "this_is.y",
+      "text": "This is y.",
+      "tts_text": "This is Y.",
+      "phonemes": "ðɪs ɪz wˈaɪ",
+      "duration_s": 1.06
+    },
+    {
+      "key": "this_is.z",
+      "text": "This is z.",
+      "tts_text": "This is Z.",
+      "phonemes": "ðɪs ɪz zˈiː",
+      "duration_s": 1.07
+    },
+    {
+      "key": "together",
+      "text": "Let's do it together.",
+      "tts_text": "Let's do it together.",
+      "phonemes": "lˈɛts dˈuː ɪt təɡˈɛðɚ",
+      "duration_s": 1.37
+    }
+  ]
+}

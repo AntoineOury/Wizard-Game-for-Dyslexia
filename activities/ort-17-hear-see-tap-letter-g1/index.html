@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <!-- Touch-first tablet activity (Vision PL-1, PL-2, PL-4): no pinch zoom, landscape-primary, portrait supported, never gated. -->
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#f6f0e4">
+  <title>Hear the Letter, Tap the Letter</title>
+  <meta name="description" content="Letter-card identification: hear a letter name, tap that letter among confusable letters. Activity Corpus ORT-17 (guided, independent) and ORT-15 (model). Letter Unit: Group 1.">
+  <link rel="preload" href="../shared/fonts/Andika-Regular.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="../shared/css/tokens.css">
+  <link rel="stylesheet" href="../shared/css/components.css">
+  <link rel="modulepreload" href="../shared/js/components.js">
+  <link rel="modulepreload" href="../shared/js/narration.js">
+  <link rel="modulepreload" href="../shared/js/telemetry.js">
+  <link rel="modulepreload" href="../shared/js/rng.js">
+  <link rel="modulepreload" href="../shared/js/host.js">
+</head>
+<body>
+  <main id="activity" aria-label="Hear the letter, tap the letter"></main>
+  <noscript><p style="padding:24px;font-family:system-ui">This activity needs JavaScript.</p></noscript>
+  <script type="module" src="./activity.js"></script>
+</body>
+</html>

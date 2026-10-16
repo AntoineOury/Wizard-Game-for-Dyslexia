@@ -1,0 +1,7 @@
+{
+ "model_max_length": 512,
+ "pad_token": "$",
+ "unk_token": "$",
+ "tokenizer_class": "PreTrainedTokenizerFast",
+ "clean_up_tokenization_spaces": false
+}

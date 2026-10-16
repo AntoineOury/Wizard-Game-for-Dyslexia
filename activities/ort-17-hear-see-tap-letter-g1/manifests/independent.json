@@ -1,0 +1,69 @@
+{
+  "id": "ort-17-hear-see-tap-letter-g1-independent",
+  "version": "1.0.0",
+  "schema": "Vision RP-2 activity manifest",
+  "launch": "activities/ort-17-hear-see-tap-letter-g1/index.html",
+  "launch_params": {
+    "phase": "model | guided | independent",
+    "units": "3–7 comma-separated letters from Letter Unit: Group 1 (model phase accepts 1–7)",
+    "pool": "optional extra letters the distractors may be drawn from (default: the unit set)",
+    "passes": "times each unit is presented (default 2; model 1)",
+    "seed": "optional unsigned 32-bit seed for a reproducible run",
+    "hand": "right | left (mirrors the chrome, Vision TR-14)",
+    "lines": "1 | 0 (baseline guide lines on the letter cards)",
+    "sfx": "1 | 0 (sound effects only; narration cannot be muted, Vision NA-4)",
+    "return": "optional URL to go to when the learner taps Done and no host is embedding the activity"
+  },
+  "target_skill": "letter recognition from the spoken letter name among confusable letters (orthographic knowledge, recognition)",
+  "domain": "orthographic",
+  "unit_type": "letter",
+  "unit_group": "Letter Unit: Group 1 (lower-case a–z)",
+  "units": [
+    "a",
+    "b",
+    "c",
+    "d",
+    "e"
+  ],
+  "unit_count": 5,
+  "modalities": [
+    "auditory",
+    "visual",
+    "tactile"
+  ],
+  "response_modes": [
+    "tap"
+  ],
+  "fallback_response_modes": [],
+  "requires_microphone": false,
+  "requires_stylus": false,
+  "band_default": "K-1",
+  "narration_manifest": "narration/manifest.json",
+  "assets": [
+    "../shared/data/letters-group1.json",
+    "../shared/fonts/Andika-Regular.woff2"
+  ],
+  "telemetry_schema": "v1",
+  "corpus_deviations": [
+    {
+      "rule": "NA-6",
+      "deviation": "If a narration asset fails to load on a device, the player falls back to browser speechSynthesis (or caption text if none). The run's telemetry records narration_mode as tts, text or mixed so the session layer can discount it.",
+      "reason": "resilience on school networks (PL-7); the intended path is the pre-generated Kokoro narration shipped with the activity"
+    }
+  ],
+  "latency": {
+    "skill_row": "Letter name / letter-sound (PEDAGOGY M-6)",
+    "acceptable_ms": 3000,
+    "multiplier": 1.5,
+    "timeout_ms": 6000,
+    "note": "measured from prompt onset; never displayed"
+  },
+  "corpus_entry": "ORT-17 Hear Letter Name, See Letter, Tap Letter",
+  "corpus_family": "Orthographic Knowledge › Tactile, Audio › Hear, See Tap - Target + Distractors",
+  "phase": "independent",
+  "options_per_item": "3–4 (4 when the pool allows)",
+  "prerequisites": [
+    "ort-17-hear-see-tap-letter-g1-guided for the same units"
+  ],
+  "est_duration_sec": 95
+}

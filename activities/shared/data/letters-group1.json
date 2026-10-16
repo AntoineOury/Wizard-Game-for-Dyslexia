@@ -1,0 +1,589 @@
+{
+  "schema": "letters/v1",
+  "source": "Target Units — Orthographic Knowledge — Visual Letter Unit - Letter Symbol, Group 1 (lower-case)",
+  "unit_type": "letter",
+  "unit_group": "Letter Unit: Group 1",
+  "case": "lower",
+  "notes": {
+    "name": "Letter name exactly as written in Target Units; name_phonetic is Target Units' respelling.",
+    "name_confusions": "Letters whose spoken names are confusable with this one (the 'ee' names b c d e g p t v z; the 'ay' names a j k; i/y; l/m/n; f/s/x; u/q/w), strongest first. Drives name-contrast feedback (Activity Corpus, Hear See Tap family).",
+    "visual_confusions": "Letters whose lower-case shapes are confusable in a single-story primary typeface (Vision VZ-4), strongest first. Drives shape-contrast feedback and diagnostic distractors (PEDAGOGY F-9). Mirrors the common_confusions field of the stroke asset schema (Vision TR-7).",
+    "shape_line": "One-sentence shape contrast spoken after an error on a visually confusable distractor. <= 8 words, child vocabulary (PEDAGOGY A-8).",
+    "group_2": "Upper-case letters (Group 2) share names and key words; their visual_confusions and shape_lines differ and are to be authored in a sibling file when an upper-case activity is built."
+  },
+  "letters": [
+    {
+      "symbol": "a",
+      "name": "A",
+      "name_phonetic": "/ae/",
+      "key_words": [
+        "ant",
+        "cat",
+        "sad"
+      ],
+      "name_confusions": [
+        "j",
+        "k"
+      ],
+      "visual_confusions": [
+        "o",
+        "d",
+        "g",
+        "e"
+      ],
+      "shape_line": "a is a round part with a line."
+    },
+    {
+      "symbol": "b",
+      "name": "B",
+      "name_phonetic": "/bee/",
+      "key_words": [
+        "bat",
+        "big",
+        "bug"
+      ],
+      "name_confusions": [
+        "d",
+        "p",
+        "v",
+        "e",
+        "t",
+        "c",
+        "g",
+        "z"
+      ],
+      "visual_confusions": [
+        "d",
+        "p",
+        "q",
+        "h"
+      ],
+      "shape_line": "b has a tall line, then a ball."
+    },
+    {
+      "symbol": "c",
+      "name": "C",
+      "name_phonetic": "/see/",
+      "key_words": [
+        "cat",
+        "can",
+        "cup"
+      ],
+      "name_confusions": [
+        "z",
+        "e",
+        "g",
+        "d",
+        "b",
+        "p",
+        "t",
+        "v"
+      ],
+      "visual_confusions": [
+        "e",
+        "o",
+        "a",
+        "s"
+      ],
+      "shape_line": "c is a curve with a gap."
+    },
+    {
+      "symbol": "d",
+      "name": "D",
+      "name_phonetic": "/dee/",
+      "key_words": [
+        "dog",
+        "did",
+        "dad"
+      ],
+      "name_confusions": [
+        "b",
+        "e",
+        "t",
+        "p",
+        "c",
+        "g",
+        "v",
+        "z"
+      ],
+      "visual_confusions": [
+        "b",
+        "q",
+        "p",
+        "a"
+      ],
+      "shape_line": "d has a ball, then a tall line."
+    },
+    {
+      "symbol": "e",
+      "name": "E",
+      "name_phonetic": "/ee/",
+      "key_words": [
+        "egg",
+        "let",
+        "bed"
+      ],
+      "name_confusions": [
+        "b",
+        "d",
+        "p",
+        "t",
+        "c",
+        "g",
+        "v",
+        "z"
+      ],
+      "visual_confusions": [
+        "c",
+        "o",
+        "a"
+      ],
+      "shape_line": "e has a short line and a curve."
+    },
+    {
+      "symbol": "f",
+      "name": "F",
+      "name_phonetic": "/ef/",
+      "key_words": [
+        "fan",
+        "fit",
+        "fish"
+      ],
+      "name_confusions": [
+        "s",
+        "x"
+      ],
+      "visual_confusions": [
+        "t",
+        "r"
+      ],
+      "shape_line": "f has a tall hook and a cross."
+    },
+    {
+      "symbol": "g",
+      "name": "G",
+      "name_phonetic": "/jee/",
+      "key_words": [
+        "gum",
+        "gap",
+        "got"
+      ],
+      "name_confusions": [
+        "j",
+        "c",
+        "d",
+        "b",
+        "e",
+        "p",
+        "t",
+        "v",
+        "z"
+      ],
+      "visual_confusions": [
+        "q",
+        "p",
+        "y",
+        "a"
+      ],
+      "shape_line": "g has a ball, then a hook down."
+    },
+    {
+      "symbol": "h",
+      "name": "H",
+      "name_phonetic": "/aech/",
+      "key_words": [
+        "hat",
+        "had",
+        "hit"
+      ],
+      "name_confusions": [],
+      "visual_confusions": [
+        "n",
+        "b",
+        "k"
+      ],
+      "shape_line": "h has a tall line and a bump."
+    },
+    {
+      "symbol": "i",
+      "name": "I",
+      "name_phonetic": "/ie/",
+      "key_words": [
+        "in",
+        "pig",
+        "big"
+      ],
+      "name_confusions": [
+        "y"
+      ],
+      "visual_confusions": [
+        "l",
+        "j",
+        "t"
+      ],
+      "shape_line": "i is a short line with a dot."
+    },
+    {
+      "symbol": "j",
+      "name": "J",
+      "name_phonetic": "/jae/",
+      "key_words": [
+        "jam",
+        "jet",
+        "jump"
+      ],
+      "name_confusions": [
+        "a",
+        "k",
+        "g"
+      ],
+      "visual_confusions": [
+        "i",
+        "g",
+        "y"
+      ],
+      "shape_line": "j is a hook down with a dot."
+    },
+    {
+      "symbol": "k",
+      "name": "K",
+      "name_phonetic": "/kae/",
+      "key_words": [
+        "kid",
+        "key",
+        "kick"
+      ],
+      "name_confusions": [
+        "a",
+        "j"
+      ],
+      "visual_confusions": [
+        "h",
+        "x",
+        "l"
+      ],
+      "shape_line": "k has a tall line and two kicks."
+    },
+    {
+      "symbol": "l",
+      "name": "L",
+      "name_phonetic": "/el/",
+      "key_words": [
+        "lips",
+        "leg",
+        "log"
+      ],
+      "name_confusions": [
+        "m",
+        "n"
+      ],
+      "visual_confusions": [
+        "i",
+        "t",
+        "j",
+        "k"
+      ],
+      "shape_line": "l is one tall line."
+    },
+    {
+      "symbol": "m",
+      "name": "M",
+      "name_phonetic": "/em/",
+      "key_words": [
+        "map",
+        "mud",
+        "mom"
+      ],
+      "name_confusions": [
+        "n",
+        "l"
+      ],
+      "visual_confusions": [
+        "n",
+        "w",
+        "h"
+      ],
+      "shape_line": "m has two bumps."
+    },
+    {
+      "symbol": "n",
+      "name": "N",
+      "name_phonetic": "/en/",
+      "key_words": [
+        "net",
+        "not",
+        "nut"
+      ],
+      "name_confusions": [
+        "m",
+        "l"
+      ],
+      "visual_confusions": [
+        "m",
+        "h",
+        "u",
+        "r"
+      ],
+      "shape_line": "n has one bump."
+    },
+    {
+      "symbol": "o",
+      "name": "O",
+      "name_phonetic": "/oe/",
+      "key_words": [
+        "on",
+        "dog",
+        "log"
+      ],
+      "name_confusions": [],
+      "visual_confusions": [
+        "a",
+        "c",
+        "e"
+      ],
+      "shape_line": "o is a round ball."
+    },
+    {
+      "symbol": "p",
+      "name": "P",
+      "name_phonetic": "/pee/",
+      "key_words": [
+        "pot",
+        "pan",
+        "pig"
+      ],
+      "name_confusions": [
+        "b",
+        "d",
+        "e",
+        "t",
+        "c",
+        "g",
+        "v",
+        "z"
+      ],
+      "visual_confusions": [
+        "q",
+        "b",
+        "d",
+        "g"
+      ],
+      "shape_line": "p has a line down, then a ball."
+    },
+    {
+      "symbol": "q",
+      "name": "Q",
+      "name_phonetic": "/kue/",
+      "key_words": [
+        "queen",
+        "quit",
+        "quilt"
+      ],
+      "name_confusions": [
+        "u",
+        "w"
+      ],
+      "visual_confusions": [
+        "p",
+        "g",
+        "d",
+        "b"
+      ],
+      "shape_line": "q has a ball, then a line down."
+    },
+    {
+      "symbol": "r",
+      "name": "R",
+      "name_phonetic": "/ar/",
+      "key_words": [
+        "rat",
+        "rip",
+        "run"
+      ],
+      "name_confusions": [],
+      "visual_confusions": [
+        "n",
+        "f",
+        "h"
+      ],
+      "shape_line": "r is a short line with an arm."
+    },
+    {
+      "symbol": "s",
+      "name": "S",
+      "name_phonetic": "/es/",
+      "key_words": [
+        "sun",
+        "sad",
+        "sit"
+      ],
+      "name_confusions": [
+        "f",
+        "x"
+      ],
+      "visual_confusions": [
+        "z",
+        "c"
+      ],
+      "shape_line": "s is a wiggly snake shape."
+    },
+    {
+      "symbol": "t",
+      "name": "T",
+      "name_phonetic": "/tee/",
+      "key_words": [
+        "tag",
+        "tip",
+        "top"
+      ],
+      "name_confusions": [
+        "d",
+        "e",
+        "p",
+        "b",
+        "c",
+        "g",
+        "v",
+        "z"
+      ],
+      "visual_confusions": [
+        "f",
+        "l",
+        "i"
+      ],
+      "shape_line": "t is a tall line with a cross."
+    },
+    {
+      "symbol": "u",
+      "name": "U",
+      "name_phonetic": "/ue/",
+      "key_words": [
+        "up",
+        "fun",
+        "sun"
+      ],
+      "name_confusions": [
+        "q",
+        "w"
+      ],
+      "visual_confusions": [
+        "n",
+        "v",
+        "y",
+        "w"
+      ],
+      "shape_line": "u is a cup with a line."
+    },
+    {
+      "symbol": "v",
+      "name": "V",
+      "name_phonetic": "/vee/",
+      "key_words": [
+        "van",
+        "vet",
+        "vine"
+      ],
+      "name_confusions": [
+        "b",
+        "d",
+        "e",
+        "p",
+        "t",
+        "c",
+        "g",
+        "z"
+      ],
+      "visual_confusions": [
+        "u",
+        "w",
+        "y"
+      ],
+      "shape_line": "v is a pointy dip."
+    },
+    {
+      "symbol": "w",
+      "name": "W",
+      "name_phonetic": "/dubble-ue/",
+      "key_words": [
+        "web",
+        "wet",
+        "win"
+      ],
+      "name_confusions": [
+        "u",
+        "q"
+      ],
+      "visual_confusions": [
+        "v",
+        "m",
+        "u"
+      ],
+      "shape_line": "w has two pointy dips."
+    },
+    {
+      "symbol": "x",
+      "name": "X",
+      "name_phonetic": "/eks/",
+      "key_words": [
+        "axe",
+        "mix",
+        "fix"
+      ],
+      "name_confusions": [
+        "s",
+        "f"
+      ],
+      "visual_confusions": [
+        "k",
+        "y",
+        "z"
+      ],
+      "shape_line": "x is two lines that cross."
+    },
+    {
+      "symbol": "y",
+      "name": "Y",
+      "name_phonetic": "/wie/",
+      "key_words": [
+        "yes",
+        "yellow",
+        "yum"
+      ],
+      "name_confusions": [
+        "i"
+      ],
+      "visual_confusions": [
+        "v",
+        "g",
+        "u",
+        "j"
+      ],
+      "shape_line": "y is a dip with a tail."
+    },
+    {
+      "symbol": "z",
+      "name": "Z",
+      "name_phonetic": "/zee/",
+      "key_words": [
+        "zap",
+        "zip",
+        "zoo"
+      ],
+      "name_confusions": [
+        "c",
+        "v",
+        "b",
+        "d",
+        "e",
+        "g",
+        "p",
+        "t"
+      ],
+      "visual_confusions": [
+        "s",
+        "x"
+      ],
+      "shape_line": "z is a zigzag."
+    }
+  ]
+}

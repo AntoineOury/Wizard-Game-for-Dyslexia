@@ -97,3 +97,7 @@ InitTestScene*.unity*
 
 # Auto-generated scenes by play mode tests
 /[Aa]ssets/[Ii]nit[Tt]est[Ss]cene*.unity*
+
+# Activity repository tooling (activities/tools): installed packages and the assembled TTS model cache
+activities/tools/node_modules
+activities/tools/.cache

@@ -1,0 +1,1767 @@
+{
+  "schema": "narration/v1",
+  "activity": "ort-17-hear-see-tap-letter-g1",
+  "version": "1.0.0",
+  "language": "en-US",
+  "voice": {
+    "engine": "Kokoro-82M v1.0 (ONNX, q8), generated offline by activities/tools/generate-narration.mjs",
+    "voice": "af_heart",
+    "speed": 0.9,
+    "note": "One consistent adult voice, warm and unhurried, about 10% slower than conversational (Vision NA-8). Pre-generated and cached as assets (NA-6); never browser speechSynthesis."
+  },
+  "rules": [
+    "NA-1",
+    "NA-6",
+    "NA-7",
+    "NA-8",
+    "NA-10",
+    "TN-9",
+    "A-8"
+  ],
+  "utterances": [
+    {
+      "key": "intro",
+      "text": "Listen, then tap the letter.",
+      "tts_text": "Listen, then tap the letter.",
+      "audio": "audio/intro.mp3",
+      "contexts": [
+        "activity start"
+      ],
+      "group": "generic"
+    },
+    {
+      "key": "together",
+      "text": "Let's do it together.",
+      "tts_text": "Let's do it together.",
+      "audio": "audio/together.mp3",
+      "contexts": [
+        "second error on the same item (PEDAGOGY M-13, Vision TN language bank)"
+      ],
+      "group": "generic"
+    },
+    {
+      "key": "stop_now",
+      "text": "That's all for now.",
+      "tts_text": "That's all for now.",
+      "audio": "audio/stop_now.mp3",
+      "contexts": [
+        "3-minute ceiling reached (Vision AC-3) or host asked to stop"
+      ],
+      "group": "generic"
+    },
+    {
+      "key": "done.3",
+      "text": "That's all three.",
+      "tts_text": "That's all three.",
+      "audio": "audio/done_3.mp3",
+      "contexts": [
+        "completion with 3 units (Vision TN-3)"
+      ],
+      "group": "generic"
+    },
+    {
+      "key": "done.4",
+      "text": "That's all four.",
+      "tts_text": "That's all four.",
+      "audio": "audio/done_4.mp3",
+      "contexts": [
+        "completion with 4 units (Vision TN-3)"
+      ],
+      "group": "generic"
+    },
+    {
+      "key": "done.5",
+      "text": "That's all five.",
+      "tts_text": "That's all five.",
+      "audio": "audio/done_5.mp3",
+      "contexts": [
+        "completion with 5 units (Vision TN-3)"
+      ],
+      "group": "generic"
+    },
+    {
+      "key": "done.6",
+      "text": "That's all six.",
+      "tts_text": "That's all six.",
+      "audio": "audio/done_6.mp3",
+      "contexts": [
+        "completion with 6 units (Vision TN-3)"
+      ],
+      "group": "generic"
+    },
+    {
+      "key": "done.7",
+      "text": "That's all seven.",
+      "tts_text": "That's all seven.",
+      "audio": "audio/done_7.mp3",
+      "contexts": [
+        "completion with 7 units (Vision TN-3)"
+      ],
+      "group": "generic"
+    },
+    {
+      "key": "prompt.a",
+      "text": "Tap the letter a.",
+      "tts_text": "Tap the letter A.",
+      "audio": "audio/prompt_a.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.a",
+      "text": "a.",
+      "tts_text": "A.",
+      "audio": "audio/name_a.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.a",
+      "text": "This is a.",
+      "tts_text": "This is A.",
+      "audio": "audio/this_is_a.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.a",
+      "text": "That's a.",
+      "tts_text": "That's A.",
+      "audio": "audio/thats_a.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.a",
+      "text": "Listen: a.",
+      "tts_text": "Listen. A.",
+      "audio": "audio/listen_a.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.a",
+      "text": "a is a round part with a line.",
+      "tts_text": "Eigh is a round part with a line.",
+      "audio": "audio/shape_a.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.b",
+      "text": "Tap the letter b.",
+      "tts_text": "Tap the letter B.",
+      "audio": "audio/prompt_b.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.b",
+      "text": "b.",
+      "tts_text": "B.",
+      "audio": "audio/name_b.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.b",
+      "text": "This is b.",
+      "tts_text": "This is B.",
+      "audio": "audio/this_is_b.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.b",
+      "text": "That's b.",
+      "tts_text": "That's B.",
+      "audio": "audio/thats_b.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.b",
+      "text": "Listen: b.",
+      "tts_text": "Listen. B.",
+      "audio": "audio/listen_b.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.b",
+      "text": "b has a tall line, then a ball.",
+      "tts_text": "B has a tall line, then a ball.",
+      "audio": "audio/shape_b.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.c",
+      "text": "Tap the letter c.",
+      "tts_text": "Tap the letter C.",
+      "audio": "audio/prompt_c.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.c",
+      "text": "c.",
+      "tts_text": "C.",
+      "audio": "audio/name_c.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.c",
+      "text": "This is c.",
+      "tts_text": "This is C.",
+      "audio": "audio/this_is_c.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.c",
+      "text": "That's c.",
+      "tts_text": "That's C.",
+      "audio": "audio/thats_c.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.c",
+      "text": "Listen: c.",
+      "tts_text": "Listen. C.",
+      "audio": "audio/listen_c.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.c",
+      "text": "c is a curve with a gap.",
+      "tts_text": "C is a curve with a gap.",
+      "audio": "audio/shape_c.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.d",
+      "text": "Tap the letter d.",
+      "tts_text": "Tap the letter D.",
+      "audio": "audio/prompt_d.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.d",
+      "text": "d.",
+      "tts_text": "D.",
+      "audio": "audio/name_d.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.d",
+      "text": "This is d.",
+      "tts_text": "This is D.",
+      "audio": "audio/this_is_d.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.d",
+      "text": "That's d.",
+      "tts_text": "That's D.",
+      "audio": "audio/thats_d.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.d",
+      "text": "Listen: d.",
+      "tts_text": "Listen. D.",
+      "audio": "audio/listen_d.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.d",
+      "text": "d has a ball, then a tall line.",
+      "tts_text": "D has a ball, then a tall line.",
+      "audio": "audio/shape_d.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.e",
+      "text": "Tap the letter e.",
+      "tts_text": "Tap the letter E.",
+      "audio": "audio/prompt_e.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.e",
+      "text": "e.",
+      "tts_text": "E.",
+      "audio": "audio/name_e.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.e",
+      "text": "This is e.",
+      "tts_text": "This is E.",
+      "audio": "audio/this_is_e.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.e",
+      "text": "That's e.",
+      "tts_text": "That's E.",
+      "audio": "audio/thats_e.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.e",
+      "text": "Listen: e.",
+      "tts_text": "Listen. E.",
+      "audio": "audio/listen_e.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.e",
+      "text": "e has a short line and a curve.",
+      "tts_text": "E has a short line and a curve.",
+      "audio": "audio/shape_e.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.f",
+      "text": "Tap the letter f.",
+      "tts_text": "Tap the letter F.",
+      "audio": "audio/prompt_f.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.f",
+      "text": "f.",
+      "tts_text": "F.",
+      "audio": "audio/name_f.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.f",
+      "text": "This is f.",
+      "tts_text": "This is F.",
+      "audio": "audio/this_is_f.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.f",
+      "text": "That's f.",
+      "tts_text": "That's F.",
+      "audio": "audio/thats_f.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.f",
+      "text": "Listen: f.",
+      "tts_text": "Listen. F.",
+      "audio": "audio/listen_f.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.f",
+      "text": "f has a tall hook and a cross.",
+      "tts_text": "F has a tall hook and a cross.",
+      "audio": "audio/shape_f.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.g",
+      "text": "Tap the letter g.",
+      "tts_text": "Tap the letter G.",
+      "audio": "audio/prompt_g.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.g",
+      "text": "g.",
+      "tts_text": "G.",
+      "audio": "audio/name_g.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.g",
+      "text": "This is g.",
+      "tts_text": "This is G.",
+      "audio": "audio/this_is_g.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.g",
+      "text": "That's g.",
+      "tts_text": "That's G.",
+      "audio": "audio/thats_g.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.g",
+      "text": "Listen: g.",
+      "tts_text": "Listen. G.",
+      "audio": "audio/listen_g.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.g",
+      "text": "g has a ball, then a hook down.",
+      "tts_text": "G has a ball, then a hook down.",
+      "audio": "audio/shape_g.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.h",
+      "text": "Tap the letter h.",
+      "tts_text": "Tap the letter H.",
+      "audio": "audio/prompt_h.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.h",
+      "text": "h.",
+      "tts_text": "H.",
+      "audio": "audio/name_h.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.h",
+      "text": "This is h.",
+      "tts_text": "This is H.",
+      "audio": "audio/this_is_h.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.h",
+      "text": "That's h.",
+      "tts_text": "That's H.",
+      "audio": "audio/thats_h.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.h",
+      "text": "Listen: h.",
+      "tts_text": "Listen. H.",
+      "audio": "audio/listen_h.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.h",
+      "text": "h has a tall line and a bump.",
+      "tts_text": "H has a tall line and a bump.",
+      "audio": "audio/shape_h.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.i",
+      "text": "Tap the letter i.",
+      "tts_text": "Tap the letter I.",
+      "audio": "audio/prompt_i.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.i",
+      "text": "i.",
+      "tts_text": "I.",
+      "audio": "audio/name_i.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.i",
+      "text": "This is i.",
+      "tts_text": "This is I.",
+      "audio": "audio/this_is_i.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.i",
+      "text": "That's i.",
+      "tts_text": "That's I.",
+      "audio": "audio/thats_i.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.i",
+      "text": "Listen: i.",
+      "tts_text": "Listen. I.",
+      "audio": "audio/listen_i.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.i",
+      "text": "i is a short line with a dot.",
+      "tts_text": "Eye is a short line with a dot.",
+      "audio": "audio/shape_i.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.j",
+      "text": "Tap the letter j.",
+      "tts_text": "Tap the letter J.",
+      "audio": "audio/prompt_j.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.j",
+      "text": "j.",
+      "tts_text": "J.",
+      "audio": "audio/name_j.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.j",
+      "text": "This is j.",
+      "tts_text": "This is J.",
+      "audio": "audio/this_is_j.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.j",
+      "text": "That's j.",
+      "tts_text": "That's J.",
+      "audio": "audio/thats_j.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.j",
+      "text": "Listen: j.",
+      "tts_text": "Listen. J.",
+      "audio": "audio/listen_j.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.j",
+      "text": "j is a hook down with a dot.",
+      "tts_text": "J is a hook down with a dot.",
+      "audio": "audio/shape_j.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.k",
+      "text": "Tap the letter k.",
+      "tts_text": "Tap the letter K.",
+      "audio": "audio/prompt_k.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.k",
+      "text": "k.",
+      "tts_text": "K.",
+      "audio": "audio/name_k.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.k",
+      "text": "This is k.",
+      "tts_text": "This is K.",
+      "audio": "audio/this_is_k.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.k",
+      "text": "That's k.",
+      "tts_text": "That's K.",
+      "audio": "audio/thats_k.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.k",
+      "text": "Listen: k.",
+      "tts_text": "Listen. K.",
+      "audio": "audio/listen_k.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.k",
+      "text": "k has a tall line and two kicks.",
+      "tts_text": "K has a tall line and two kicks.",
+      "audio": "audio/shape_k.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.l",
+      "text": "Tap the letter l.",
+      "tts_text": "Tap the letter L.",
+      "audio": "audio/prompt_l.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.l",
+      "text": "l.",
+      "tts_text": "L.",
+      "audio": "audio/name_l.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.l",
+      "text": "This is l.",
+      "tts_text": "This is L.",
+      "audio": "audio/this_is_l.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.l",
+      "text": "That's l.",
+      "tts_text": "That's L.",
+      "audio": "audio/thats_l.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.l",
+      "text": "Listen: l.",
+      "tts_text": "Listen. L.",
+      "audio": "audio/listen_l.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.l",
+      "text": "l is one tall line.",
+      "tts_text": "L is one tall line.",
+      "audio": "audio/shape_l.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.m",
+      "text": "Tap the letter m.",
+      "tts_text": "Tap the letter M.",
+      "audio": "audio/prompt_m.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.m",
+      "text": "m.",
+      "tts_text": "M.",
+      "audio": "audio/name_m.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.m",
+      "text": "This is m.",
+      "tts_text": "This is M.",
+      "audio": "audio/this_is_m.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.m",
+      "text": "That's m.",
+      "tts_text": "That's M.",
+      "audio": "audio/thats_m.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.m",
+      "text": "Listen: m.",
+      "tts_text": "Listen. M.",
+      "audio": "audio/listen_m.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.m",
+      "text": "m has two bumps.",
+      "tts_text": "M has two bumps.",
+      "audio": "audio/shape_m.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.n",
+      "text": "Tap the letter n.",
+      "tts_text": "Tap the letter N.",
+      "audio": "audio/prompt_n.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.n",
+      "text": "n.",
+      "tts_text": "N.",
+      "audio": "audio/name_n.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.n",
+      "text": "This is n.",
+      "tts_text": "This is N.",
+      "audio": "audio/this_is_n.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.n",
+      "text": "That's n.",
+      "tts_text": "That's N.",
+      "audio": "audio/thats_n.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.n",
+      "text": "Listen: n.",
+      "tts_text": "Listen. N.",
+      "audio": "audio/listen_n.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.n",
+      "text": "n has one bump.",
+      "tts_text": "N has one bump.",
+      "audio": "audio/shape_n.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.o",
+      "text": "Tap the letter o.",
+      "tts_text": "Tap the letter O.",
+      "audio": "audio/prompt_o.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.o",
+      "text": "o.",
+      "tts_text": "O.",
+      "audio": "audio/name_o.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.o",
+      "text": "This is o.",
+      "tts_text": "This is O.",
+      "audio": "audio/this_is_o.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.o",
+      "text": "That's o.",
+      "tts_text": "That's O.",
+      "audio": "audio/thats_o.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.o",
+      "text": "Listen: o.",
+      "tts_text": "Listen. O.",
+      "audio": "audio/listen_o.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.o",
+      "text": "o is a round ball.",
+      "tts_text": "O is a round ball.",
+      "audio": "audio/shape_o.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.p",
+      "text": "Tap the letter p.",
+      "tts_text": "Tap the letter P.",
+      "audio": "audio/prompt_p.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.p",
+      "text": "p.",
+      "tts_text": "P.",
+      "audio": "audio/name_p.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.p",
+      "text": "This is p.",
+      "tts_text": "This is P.",
+      "audio": "audio/this_is_p.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.p",
+      "text": "That's p.",
+      "tts_text": "That's P.",
+      "audio": "audio/thats_p.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.p",
+      "text": "Listen: p.",
+      "tts_text": "Listen. P.",
+      "audio": "audio/listen_p.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.p",
+      "text": "p has a line down, then a ball.",
+      "tts_text": "P has a line down, then a ball.",
+      "audio": "audio/shape_p.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.q",
+      "text": "Tap the letter q.",
+      "tts_text": "Tap the letter Q.",
+      "audio": "audio/prompt_q.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.q",
+      "text": "q.",
+      "tts_text": "Q.",
+      "audio": "audio/name_q.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.q",
+      "text": "This is q.",
+      "tts_text": "This is Q.",
+      "audio": "audio/this_is_q.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.q",
+      "text": "That's q.",
+      "tts_text": "That's Q.",
+      "audio": "audio/thats_q.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.q",
+      "text": "Listen: q.",
+      "tts_text": "Listen. Q.",
+      "audio": "audio/listen_q.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.q",
+      "text": "q has a ball, then a line down.",
+      "tts_text": "Q has a ball, then a line down.",
+      "audio": "audio/shape_q.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.r",
+      "text": "Tap the letter r.",
+      "tts_text": "Tap the letter R.",
+      "audio": "audio/prompt_r.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.r",
+      "text": "r.",
+      "tts_text": "R.",
+      "audio": "audio/name_r.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.r",
+      "text": "This is r.",
+      "tts_text": "This is R.",
+      "audio": "audio/this_is_r.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.r",
+      "text": "That's r.",
+      "tts_text": "That's R.",
+      "audio": "audio/thats_r.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.r",
+      "text": "Listen: r.",
+      "tts_text": "Listen. R.",
+      "audio": "audio/listen_r.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.r",
+      "text": "r is a short line with an arm.",
+      "tts_text": "R is a short line with an arm.",
+      "audio": "audio/shape_r.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.s",
+      "text": "Tap the letter s.",
+      "tts_text": "Tap the letter S.",
+      "audio": "audio/prompt_s.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.s",
+      "text": "s.",
+      "tts_text": "S.",
+      "audio": "audio/name_s.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.s",
+      "text": "This is s.",
+      "tts_text": "This is S.",
+      "audio": "audio/this_is_s.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.s",
+      "text": "That's s.",
+      "tts_text": "That's S.",
+      "audio": "audio/thats_s.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.s",
+      "text": "Listen: s.",
+      "tts_text": "Listen. S.",
+      "audio": "audio/listen_s.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.s",
+      "text": "s is a wiggly snake shape.",
+      "tts_text": "S is a wiggly snake shape.",
+      "audio": "audio/shape_s.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.t",
+      "text": "Tap the letter t.",
+      "tts_text": "Tap the letter T.",
+      "audio": "audio/prompt_t.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.t",
+      "text": "t.",
+      "tts_text": "T.",
+      "audio": "audio/name_t.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.t",
+      "text": "This is t.",
+      "tts_text": "This is T.",
+      "audio": "audio/this_is_t.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.t",
+      "text": "That's t.",
+      "tts_text": "That's T.",
+      "audio": "audio/thats_t.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.t",
+      "text": "Listen: t.",
+      "tts_text": "Listen. T.",
+      "audio": "audio/listen_t.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.t",
+      "text": "t is a tall line with a cross.",
+      "tts_text": "T is a tall line with a cross.",
+      "audio": "audio/shape_t.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.u",
+      "text": "Tap the letter u.",
+      "tts_text": "Tap the letter U.",
+      "audio": "audio/prompt_u.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.u",
+      "text": "u.",
+      "tts_text": "U.",
+      "audio": "audio/name_u.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.u",
+      "text": "This is u.",
+      "tts_text": "This is U.",
+      "audio": "audio/this_is_u.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.u",
+      "text": "That's u.",
+      "tts_text": "That's U.",
+      "audio": "audio/thats_u.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.u",
+      "text": "Listen: u.",
+      "tts_text": "Listen. U.",
+      "audio": "audio/listen_u.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.u",
+      "text": "u is a cup with a line.",
+      "tts_text": "U is a cup with a line.",
+      "audio": "audio/shape_u.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.v",
+      "text": "Tap the letter v.",
+      "tts_text": "Tap the letter V.",
+      "audio": "audio/prompt_v.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.v",
+      "text": "v.",
+      "tts_text": "V.",
+      "audio": "audio/name_v.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.v",
+      "text": "This is v.",
+      "tts_text": "This is V.",
+      "audio": "audio/this_is_v.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.v",
+      "text": "That's v.",
+      "tts_text": "That's V.",
+      "audio": "audio/thats_v.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.v",
+      "text": "Listen: v.",
+      "tts_text": "Listen. V.",
+      "audio": "audio/listen_v.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.v",
+      "text": "v is a pointy dip.",
+      "tts_text": "V is a pointy dip.",
+      "audio": "audio/shape_v.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.w",
+      "text": "Tap the letter w.",
+      "tts_text": "Tap the letter W.",
+      "audio": "audio/prompt_w.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.w",
+      "text": "w.",
+      "tts_text": "W.",
+      "audio": "audio/name_w.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.w",
+      "text": "This is w.",
+      "tts_text": "This is W.",
+      "audio": "audio/this_is_w.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.w",
+      "text": "That's w.",
+      "tts_text": "That's W.",
+      "audio": "audio/thats_w.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.w",
+      "text": "Listen: w.",
+      "tts_text": "Listen. W.",
+      "audio": "audio/listen_w.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.w",
+      "text": "w has two pointy dips.",
+      "tts_text": "W has two pointy dips.",
+      "audio": "audio/shape_w.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.x",
+      "text": "Tap the letter x.",
+      "tts_text": "Tap the letter X.",
+      "audio": "audio/prompt_x.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.x",
+      "text": "x.",
+      "tts_text": "X.",
+      "audio": "audio/name_x.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.x",
+      "text": "This is x.",
+      "tts_text": "This is X.",
+      "audio": "audio/this_is_x.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.x",
+      "text": "That's x.",
+      "tts_text": "That's X.",
+      "audio": "audio/thats_x.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.x",
+      "text": "Listen: x.",
+      "tts_text": "Listen. X.",
+      "audio": "audio/listen_x.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.x",
+      "text": "x is two lines that cross.",
+      "tts_text": "X is two lines that cross.",
+      "audio": "audio/shape_x.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.y",
+      "text": "Tap the letter y.",
+      "tts_text": "Tap the letter Y.",
+      "audio": "audio/prompt_y.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.y",
+      "text": "y.",
+      "tts_text": "Y.",
+      "audio": "audio/name_y.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.y",
+      "text": "This is y.",
+      "tts_text": "This is Y.",
+      "audio": "audio/this_is_y.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.y",
+      "text": "That's y.",
+      "tts_text": "That's Y.",
+      "audio": "audio/thats_y.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.y",
+      "text": "Listen: y.",
+      "tts_text": "Listen. Y.",
+      "audio": "audio/listen_y.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.y",
+      "text": "y is a dip with a tail.",
+      "tts_text": "Y is a dip with a tail.",
+      "audio": "audio/shape_y.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    },
+    {
+      "key": "prompt.z",
+      "text": "Tap the letter z.",
+      "tts_text": "Tap the letter Z.",
+      "audio": "audio/prompt_z.mp3",
+      "contexts": [
+        "item prompt (guided, independent, model)",
+        "neutral re-prompt after a timeout",
+        "re-prompt after demonstration"
+      ],
+      "group": "prompt"
+    },
+    {
+      "key": "name.z",
+      "text": "z.",
+      "tts_text": "Z.",
+      "audio": "audio/name_z.mp3",
+      "contexts": [
+        "letter name repeated as the letter is tapped (ORT-15, MM-5)"
+      ],
+      "group": "name"
+    },
+    {
+      "key": "this_is.z",
+      "text": "This is z.",
+      "tts_text": "This is Z.",
+      "audio": "audio/this_is_z.mp3",
+      "contexts": [
+        "demonstration after an error",
+        "model phase",
+        "model support after two consecutive errors"
+      ],
+      "group": "this_is"
+    },
+    {
+      "key": "thats.z",
+      "text": "That's z.",
+      "tts_text": "That's Z.",
+      "audio": "audio/thats_z.mp3",
+      "contexts": [
+        "verification after tapping this letter when it was not the target (PEDAGOGY F-1)"
+      ],
+      "group": "thats"
+    },
+    {
+      "key": "listen.z",
+      "text": "Listen: z.",
+      "tts_text": "Listen. Z.",
+      "audio": "audio/listen_z.mp3",
+      "contexts": [
+        "name-contrast elaboration when the tapped letter's name sounds like the target's (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "listen"
+    },
+    {
+      "key": "shape.z",
+      "text": "z is a zigzag.",
+      "tts_text": "Z is a zigzag.",
+      "audio": "audio/shape_z.mp3",
+      "contexts": [
+        "shape-contrast elaboration when the tapped letter looks like the target (Activity Corpus, Hear See Tap family)"
+      ],
+      "group": "shape"
+    }
+  ]
+}

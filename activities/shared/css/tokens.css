@@ -1,0 +1,62 @@
+/* Otherwise Labs — Activity Repository — shared design tokens
+   Vision VZ-1 (warm neutral ground, muted accents, soft forms), VZ-4/VZ-5 (primary typeface with
+   single-story a and g, generous spacing), VZ-6 (dark warm grey on cream, WCAG AA floor),
+   VZ-7 (meaning never in colour alone; no red for error), VZ-9 (touch targets >= 60px, >= 16px apart). */
+
+@font-face {
+  font-family: "Andika";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("../fonts/Andika-Regular.woff2") format("woff2");
+}
+@font-face {
+  font-family: "Andika";
+  font-style: normal;
+  font-weight: 700;
+  font-display: block;
+  src: url("../fonts/Andika-Bold.woff2") format("woff2");
+}
+
+:root {
+  /* Ground and ink */
+  --ol-ground: #f6f0e4;        /* soft cream, never pure white */
+  --ol-ground-2: #ede5d5;      /* chrome strips (progress, footer) */
+  --ol-card: #fffbf3;          /* letter cards */
+  --ol-card-edge: #dfd4bf;
+  --ol-ink: #3b3733;           /* dark warm grey, ~10.9:1 on cream */
+  --ol-ink-soft: #6d665e;      /* ~5.3:1 on cream */
+  --ol-ink-faint: #a69d91;     /* guide lines inside cards, decorative only */
+
+  /* Accents: muted, saturated-but-not-neon. Never red. */
+  --ol-sage: #5f8a73;          /* confirmation, demonstration outline */
+  --ol-sage-soft: #cfe0d4;
+  --ol-sky: #6f8bb3;           /* replay control, focus ring */
+  --ol-sky-soft: #d6e0ee;
+  --ol-clay: #c4885a;          /* pointer hand during a demonstration */
+  --ol-clay-soft: #f0dcc9;
+  --ol-plum: #8b7a99;          /* neutral "noted" state after a wrong tap: outline + shape, no red */
+
+  /* Type (Vision VZ-5): generous letter spacing, line height >= 1.5, sentence case */
+  --ol-font: "Andika", "Comic Neue", "Trebuchet MS", system-ui, sans-serif;
+  --ol-tracking: 0.06em;
+  --ol-leading: 1.5;
+
+  /* Touch (Vision VZ-9) */
+  --ol-touch-min: 60px;
+  --ol-touch-gap: 16px;
+
+  /* Shape */
+  --ol-radius: 28px;
+  --ol-radius-sm: 16px;
+  --ol-shadow: 0 2px 0 var(--ol-card-edge), 0 10px 24px rgba(59, 55, 51, 0.08);
+  --ol-shadow-lift: 0 3px 0 var(--ol-card-edge), 0 16px 32px rgba(59, 55, 51, 0.12);
+
+  /* Motion: brief, calm, and never inside the working area during a response (VZ-2, VZ-3) */
+  --ol-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --ol-dur: 220ms;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root { --ol-dur: 0ms; }
+}

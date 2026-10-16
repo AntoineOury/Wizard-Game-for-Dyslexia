@@ -1,0 +1,335 @@
+/* Otherwise Labs — Activity Repository — shared component library (Vision VZ-8, RP-10)
+   One shell for every activity: progress strip, caption, silent working area, replay control,
+   start surface, completion surface. Activities add their own cards inside .ol-work only. */
+
+*, *::before, *::after { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  height: 100%;
+  background: var(--ol-ground);
+  color: var(--ol-ink);
+  font-family: var(--ol-font);
+  letter-spacing: var(--ol-tracking);
+  line-height: var(--ol-leading);
+  -webkit-text-size-adjust: 100%;
+  -webkit-tap-highlight-color: transparent;
+  overscroll-behavior: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+button { font: inherit; letter-spacing: inherit; color: inherit; }
+
+/* ---------- Shell ---------- */
+
+.ol-shell {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  grid-template-areas: "top" "work" "bottom";
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.ol-top {
+  grid-area: top;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--ol-touch-gap);
+  padding: 14px 20px 0;
+  min-height: 64px;
+}
+
+.ol-bottom {
+  grid-area: bottom;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  padding: 0 20px 18px;
+  min-height: 96px;
+}
+
+/* Left-handed layout (Vision TR-14): mirror the chrome so a resting left hand never covers it. */
+.ol-shell[data-hand="left"] .ol-bottom { flex-direction: row-reverse; }
+.ol-shell[data-hand="left"] .ol-top { flex-direction: row-reverse; }
+
+/* ---------- Progress (skill-shaped, not points: GM-7). One marker per planned item. ---------- */
+
+.ol-progress {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 60vw;
+}
+.ol-progress__dot {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid var(--ol-ink-faint);
+  background: transparent;
+  transition: background var(--ol-dur) var(--ol-ease), border-color var(--ol-dur) var(--ol-ease), transform var(--ol-dur) var(--ol-ease);
+}
+.ol-progress__dot.is-done {
+  background: var(--ol-sage);
+  border-color: var(--ol-sage);
+}
+.ol-progress__dot.is-current {
+  border-color: var(--ol-ink-soft);
+  transform: scale(1.15);
+}
+
+/* ---------- Icon buttons (replay, sound effects) ---------- */
+
+.ol-iconbtn {
+  width: 72px;
+  height: 72px;
+  min-width: var(--ol-touch-min);
+  min-height: var(--ol-touch-min);
+  border-radius: 50%;
+  border: 0;
+  background: var(--ol-card);
+  box-shadow: var(--ol-shadow);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  color: var(--ol-sky);
+  transition: transform var(--ol-dur) var(--ol-ease), box-shadow var(--ol-dur) var(--ol-ease);
+}
+.ol-iconbtn:active { transform: translateY(1px) scale(0.98); box-shadow: 0 1px 0 var(--ol-card-edge); }
+.ol-iconbtn:focus-visible { outline: 4px solid var(--ol-sky-soft); outline-offset: 2px; }
+.ol-iconbtn svg { width: 34px; height: 34px; display: block; }
+.ol-iconbtn--small { width: 56px; height: 56px; min-width: 56px; min-height: 56px; color: var(--ol-ink-soft); }
+.ol-iconbtn--small svg { width: 26px; height: 26px; }
+
+/* Replay control (Vision NA-2): fixed position, same place in every activity, speaker icon, no label. */
+.ol-replay.is-playing { color: var(--ol-sage); }
+.ol-replay.is-playing svg .ol-wave { animation: ol-wave 900ms var(--ol-ease) infinite alternate; }
+@keyframes ol-wave { from { opacity: 0.35; } to { opacity: 1; } }
+
+/* ---------- Caption: on-screen text of what is being said (NA-3). Supports the audio; never replaces it. ---------- */
+
+.ol-caption {
+  text-align: center;
+  font-size: clamp(20px, 3.2vmin, 30px);
+  color: var(--ol-ink-soft);
+  min-height: 1.5em;
+  padding: 4px 24px 0;
+  transition: opacity var(--ol-dur) var(--ol-ease);
+}
+.ol-caption:empty { opacity: 0; }
+
+/* ---------- Working area (Vision VZ-2): visually silent. No texture, no decoration, nothing moving nearby. ---------- */
+
+.ol-work {
+  grid-area: work;
+  display: grid;
+  grid-template-rows: auto 1fr;
+  align-content: center;
+  justify-items: center;
+  padding: 8px 24px 16px;
+  min-height: 0;
+}
+
+.ol-cards {
+  display: flex;
+  align-items: center;
+  align-content: center; /* wrapped rows (portrait) stay together instead of spreading over the work area */
+  justify-content: center;
+  gap: clamp(var(--ol-touch-gap), 4vmin, 44px);
+  flex-wrap: wrap;
+  width: 100%;
+}
+
+/* A letter card: large tap target, letter sits on a baseline like a letter card on the table. */
+.ol-card {
+  --card: clamp(132px, 30vmin, 260px);
+  position: relative;
+  width: var(--card);
+  height: var(--card);
+  border-radius: var(--ol-radius);
+  border: 3px solid transparent;
+  background: var(--ol-card);
+  box-shadow: var(--ol-shadow);
+  padding: 0;
+  cursor: pointer;
+  display: block;
+  transition: transform var(--ol-dur) var(--ol-ease), box-shadow var(--ol-dur) var(--ol-ease),
+              border-color var(--ol-dur) var(--ol-ease), background var(--ol-dur) var(--ol-ease), opacity var(--ol-dur) var(--ol-ease);
+}
+.ol-card:focus-visible { outline: 4px solid var(--ol-sky-soft); outline-offset: 3px; }
+.ol-card:active { transform: scale(0.985); }
+.ol-card svg { width: 100%; height: 100%; display: block; border-radius: inherit; }
+.ol-card svg .ol-guide { stroke: var(--ol-ink-faint); stroke-width: 0.6; opacity: 0.55; }
+.ol-card svg .ol-guide--base { opacity: 0.75; stroke-width: 0.8; }
+.ol-card svg .ol-glyph { fill: var(--ol-ink); font-family: var(--ol-font); font-weight: 400; letter-spacing: 0; }
+.ol-shell[data-lines="0"] .ol-card svg .ol-guide { display: none; }
+
+/* Single card (model phase): larger. */
+.ol-cards.is-single .ol-card { --card: clamp(180px, 42vmin, 340px); }
+
+/* States. Shape + outline carry the meaning, never colour alone (VZ-7). */
+.ol-card.is-highlight {
+  border-color: var(--ol-sage);
+  box-shadow: var(--ol-shadow-lift), 0 0 0 8px var(--ol-sage-soft);
+  transform: translateY(-4px);
+}
+.ol-card.is-confirm {
+  border-color: var(--ol-sage);
+  background: #f3f8f4;
+}
+.ol-card.is-noted {
+  border-color: var(--ol-plum);
+  border-style: dashed;
+}
+.ol-card.is-dim {
+  opacity: 0.38;
+  pointer-events: none;
+}
+.ol-card[disabled] { cursor: default; }
+
+/* Pointer hand shown above the demonstrated card (the tutor pointing at the card). */
+.ol-pointer {
+  position: absolute;
+  left: 50%;
+  top: -34px;
+  width: 44px;
+  height: 44px;
+  transform: translateX(-50%);
+  color: var(--ol-clay);
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity var(--ol-dur) var(--ol-ease), transform 600ms var(--ol-ease);
+}
+.ol-card.is-highlight .ol-pointer { opacity: 1; transform: translateX(-50%) translateY(4px); }
+
+/* ---------- Start surface: the one unavoidable gesture that unlocks audio on tablets. ---------- */
+
+.ol-start {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  background: var(--ol-ground);
+  z-index: 20;
+  transition: opacity 300ms var(--ol-ease);
+}
+.ol-start.is-hidden { opacity: 0; pointer-events: none; }
+.ol-start__btn {
+  display: grid;
+  place-items: center;
+  gap: 14px;
+  width: min(72vw, 360px);
+  height: min(44vh, 260px);
+  border: 0;
+  border-radius: var(--ol-radius);
+  background: var(--ol-card);
+  box-shadow: var(--ol-shadow-lift);
+  cursor: pointer;
+  color: var(--ol-ink);
+  font-size: clamp(22px, 4vmin, 34px);
+}
+.ol-start__btn:active { transform: translateY(1px); }
+.ol-start__btn svg { width: clamp(64px, 14vmin, 110px); height: auto; color: var(--ol-sky); }
+.ol-start__btn[disabled] { opacity: 0.6; cursor: progress; }
+.ol-start__hint { color: var(--ol-ink-soft); font-size: clamp(16px, 2.4vmin, 20px); margin-top: 18px; text-align: center; padding: 0 24px; }
+
+/* ---------- Completion surface (Vision TN-3, GM-3): factual line, brief calm milestone, one way out. ---------- */
+
+.ol-complete {
+  position: fixed;
+  inset: 0;
+  display: grid;
+  grid-template-rows: 1fr auto 1fr;
+  place-items: center;
+  background: var(--ol-ground);
+  z-index: 15;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 320ms var(--ol-ease);
+}
+.ol-complete.is-shown { opacity: 1; pointer-events: auto; }
+.ol-complete__letters {
+  display: flex;
+  gap: 18px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-self: end;
+  padding: 0 24px;
+}
+.ol-complete__letter {
+  width: clamp(64px, 11vmin, 104px);
+  height: clamp(64px, 11vmin, 104px);
+  border-radius: var(--ol-radius-sm);
+  background: var(--ol-card);
+  box-shadow: var(--ol-shadow);
+  display: grid;
+  place-items: center;
+  font-size: clamp(36px, 6.5vmin, 60px);
+  letter-spacing: 0;
+  opacity: 0;
+  transform: translateY(18px);
+  animation: ol-settle 520ms var(--ol-ease) forwards;
+}
+@keyframes ol-settle { to { opacity: 1; transform: none; } }
+.ol-complete__line {
+  font-size: clamp(24px, 4vmin, 36px);
+  color: var(--ol-ink);
+  text-align: center;
+  padding: 0 24px;
+}
+.ol-complete__done {
+  align-self: start;
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 72px;
+  padding: 0 34px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--ol-card);
+  box-shadow: var(--ol-shadow);
+  color: var(--ol-ink);
+  font-size: clamp(20px, 3vmin, 26px);
+  cursor: pointer;
+}
+.ol-complete__done svg { width: 30px; height: 30px; color: var(--ol-sage); }
+
+/* ---------- Debug drawer (only with ?debug=1; never in the child's view otherwise) ---------- */
+.ol-debug {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  width: min(44vw, 520px);
+  max-height: 40vh;
+  overflow: auto;
+  font: 12px/1.4 ui-monospace, SFMono-Regular, Menlo, monospace;
+  letter-spacing: 0;
+  background: rgba(59, 55, 51, 0.92);
+  color: #f6f0e4;
+  padding: 10px 12px;
+  border-top-left-radius: 12px;
+  z-index: 30;
+  white-space: pre-wrap;
+  user-select: text;
+}
+
+/* ---------- Portrait: supported, never gated (Vision PL-4). Cards wrap; chrome tightens. ---------- */
+@media (orientation: portrait) {
+  .ol-card { --card: clamp(120px, 38vw, 220px); }
+  .ol-cards.is-single .ol-card { --card: clamp(180px, 60vw, 320px); }
+  .ol-progress { max-width: 70vw; }
+}
+
+.ol-visually-hidden {
+  position: absolute !important;
+  width: 1px; height: 1px;
+  padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0);
+  white-space: nowrap; border: 0;
+}
