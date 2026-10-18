@@ -13,6 +13,11 @@ namespace OtherwiseLabs.GemGame
     /// whenever that changes, so a vial made at the mortar appears for good
     /// and a vial the cauldron spends disappears.
     ///
+    /// With a brewing game in the scene every bottle is also a real brewing
+    /// ingredient (<see cref="PotionIngredient"/>): it glows under the
+    /// pointer, can be tapped or dragged into the cauldron, and spends one
+    /// vial of its letter when poured (refunded if the brew fizzles).
+    ///
     /// The rack takes the end of the brewing game's second shelf that
     /// <see cref="BrewingGameController.vialRackShare"/> reserves, so it
     /// never overlaps the recipe bottles. Without a brewing game it uses the
@@ -24,17 +29,38 @@ namespace OtherwiseLabs.GemGame
         Transform _fallbackShelf;
         BrewingGameController _brewing;
         readonly List<GameObject> _bottles = new List<GameObject>();
+        bool _dirty;
 
         public void Setup(GameObject vialPrefab, Transform fallbackShelf)
         {
             _vialPrefab = vialPrefab;
             _fallbackShelf = fallbackShelf;
             _brewing = FindObjectOfType<BrewingGameController>();
-            VialInventory.Changed += Rebuild;
+            VialInventory.Changed += MarkDirty;
             Rebuild();
         }
 
-        void OnDestroy() => VialInventory.Changed -= Rebuild;
+        void OnDestroy() => VialInventory.Changed -= MarkDirty;
+
+        void MarkDirty() => _dirty = true;
+
+        /// <summary>
+        /// Rebuilds once nothing on the rack is in someone's hand or in the
+        /// air, so a vial landing from the mortar never yanks away the bottle
+        /// the player is pouring. A bottle that vanished (poured) also
+        /// triggers a rebuild, so the rack never shows a stale gap.
+        /// </summary>
+        void Update()
+        {
+            bool busy = false;
+            foreach (GameObject bottle in _bottles)
+            {
+                if (bottle == null) { _dirty = true; continue; }
+                var potion = bottle.GetComponent<PotionIngredient>();
+                if (potion != null && potion.CurrentState != PotionIngredient.State.Shelved) busy = true;
+            }
+            if (_dirty && !busy) Rebuild();
+        }
 
         /// <summary>Where a vial of this letter stands (or will stand once added).</summary>
         public Vector3 SlotFor(char letter)
@@ -46,6 +72,7 @@ namespace OtherwiseLabs.GemGame
 
         void Rebuild()
         {
+            _dirty = false;
             foreach (GameObject bottle in _bottles) if (bottle != null) Destroy(bottle);
             _bottles.Clear();
 
@@ -54,9 +81,18 @@ namespace OtherwiseLabs.GemGame
             {
                 char letter = letters[i];
                 Vector3 position = SlotPosition(i, letters.Count, out float height);
-                GameObject bottle = BuildVial(_vialPrefab, letter, height);
+                bool ingredient = _brewing != null && _brewing.Cauldron != null;
+                GameObject bottle = BuildVial(_vialPrefab, letter, height, withLabel: !ingredient);
                 bottle.transform.SetParent(transform, true);
                 bottle.transform.position = position;
+                if (ingredient)
+                {
+                    // The brewing game's own bottle behavior: label, hover glow,
+                    // drag, tap-to-pour, glide home. It floats just above the shelf.
+                    var potion = bottle.AddComponent<PotionIngredient>();
+                    potion.FromVialRack = true;
+                    potion.Setup(letter, _brewing, position + Vector3.up * 0.05f, LetterColor(letter), true);
+                }
 
                 int count = VialInventory.Count(letter);
                 if (count > 1) AddCountLabel(bottle, count, height);
@@ -106,7 +142,7 @@ namespace OtherwiseLabs.GemGame
         /// standing on its base, tinted by letter like the brewing bottles, with
         /// the letter floating above. Shared with the vial that flies from the mortar.
         /// </summary>
-        public static GameObject BuildVial(GameObject prefab, char letter, float height)
+        public static GameObject BuildVial(GameObject prefab, char letter, float height, bool withLabel = true)
         {
             GameObject vial = prefab != null ? Instantiate(prefab) : GameObject.CreatePrimitive(PrimitiveType.Capsule);
             vial.name = $"Vial {letter}";
@@ -136,6 +172,7 @@ namespace OtherwiseLabs.GemGame
                 }
             }
             vial.transform.SetParent(root.transform, false);
+            if (!withLabel) return root;
 
             var labelGo = new GameObject("Letter");
             labelGo.transform.SetParent(root.transform, false);

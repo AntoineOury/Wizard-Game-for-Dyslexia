@@ -80,6 +80,7 @@ namespace OtherwiseLabs.BrewingGame
         System.Random _rng;
         string _word = "";
         readonly List<char> _poured = new List<char>();
+        readonly List<char> _vialsSpent = new List<char>();   // made vials poured this attempt, refunded on a fizzle
         readonly List<PotionIngredient> _potions = new List<PotionIngredient>();
         readonly List<(char letter, Vector3 slot)> _layout = new List<(char, Vector3)>();
         int _successes;
@@ -183,6 +184,7 @@ namespace OtherwiseLabs.BrewingGame
             int length = Mathf.Min(startingLength + _successes / Mathf.Max(1, brewsPerLengthUp), maxLength);
             _word = PickBrewWord(length).ToUpperInvariant();
             _poured.Clear();
+            _vialsSpent.Clear();
             _heardOnce = false;
             BuildShelfLayout();
             SpawnPotions();
@@ -433,7 +435,10 @@ namespace OtherwiseLabs.BrewingGame
             if (_phase == Phase.Resolving) return;
             _potions.Remove(potion);
             _poured.Add(potion.Letter);
-            VialInventory.TryConsume(potion.Letter);   // vials are the ingredients, spent per pour (free when none)
+            // Made vials (the gem game's rack) are spent when poured; the
+            // recipe's own shelf bottles stay free.
+            if (potion.FromVialRack && VialInventory.TryConsume(potion.Letter))
+                _vialsSpent.Add(potion.Letter);
             Cauldron.Pour(potion.Letter);
             if (_phase != Phase.Speaking)
                 speaker.Speak(potion.Letter, Cauldron.Mouth, out _);   // the cauldron echoes the letter
@@ -467,6 +472,7 @@ namespace OtherwiseLabs.BrewingGame
                 _successes++;
                 Cauldron.Celebrate(_word);
                 PaperInventory.Add(_word);
+                _vialsSpent.Clear();
                 StartCoroutine(PaperFliesOut());
                 Toast($"You brewed a {_word} paper!  It's in your satchel (x{PaperInventory.Count(_word)}).");
                 yield return new WaitForSeconds(3.6f);
@@ -475,6 +481,8 @@ namespace OtherwiseLabs.BrewingGame
             else
             {
                 Cauldron.Fizzle();
+                foreach (char letter in _vialsSpent) VialInventory.Add(letter);   // a fizzle never costs made vials
+                _vialsSpent.Clear();
                 Toast("Almost! The order wasn't quite right. Listen again...");
                 yield return new WaitForSeconds(1.6f);
                 _poured.Clear();
@@ -575,7 +583,7 @@ namespace OtherwiseLabs.BrewingGame
             {
                 var potion = hit.collider.GetComponentInParent<PotionIngredient>();
                 if (potion != null && potion.CurrentState == PotionIngredient.State.Shelved
-                    && PlayerWithin(potion.transform.position, interactRange))
+                    && _phase != Phase.Asleep && PlayerWithin(potion.transform.position, interactRange))
                     hover = potion;
             }
             SetHover(hover);
@@ -600,7 +608,7 @@ namespace OtherwiseLabs.BrewingGame
 
             var potion = hit.collider.GetComponentInParent<PotionIngredient>();
             if (potion != null && potion.CurrentState == PotionIngredient.State.Shelved
-                && PlayerWithin(potion.transform.position, interactRange))
+                && _phase != Phase.Asleep && PlayerWithin(potion.transform.position, interactRange))
             {
                 _held = potion;
                 _holdDistance = Mathf.Clamp(Vector3.Distance(ray.origin, potion.transform.position), 1f, 3.6f);

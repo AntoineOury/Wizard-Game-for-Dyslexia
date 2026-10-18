@@ -21,6 +21,9 @@ namespace OtherwiseLabs.BrewingGame
 
         public enum State { Shelved, Held, Flying, Consumed }
 
+        /// <summary>A made vial from the gem game's rack: spent from VialInventory when poured.</summary>
+        public bool FromVialRack { get; set; }
+
         BrewingGameController _game;
         Vector3 _home;
         float _bobSeed;

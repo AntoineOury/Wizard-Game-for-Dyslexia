@@ -48,6 +48,12 @@ The made vials stand on the far end of the brewing game's second shelf: one
 bottle per letter owned, with "x3" over it when there are several. The rack
 mirrors `VialInventory`, so it is there again on every visit and a bottle
 disappears when the cauldron spends the last vial of its letter.
+**Rack vials are brewing ingredients.** Once the spell book has been tapped
+awake, each rack bottle behaves exactly like a recipe bottle: it glows under
+the pointer, and can be tapped (flies into the cauldron) or dragged and
+dropped onto it. Pouring one spends one vial of that letter; if the brew
+fizzles, the vials poured in that attempt come back to the rack.
+
 `Vial Rack Share` on the **brewing** controller sets how much of that shelf
 the rack keeps (default 35%); the recipe bottles stay out of it. Many letters
 share the rack by standing a little smaller.
@@ -73,10 +79,10 @@ vial. Turn `Allow Tap Fallback` off to require speech.
 
 ## How vials feed the cauldron
 
-The brewing game treats vials as its ingredients: recipe words are chosen
-the vial stock can afford whenever possible, and **every potion poured into
-the cauldron spends one vial of that letter** (when one exists). With no
-vials the cauldron still brews for free, so a fresh save never dead-ends.
+Recipe words are chosen so the vial stock can afford them whenever possible,
+so the letters on the rack are the ones the book tends to ask for. Rack
+vials are spent only when poured; the recipe's own shelf bottles stay free,
+so a fresh save never dead-ends.
 Vial counts show in the backpack grid as the light-blue number in each
 slot's top-left corner.
 

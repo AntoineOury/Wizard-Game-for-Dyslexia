@@ -39,9 +39,11 @@ traps use, so everything brewed is a word the hunting game understands.
      another listen.
 
 **Vials are the ingredients.** Letter vials come from the gem stencil game
-(see `GemGame-README.md`). Recipes prefer words the vial stock can pay for,
-and every potion poured spends one vial of its letter. With no vials the
-cauldron still brews for free, so a fresh save never dead-ends.
+(see `GemGame-README.md`) and stand on a rack at the far end of the second
+shelf. Rack vials are ingredients like any shelf bottle (glow, tap, drag);
+pouring one spends that vial, and a fizzle gives back the vials poured in
+that attempt. Recipes prefer words the vial stock can pay for; the recipe's
+own shelf bottles stay free, so a fresh save never dead-ends.
 
 Brewed papers land in **`PaperInventory`** (word → count, persisted like the
 capture journal) and show up in the **backpack** — the "Bag (I)" button on
