@@ -72,8 +72,7 @@ namespace OtherwiseLabs.CreatureGame
             return best;
         }
 
-        public static WordTrapPaper Place(Vector3 groundPosition, char letter, string word,
-            GameObject visualPrefab = null)
+        public static WordTrapPaper Place(Vector3 groundPosition, char letter, string word)
         {
             var root = new GameObject($"Word Paper ({word})");
             root.transform.position = groundPosition + Vector3.up * 0.03f;
@@ -82,7 +81,7 @@ namespace OtherwiseLabs.CreatureGame
             paper.Letter = char.ToUpperInvariant(letter);
             paper.Word = word;
             paper.ComputeEligibility();
-            paper.BuildVisual(visualPrefab);
+            paper.BuildVisual();
 
             var trigger = root.AddComponent<BoxCollider>();
             trigger.isTrigger = true;
@@ -93,14 +92,8 @@ namespace OtherwiseLabs.CreatureGame
             return paper;
         }
 
-        void BuildVisual(GameObject visualPrefab)
+        void BuildVisual()
         {
-            if (visualPrefab != null)
-            {
-                BuildPrefabVisual(visualPrefab);
-                return;
-            }
-
             // The sheet: a quad laid flat. Its auto MeshCollider goes — the
             // trigger box on the root does all the sensing.
             var sheet = GameObject.CreatePrimitive(PrimitiveType.Quad);
@@ -132,49 +125,6 @@ namespace OtherwiseLabs.CreatureGame
             text.fontSizeMin = 1f;
             text.fontSizeMax = 9f;
             text.rectTransform.sizeDelta = new Vector2(1.6f, 1.05f);
-        }
-
-        /// <summary>
-        /// Alternative trap look: any prefab (today a letter-potion vial from
-        /// the store) standing where the paper would lie, letter-tinted, with
-        /// the word floating above it facing the player. This is also the
-        /// swap point for fancier trap visuals later — e.g. a hologram-style
-        /// render — hand in a different prefab and nothing else changes.
-        /// </summary>
-        void BuildPrefabVisual(GameObject visualPrefab)
-        {
-            GameObject visual = Instantiate(visualPrefab, transform);
-            visual.name = "Trap Visual";
-            foreach (Collider collider in visual.GetComponentsInChildren<Collider>())
-                Destroy(collider);
-            visual.transform.localPosition = Vector3.zero;
-            visual.transform.localRotation = Quaternion.Euler(0f, Random.Range(0f, 360f), 0f);
-
-            // Letter-hued tint, same recipe as the brewing shelves.
-            Color tint = Color.HSVToRGB(((Letter - 'A') * 7 % 26) / 26f, 0.55f, 1f);
-            Color soft = Color.Lerp(Color.white, tint, 0.45f);
-            var block = new MaterialPropertyBlock();
-            foreach (Renderer renderer in visual.GetComponentsInChildren<Renderer>())
-            {
-                renderer.GetPropertyBlock(block);
-                block.SetColor("_BaseColor", soft);
-                block.SetColor("_Color", soft);
-                renderer.SetPropertyBlock(block);
-            }
-
-            // The word hovers above the vial, always facing the player.
-            var textGo = new GameObject("Word");
-            textGo.transform.SetParent(transform, false);
-            textGo.transform.localPosition = new Vector3(0f, 0.9f, 0f);
-            var text = textGo.AddComponent<TextMeshPro>();
-            text.text = Word;
-            text.fontSize = 2.1f;
-            text.fontStyle = FontStyles.Bold;
-            text.color = Color.Lerp(tint, Color.white, 0.25f);
-            text.outlineWidth = 0.2f;
-            text.alignment = TextAlignmentOptions.Center;
-            text.rectTransform.sizeDelta = new Vector2(2.2f, 0.6f);
-            textGo.AddComponent<TrapWordBillboard>();
         }
 
         /// <summary>
@@ -218,17 +168,6 @@ namespace OtherwiseLabs.CreatureGame
         void OnDestroy()
         {
             Active.Remove(this);
-        }
-    }
-
-    /// <summary>Keeps a trap's floating word facing the camera. Runtime-only.</summary>
-    public class TrapWordBillboard : MonoBehaviour
-    {
-        void LateUpdate()
-        {
-            Camera cam = Camera.main;
-            if (cam == null) return;
-            transform.rotation = Quaternion.LookRotation(transform.position - cam.transform.position);
         }
     }
 }

@@ -56,19 +56,6 @@ namespace OtherwiseLabs.CreatureGame
         /// tracing half the shape passes, but wobbly lines do. Shared by the
         /// 2D panel and the in-world air-tracing so they can never disagree.
         /// </summary>
-        /// <summary>
-        /// How many separate strokes the letter's template uses. The gem
-        /// constellation game offers single-stroke letters only, so one
-        /// unbroken chain of lines can draw them.
-        /// </summary>
-        public static int StrokeCount(char letter)
-        {
-            EnsureBuilt();
-            return _shapes.TryGetValue(char.ToUpperInvariant(letter), out Vector2[][] strokes)
-                ? strokes.Length
-                : 0;
-        }
-
         public static float ScoreTrace(IReadOnlyList<Vector2> drawnUnit, char letter, float tolerance = 0.14f)
         {
             List<Vector2> template = SamplePath(letter, 0.04f);

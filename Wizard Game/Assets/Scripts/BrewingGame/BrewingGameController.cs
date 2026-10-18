@@ -177,7 +177,7 @@ namespace OtherwiseLabs.BrewingGame
         void NextRound()
         {
             int length = Mathf.Min(startingLength + _successes / Mathf.Max(1, brewsPerLengthUp), maxLength);
-            _word = PickBrewWord(length).ToUpperInvariant();
+            _word = WordBank.PickWord(Mathf.Min(length, maxLength), length, _rng).ToUpperInvariant();
             _poured.Clear();
             _heardOnce = false;
             BuildShelfLayout();
@@ -187,33 +187,6 @@ namespace OtherwiseLabs.BrewingGame
 
             if (autoPlayRadius > 0f && PlayerWithin(book.position, autoPlayRadius))
                 StartCoroutine(SpeakSequence());
-        }
-
-        /// <summary>
-        /// Recipes prefer words the VIAL satchel can pay for — the gem
-        /// constellation game's vials are the cauldron's ingredients. When no
-        /// word is affordable (fresh save, empty satchel), brewing stays free
-        /// so the loop never dead-ends; vials are still spent when they exist.
-        /// </summary>
-        string PickBrewWord(int length)
-        {
-            for (int attempt = 0; attempt < 40; attempt++)
-            {
-                string candidate = WordBank.PickWord(length, length, _rng);
-                if (CanAfford(candidate)) return candidate;
-            }
-            return WordBank.PickWord(length, length, _rng);
-        }
-
-        static bool CanAfford(string word)
-        {
-            word = word.ToUpperInvariant();
-            for (char c = 'A'; c <= 'Z'; c++)
-            {
-                int needed = WordBank.CountLetter(word, c);
-                if (needed > 0 && VialInventory.Count(c) < needed) return false;
-            }
-            return true;
         }
 
         void BuildShelfLayout()
@@ -395,7 +368,6 @@ namespace OtherwiseLabs.BrewingGame
             if (_phase == Phase.Resolving) return;
             _potions.Remove(potion);
             _poured.Add(potion.Letter);
-            VialInventory.TryConsume(potion.Letter);   // vials are the ingredients, spent per pour (free when none)
             Cauldron.Pour(potion.Letter);
             if (_phase != Phase.Speaking)
                 speaker.Speak(potion.Letter, Cauldron.Mouth, out _);   // the cauldron echoes the letter

@@ -75,7 +75,6 @@ namespace OtherwiseLabs.CreatureGame
             if (Instance == this) Instance = null;
             SceneManager.sceneLoaded -= OnSceneLoaded;
             PaperInventory.Changed -= OnInventoryChanged;
-            VialInventory.Changed -= OnInventoryChanged;
             ReleaseUiMode();
         }
 
@@ -113,7 +112,6 @@ namespace OtherwiseLabs.CreatureGame
             _selectedLetter = '\0';
             Rebuild();
             PaperInventory.Changed += OnInventoryChanged;
-            VialInventory.Changed += OnInventoryChanged;
             PlayerControlScheme.UiMode = true;
             _claimedUiMode = true;
         }
@@ -123,7 +121,6 @@ namespace OtherwiseLabs.CreatureGame
             if (_panel == null || !_panel.activeSelf) return;
             _panel.SetActive(false);
             PaperInventory.Changed -= OnInventoryChanged;
-            VialInventory.Changed -= OnInventoryChanged;
             ReleaseUiMode();
         }
 
@@ -217,9 +214,8 @@ namespace OtherwiseLabs.CreatureGame
             for (int i = 0; i < 26; i++)
             {
                 char letter = (char)('A' + i);
-                int papers = PaperInventory.CountForLetter(letter);
-                int vials = VialInventory.Count(letter);
-                bool hasAny = papers > 0 || vials > 0;
+                int supply = PaperInventory.CountForLetter(letter);
+                bool stocked = supply > 0;
 
                 var slotGo = new GameObject($"Slot {letter}", typeof(RectTransform));
                 slotGo.transform.SetParent(_window, false);
@@ -229,36 +225,28 @@ namespace OtherwiseLabs.CreatureGame
                     new Vector2(-224f + column * 56f, -150f - row * 60f), new Vector2(50f, 54f));
 
                 var background = slotGo.AddComponent<Image>();
-                background.color = hasAny ? new Color(1f, 1f, 1f, 0.13f) : new Color(0f, 0f, 0f, 0.38f);
+                background.color = stocked ? new Color(1f, 1f, 1f, 0.13f) : new Color(0f, 0f, 0f, 0.38f);
                 var button = slotGo.AddComponent<Button>();
                 button.targetGraphic = background;
                 char captured = letter;
                 button.onClick.AddListener(() => SelectSlot(captured));
 
                 TMP_Text glyph = MakeText(rect, letter.ToString(), 27f,
-                    hasAny ? Paper : new Color(1f, 1f, 1f, 0.18f), FontStyles.Bold);
+                    stocked ? Paper : new Color(1f, 1f, 1f, 0.18f), FontStyles.Bold);
                 Stretch(glyph.rectTransform);
 
-                if (papers > 0)
+                if (stocked)
                 {
-                    TMP_Text badge = MakeText(rect, $"x{papers}", 13f, Gold, FontStyles.Bold);
+                    TMP_Text badge = MakeText(rect, $"x{supply}", 13f, Gold, FontStyles.Bold);
                     badge.alignment = TextAlignmentOptions.BottomRight;
                     Stretch(badge.rectTransform);
                     badge.rectTransform.offsetMax = new Vector2(-3f, 0f);
-                }
-                if (vials > 0)
-                {
-                    TMP_Text vialBadge = MakeText(rect, vials.ToString(), 13f,
-                        new Color(0.55f, 0.85f, 1f, 1f), FontStyles.Bold);
-                    vialBadge.alignment = TextAlignmentOptions.TopLeft;
-                    Stretch(vialBadge.rectTransform);
-                    vialBadge.rectTransform.offsetMin = new Vector2(4f, 0f);
                 }
 
                 _slots.Add(slotGo);
             }
 
-            _totalLabel.text = $"Papers: {PaperInventory.TotalCount}    Vials: {VialInventory.TotalCount}";
+            _totalLabel.text = $"Papers in the bag: {PaperInventory.TotalCount}";
             RefreshDetail();
         }
 
@@ -279,21 +267,18 @@ namespace OtherwiseLabs.CreatureGame
             }
 
             var words = PaperInventory.WordsFor(_selectedLetter);
-            int vialCount = VialInventory.Count(_selectedLetter);
-            if (words.Count == 0 && vialCount == 0)
+            if (words.Count == 0)
             {
                 _detailLabel.text =
-                    $"No {_selectedLetter} yet — make a {_selectedLetter} vial at the gem table, then brew it into a word at the cauldron!";
+                    $"No {_selectedLetter} food yet — brew a word with {_selectedLetter} in it at the Alchemist Store!";
                 return;
             }
 
             var parts = new List<string>();
             foreach (KeyValuePair<string, int> pair in words)
                 parts.Add(pair.Value > 1 ? $"{pair.Key} x{pair.Value}" : pair.Key);
-            string traps = words.Count > 0
-                ? $"{_selectedLetter} traps: {PaperInventory.CountForLetter(_selectedLetter)}  —  {string.Join(", ", parts)}"
-                : $"No {_selectedLetter} traps yet — brew a word with {_selectedLetter} at the cauldron.";
-            _detailLabel.text = $"{traps}\nVials of {_selectedLetter}: {vialCount}";
+            _detailLabel.text =
+                $"{_selectedLetter} traps: {PaperInventory.CountForLetter(_selectedLetter)}  —  {string.Join(", ", parts)}";
         }
 
         // ------------------------------------------------------------------
