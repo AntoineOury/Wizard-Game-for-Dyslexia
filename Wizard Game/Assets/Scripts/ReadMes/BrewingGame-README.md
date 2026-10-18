@@ -8,10 +8,13 @@ traps use, so everything brewed is a word the hunting game understands.
 
 ## The brewing loop
 
+0. **Wake** — the game sleeps when the player enters the store: empty
+   shelves, silent book. Near the book the hint says "Tap the spell book to
+   start brewing!"; the first tap fills the shelves and starts the reading.
 1. **Listen** — the spell book on the table says the letters of a secret
-   word, one sound at a time ("wuh... ah... guh..."). Walk close and it
-   reads automatically; **tap the book any time to hear it again** (the
-   flowchart's replay branch).
+   word, one sound at a time ("wuh... ah... guh..."). After a brew, a new
+   recipe reads by itself when the player is close; **tap the book any time
+   to hear it again** (the flowchart's replay branch).
 2. **Pick** — letter potions float on the shelves, each with a big letter
    over the cork (and a letter-tinted bottle). The word's letters are all
    there, shuffled, plus a couple of decoys. The bottle under the pointer
@@ -89,7 +92,7 @@ The cauldron's letter echo on each pour uses the same voice.
 | Starting/Max Length, Brews Per Length Up | how fast recipes grow |
 | Decoy Count | extra wrong-letter potions on the shelves |
 | Gap Between Letters | breathing room in the spoken sequence |
-| Auto Play Radius | how close the player must be for the book to self-read (0 = tap only) |
+| Auto Play Radius | how close the player must be for the book to self-read new recipes, and to see the wake-up hint (0 = tap only) |
 | Interact Range | max distance for tapping potions/the book |
 | Tint Potions | letter-colored bottles on/off |
 | Puff Color | the cauldron's letter-smoke color |

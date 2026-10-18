@@ -33,7 +33,9 @@ PCG World. Each arrow is one mini-game.
    glyph, halo, a little light). **Tap it** to pick it up: it rides in front
    of the camera, lower right, like a held lantern.
 5. **Mortar** — walk to the mortar on the other table and **tap it**: the
-   letter arcs in and sinks. The hint asks the player to **say the letter's
+   letter arcs in and sinks. The tap is forgiving: it looks past the
+   player's own body (third person puts it between camera and mortar) and
+   counts a tap that lands just beside the mortar. The hint asks the player to **say the letter's
    name out loud** ("double u", "ess", "bee").
 6. **Vial** — heard right, the mortar grinds, the letter puffs out of it, and
    a letter-tinted **vial** arcs onto the potion shelf. It sits there for a

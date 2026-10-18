@@ -70,9 +70,10 @@ namespace OtherwiseLabs.BrewingGame
 
         public BrewingCauldron Cauldron { get; private set; }
 
-        enum Phase { Waiting, Speaking, Brewing, Resolving }
+        enum Phase { Asleep, Waiting, Speaking, Brewing, Resolving }
 
-        Phase _phase = Phase.Waiting;
+        // The game sleeps (empty shelves, silent book) until the book is tapped.
+        Phase _phase = Phase.Asleep;
         Transform _player;
         System.Random _rng;
         string _word = "";
@@ -121,7 +122,7 @@ namespace OtherwiseLabs.BrewingGame
             if (shelfB != null) EnsureTapCollider(shelfB);
 
             BuildOverlay();
-            StartCoroutine(FirstRound());
+            SetHint("");
         }
 
         /// <summary>Inspector references first; sleeves-rolled-up name search second.</summary>
@@ -168,10 +169,11 @@ namespace OtherwiseLabs.BrewingGame
         // ------------------------------------------------------------------
         // Rounds
 
-        IEnumerator FirstRound()
+        /// <summary>The first tap on the book wakes the game: shelves fill and the book reads.</summary>
+        void WakeUp()
         {
-            yield return new WaitForSeconds(1f);
             NextRound();
+            if (_phase == Phase.Waiting) StartCoroutine(SpeakSequence());
         }
 
         void NextRound()
@@ -495,6 +497,9 @@ namespace OtherwiseLabs.BrewingGame
         {
             if (_phase == Phase.Resolving) { SetHover(null); _held = null; return; }
 
+            if (_phase == Phase.Asleep)
+                SetHint(PlayerWithin(book.position, autoPlayRadius) ? "Tap the spell book to start brewing!" : "");
+
             UpdateHover();
 
             if (Input.GetMouseButtonDown(0) && !PointerOverBlockingUi())
@@ -513,7 +518,9 @@ namespace OtherwiseLabs.BrewingGame
             else if (_pressOnBook && Input.GetMouseButtonUp(0))
             {
                 _pressOnBook = false;
-                if (IsTap() && _phase != Phase.Speaking)
+                if (IsTap() && _phase == Phase.Asleep)
+                    WakeUp();
+                else if (IsTap() && _phase != Phase.Speaking)
                     StartCoroutine(SpeakSequence());
             }
         }

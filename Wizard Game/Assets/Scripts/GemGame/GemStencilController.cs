@@ -693,7 +693,7 @@ namespace OtherwiseLabs.GemGame
             _pressOnLetter = _pressOnMortar = _pressOnTable = false;
 
             Ray ray = PointerRay();
-            bool hitSomething = Physics.Raycast(ray, out RaycastHit hit, 80f);
+            bool hitSomething = RaycastPastPlayer(ray, out RaycastHit hit);
 
             switch (_phase)
             {
@@ -720,7 +720,7 @@ namespace OtherwiseLabs.GemGame
                     break;
 
                 case Phase.Carrying:
-                    if (hitSomething && hit.transform.IsChildOf(mortar))
+                    if (PointsAtMortar(ray))
                     {
                         if (PlayerWithin(mortar.position, interactRange)) _pressOnMortar = true;
                         else SetHint($"Walk closer to the mortar to drop the {_letter} in.");
@@ -773,6 +773,44 @@ namespace OtherwiseLabs.GemGame
             if (vertex < 0) return;
             StencilGem gem = FirstPileGem();
             if (gem != null) Place(gem, vertex);
+        }
+
+        /// <summary>
+        /// Nearest hit that isn't the player. In third person the camera sits
+        /// behind the player, so walking up to the mortar puts the player's own
+        /// capsule between the camera and the mortar, swallowing the tap.
+        /// </summary>
+        bool RaycastPastPlayer(Ray ray, out RaycastHit nearest)
+        {
+            nearest = default;
+            bool found = false;
+            foreach (RaycastHit hit in Physics.RaycastAll(ray, 80f))
+            {
+                if (_player != null && hit.transform.IsChildOf(_player)) continue;
+                if (!found || hit.distance < nearest.distance)
+                {
+                    nearest = hit;
+                    found = true;
+                }
+            }
+            return found;
+        }
+
+        /// <summary>
+        /// Forgiving mortar test: any hit along the ray on the mortar counts
+        /// (whatever sits in front of it), and so does a tap that passes close
+        /// to the mortar's mouth — it is a small target, especially on touch.
+        /// </summary>
+        bool PointsAtMortar(Ray ray)
+        {
+            foreach (RaycastHit hit in Physics.RaycastAll(ray, 80f))
+                if (hit.transform.IsChildOf(mortar)) return true;
+
+            Bounds bounds = BoundsOf(mortar);
+            float reach = Mathf.Max(bounds.extents.x, bounds.extents.z) + 0.3f;
+            Vector3 toMouth = bounds.center - ray.origin;
+            if (Vector3.Dot(toMouth, ray.direction) <= 0f) return false;
+            return Vector3.Cross(ray.direction, toMouth).magnitude <= reach;
         }
 
         bool IsTap() =>
