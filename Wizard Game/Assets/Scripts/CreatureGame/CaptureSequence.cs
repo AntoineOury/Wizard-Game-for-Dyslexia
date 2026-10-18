@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -62,18 +61,6 @@ namespace OtherwiseLabs.CreatureGame
         bool _stroking;
         float _evaluateAt;
 
-        // Tap-the-star calibration: the star sits at the plane center, which
-        // the capture camera puts at the EXACT middle of the screen — so the
-        // player's opening tap should read (0.5, 0.5). Whatever it actually
-        // reads is this device's constant pointer offset (browser bars and
-        // scaling quirks we can't see from here); subtracting it from every
-        // ray afterwards pins the ink precisely under the finger, on any
-        // platform, with no assumptions.
-        bool _aimCalibrated;
-        Vector2 _aimOffset;
-        Transform _star;
-        Material _starMaterial;
-
         readonly List<Renderer> _hiddenBody = new List<Renderer>();
         GameObject _sleepingTouchControls;
 
@@ -92,8 +79,6 @@ namespace OtherwiseLabs.CreatureGame
             _drawnUnit.Clear();
             _evaluateAt = 0f;
             HintText = "";
-            _aimCalibrated = false;
-            _aimOffset = Vector2.zero;
 
             // The letter hangs above the creature, facing the player's eyes.
             // "Away-facing" rotation on purpose: a Unity quad shows its -Z
@@ -162,8 +147,7 @@ namespace OtherwiseLabs.CreatureGame
                     if (_t >= 1f)
                     {
                         _phase = Phase.Tracing;
-                        BuildStar();
-                        HintText = "Tap the golden star to wake your net!";
+                        HintText = $"Wave and trace the {_creature.Letter} in the air!  (Esc to step back)";
                     }
                     break;
                 }
@@ -195,22 +179,16 @@ namespace OtherwiseLabs.CreatureGame
 
         void HandleDrawing()
         {
-            bool overUi = _game.PointerOverBlockingUi();
-
-            // First beat of every capture: tap the star to calibrate the aim.
-            if (!_aimCalibrated)
-            {
-                CurrentAimWorld = _planeCenter;   // the net rests pointing at the star
-                PulseStar();
-                if (Input.GetMouseButtonDown(0) && !overUi) CalibrateAim();
-                return;
-            }
-
             // Keep the aim point live even between strokes: the net follows
             // the player's hand the whole time, not only while ink flows.
-            Ray aimRay = AimRay();
+            // TruePointer, not Input.mousePosition: in browser builds the ray
+            // comes from the pointer's REAL canvas position (DOM truth), so
+            // ink lands exactly under the finger on every display scale.
+            Ray aimRay = TruePointer.Ray(_camera);
             if (_plane.Raycast(aimRay, out float aimDistance))
                 CurrentAimWorld = aimRay.GetPoint(aimDistance);
+
+            bool overUi = _game.PointerOverBlockingUi();
 
             if (Input.GetMouseButtonDown(0) && !overUi)
             {
@@ -232,7 +210,7 @@ namespace OtherwiseLabs.CreatureGame
 
         void TryInk(bool force)
         {
-            Ray ray = AimRay();
+            Ray ray = TruePointer.Ray(_camera);
             if (!_plane.Raycast(ray, out float distance)) return;
 
             Vector3 world = ray.GetPoint(distance);
@@ -247,73 +225,6 @@ namespace OtherwiseLabs.CreatureGame
             _lastInkUnit = unit;
             _drawnUnit.Add(unit);
             MakeDot(_inkRoot, unit, 0.055f, _inkMaterial);
-        }
-
-        /// <summary>The trace ray: true pointer position plus this capture's calibration.</summary>
-        Ray AimRay()
-        {
-            Vector2 viewport = TruePointer.Viewport() + _aimOffset;
-            return TruePointer.FromViewport(_camera, viewport);
-        }
-
-        /// <summary>
-        /// The star tap SHOULD read (0.5, 0.5) — it sits at the plane center,
-        /// dead middle of the screen. Whatever it actually reads is this
-        /// device's constant pointer offset; store the correction.
-        /// </summary>
-        void CalibrateAim()
-        {
-            Vector2 raw = TruePointer.Viewport();
-            _aimOffset = new Vector2(
-                Mathf.Clamp(0.5f - raw.x, -0.35f, 0.35f),
-                Mathf.Clamp(0.5f - raw.y, -0.35f, 0.35f));
-            _aimCalibrated = true;
-            Debug.Log($"[CaptureTrace] star tap viewport=({raw.x:F3}, {raw.y:F3}) " +
-                      $"offset=({_aimOffset.x:F3}, {_aimOffset.y:F3}) " +
-                      $"screen={Screen.width}x{Screen.height} mouse={Input.mousePosition}");
-            if (_star != null) StartCoroutine(PopStar());
-            HintText = $"Now trace the {_creature.Letter} in the air!  (Esc to step back)";
-        }
-
-        void BuildStar()
-        {
-            if (_visualRoot == null) return;
-            var starRoot = new GameObject("Start Star");
-            starRoot.transform.SetParent(_visualRoot, false);
-            starRoot.transform.localPosition = Vector3.zero;
-            _star = starRoot.transform;
-
-            if (_starMaterial == null && _guideMaterial != null)
-                _starMaterial = new Material(_guideMaterial.shader) { color = new Color(1f, 0.85f, 0.3f, 0.95f) };
-            for (int i = 0; i < 2; i++)
-            {
-                GameObject quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
-                Destroy(quad.GetComponent<Collider>());
-                quad.transform.SetParent(starRoot.transform, false);
-                quad.transform.localRotation = Quaternion.Euler(0f, 0f, i * 45f);
-                quad.transform.localScale = new Vector3(0.16f, 0.16f, 1f);
-                if (_starMaterial != null)
-                    quad.GetComponent<MeshRenderer>().sharedMaterial = _starMaterial;
-            }
-        }
-
-        void PulseStar()
-        {
-            if (_star != null)
-                _star.localScale = Vector3.one * (1f + 0.22f * Mathf.Sin(Time.time * 5.5f));
-        }
-
-        IEnumerator PopStar()
-        {
-            Transform star = _star;
-            _star = null;
-            for (float t = 0f; t < 0.3f; t += Time.deltaTime)
-            {
-                if (star == null) yield break;
-                star.localScale = Vector3.one * (1f + 3.5f * (t / 0.3f));
-                yield return null;
-            }
-            if (star != null) Destroy(star.gameObject);
         }
 
         void Evaluate()
@@ -401,8 +312,6 @@ namespace OtherwiseLabs.CreatureGame
             WakeTouchControls();
             if (_guideMaterial != null) Destroy(_guideMaterial);
             if (_inkMaterial != null) Destroy(_inkMaterial);
-            if (_starMaterial != null) Destroy(_starMaterial);
-            _starMaterial = null;
         }
 
         Vector3 HeadPosition()
