@@ -130,8 +130,8 @@ namespace OtherwiseLabs.BrewingGame
                 transform.localScale = Vector3.one * (_baseScale * (1f + 0.09f * _glow));
         }
 
-        /// <summary>Soft radial gradient, generated once — the glow texture.</summary>
-        static Sprite HaloSprite()
+        /// <summary>Soft radial gradient, generated once — the glow texture (shared with the gem stencil).</summary>
+        public static Sprite HaloSprite()
         {
             if (_haloSprite != null) return _haloSprite;
             const int size = 96;
