@@ -144,6 +144,20 @@ shyness rule adds the third move (step away so they dare approach). `Call
 Radius` on the controller sets how far a call carries; each creature type can
 override it with its own `Call Response Radius` in the creatures list.
 
+### Browser pointer accuracy (the tracing fix)
+
+Unity's own `Input.mousePosition` proved unreliable in browser builds on
+scaled displays — tracing ink landed shrunken and shifted while UI still
+worked. The fix bypasses it for world aiming: `TruePointer` builds rays
+from the pointer's REAL canvas position, read directly from the browser
+(`Plugins/WebGL/WebPointer.jslib`, normalized by the canvas's own CSS
+rect — ground truth on every device and display scale). Letter tracing,
+trap placement, creature taps and potion grabbing all aim through it;
+in the editor and native builds it is plain `ScreenPointToRay`,
+unchanged. UI buttons keep using EventSystem coordinates so they stay
+consistent with how UGUI itself raycasts. **Template and code changes
+only reach the browser in a freshly built WebGL upload.**
+
 ### Landscape builds
 
 The project is set to Auto Rotation with portrait disabled (Player settings),

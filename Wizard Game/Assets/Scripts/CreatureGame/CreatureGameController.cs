@@ -204,7 +204,7 @@ namespace OtherwiseLabs.CreatureGame
             Camera camera = Camera.main;
             if (camera == null) return;
 
-            Ray ray = camera.ScreenPointToRay(Input.mousePosition);
+            Ray ray = TruePointer.Ray(camera);
 
             if (_placing)
             {

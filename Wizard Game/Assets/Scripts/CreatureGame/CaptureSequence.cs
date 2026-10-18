@@ -181,7 +181,10 @@ namespace OtherwiseLabs.CreatureGame
         {
             // Keep the aim point live even between strokes: the net follows
             // the player's hand the whole time, not only while ink flows.
-            Ray aimRay = _camera.ScreenPointToRay(Input.mousePosition);
+            // TruePointer, not Input.mousePosition: in browser builds the ray
+            // comes from the pointer's REAL canvas position (DOM truth), so
+            // ink lands exactly under the finger on every display scale.
+            Ray aimRay = TruePointer.Ray(_camera);
             if (_plane.Raycast(aimRay, out float aimDistance))
                 CurrentAimWorld = aimRay.GetPoint(aimDistance);
 
@@ -207,7 +210,7 @@ namespace OtherwiseLabs.CreatureGame
 
         void TryInk(bool force)
         {
-            Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
+            Ray ray = TruePointer.Ray(_camera);
             if (!_plane.Raycast(ray, out float distance)) return;
 
             Vector3 world = ray.GetPoint(distance);

@@ -569,8 +569,9 @@ namespace OtherwiseLabs.BrewingGame
         Ray PointerRay()
         {
             Camera cam = Camera.main;
-            Vector2 screen = PointerScreen();
-            return cam != null ? cam.ScreenPointToRay(screen) : new Ray(Vector3.zero, Vector3.forward);
+            // TruePointer reads the browser's real canvas coordinates in WebGL
+            // (and handles the locked-cursor center case itself).
+            return cam != null ? TruePointer.Ray(cam) : new Ray(Vector3.zero, Vector3.forward);
         }
 
         bool PlayerWithin(Vector3 position, float range)
