@@ -59,19 +59,64 @@ namespace OtherwiseLabs.CreatureGame
         public static float ScoreTrace(IReadOnlyList<Vector2> drawnUnit, char letter, float tolerance = 0.14f)
         {
             List<Vector2> template = SamplePath(letter, 0.04f);
+            IReadOnlyList<Vector2> drawn = FitToTemplate(drawnUnit, template);
             float toleranceSqr = tolerance * tolerance;
 
             int drawnOnPath = 0;
-            for (int i = 0; i < drawnUnit.Count; i++)
-                if (NearAny(drawnUnit[i], template, toleranceSqr)) drawnOnPath++;
+            for (int i = 0; i < drawn.Count; i++)
+                if (NearAny(drawn[i], template, toleranceSqr)) drawnOnPath++;
 
             int covered = 0;
             for (int i = 0; i < template.Count; i++)
-                if (NearAny(template[i], drawnUnit, toleranceSqr)) covered++;
+                if (NearAny(template[i], drawn, toleranceSqr)) covered++;
 
-            float onPath = drawnUnit.Count > 0 ? drawnOnPath / (float)drawnUnit.Count : 0f;
+            float onPath = drawn.Count > 0 ? drawnOnPath / (float)drawn.Count : 0f;
             float coverage = template.Count > 0 ? covered / (float)template.Count : 0f;
             return Mathf.Min(onPath, coverage);
+        }
+
+        /// <summary>
+        /// Slides and gently rescales the drawn trace so its bounding box
+        /// sits on the template's before grading. Letter FORMATION is what
+        /// we grade: a well-shaped letter drawn a bit small, large or
+        /// off-center — a child's natural drift, or a device that maps
+        /// touches slightly off (some browsers do) — still earns its
+        /// capture. The shape itself is untouched: no rotation, no flip,
+        /// no per-axis stretch, so b/d/p/q stay honest, and the scale
+        /// correction is clamped so a tiny scribble can't pass as a letter.
+        /// </summary>
+        static IReadOnlyList<Vector2> FitToTemplate(IReadOnlyList<Vector2> drawn, List<Vector2> template)
+        {
+            if (drawn.Count < 2 || template.Count == 0) return drawn;
+
+            Vector2 drawnMin = drawn[0], drawnMax = drawn[0];
+            for (int i = 1; i < drawn.Count; i++)
+            {
+                drawnMin = Vector2.Min(drawnMin, drawn[i]);
+                drawnMax = Vector2.Max(drawnMax, drawn[i]);
+            }
+            Vector2 templateMin = template[0], templateMax = template[0];
+            for (int i = 1; i < template.Count; i++)
+            {
+                templateMin = Vector2.Min(templateMin, template[i]);
+                templateMax = Vector2.Max(templateMax, template[i]);
+            }
+
+            Vector2 drawnSize = drawnMax - drawnMin;
+            float drawnExtent = Mathf.Max(drawnSize.x, drawnSize.y);
+            if (drawnExtent < 0.08f) return drawn;   // a dot or stab: nothing to align
+
+            Vector2 templateSize = templateMax - templateMin;
+            float templateExtent = Mathf.Max(templateSize.x, templateSize.y);
+            float scale = Mathf.Clamp(templateExtent / drawnExtent, 0.6f, 1.8f);
+
+            Vector2 drawnCenter = (drawnMin + drawnMax) * 0.5f;
+            Vector2 templateCenter = (templateMin + templateMax) * 0.5f;
+
+            var fitted = new List<Vector2>(drawn.Count);
+            for (int i = 0; i < drawn.Count; i++)
+                fitted.Add((drawn[i] - drawnCenter) * scale + templateCenter);
+            return fitted;
         }
 
         static bool NearAny(Vector2 point, IReadOnlyList<Vector2> others, float toleranceSqr)

@@ -25,6 +25,13 @@ namespace OtherwiseLabs.CreatureGame
         /// <summary>The letter this trap was baited for (the word challenge's target).</summary>
         public char Letter { get; private set; }
         public string Word { get; private set; }
+
+        /// <summary>
+        /// Which inventory paper was spent to place this trap (may differ
+        /// from Word — supplies are per-letter). Lets a replaced, catch-less
+        /// trap refund exactly what it consumed.
+        /// </summary>
+        public string SourceWord { get; set; }
         public LetterCreature Snared { get; private set; }
 
         /// <summary>Letters present in the word, strongest hold first — the only ones this paper can catch.</summary>

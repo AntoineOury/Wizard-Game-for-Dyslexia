@@ -107,6 +107,20 @@ namespace OtherwiseLabs.CreatureGame
             return count;
         }
 
+        /// <summary>
+        /// A random word of minLength..maxLength letters. The brewing game's
+        /// recipes come from this same pool as the trap words, so every brewed
+        /// paper is a word the trap system already understands.
+        /// </summary>
+        public static string PickWord(int minLength, int maxLength, Random rng)
+        {
+            var fits = new List<string>();
+            foreach (string word in Words)
+                if (word.Length >= minLength && word.Length <= maxLength)
+                    fits.Add(word);
+            return fits.Count == 0 ? "cat" : Pick(fits, rng);
+        }
+
         static string Pick(List<string> list, Random rng) => list[rng.Next(list.Count)];
     }
 }

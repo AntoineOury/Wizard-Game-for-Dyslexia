@@ -144,6 +144,11 @@ Shader "OtherwiseLabs/Terrain Vertex Color"
             #pragma target 3.0
             #pragma multi_compile_vertex _ _CASTING_PUNCTUAL_LIGHT_SHADOW
 
+            // URP 14.0.11's Shadows.hlsl calls LerpWhiteTo but leaves its
+            // home include (core CommonMaterial.hlsl) to the caller — the lit
+            // pass inherits it through Lighting.hlsl, this pass must pull it
+            // in itself or the whole shader fails to compile.
+            #include "Packages/com.unity.render-pipelines.core/ShaderLibrary/CommonMaterial.hlsl"
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Shadows.hlsl"
 
             float3 _LightDirection;

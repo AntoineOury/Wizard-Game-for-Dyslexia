@@ -91,7 +91,10 @@ namespace OtherwiseLabs.CreatureGame
             _planeRotation = Quaternion.LookRotation(toPlane.normalized);
             _planeRight = _planeRotation * Vector3.right;
             _planeUp = _planeRotation * Vector3.up;
-            _plane = new Plane((head - _planeCenter).normalized, _planeCenter);
+            // The ink raycast plane IS the visual plane (same rotation, its
+            // -Z face toward the viewer) — one surface for dots and ink, so
+            // what the finger touches is exactly where ink lands.
+            _plane = new Plane(_planeRotation * Vector3.back, _planeCenter);
             CurrentAimWorld = _planeCenter;
 
             HidePlayerBody();
@@ -178,7 +181,10 @@ namespace OtherwiseLabs.CreatureGame
         {
             // Keep the aim point live even between strokes: the net follows
             // the player's hand the whole time, not only while ink flows.
-            Ray aimRay = _camera.ScreenPointToRay(Input.mousePosition);
+            // TruePointer, not Input.mousePosition: in browser builds the ray
+            // comes from the pointer's REAL canvas position (DOM truth), so
+            // ink lands exactly under the finger on every display scale.
+            Ray aimRay = TruePointer.Ray(_camera);
             if (_plane.Raycast(aimRay, out float aimDistance))
                 CurrentAimWorld = aimRay.GetPoint(aimDistance);
 
@@ -204,13 +210,16 @@ namespace OtherwiseLabs.CreatureGame
 
         void TryInk(bool force)
         {
-            Ray ray = _camera.ScreenPointToRay(Input.mousePosition);
+            Ray ray = TruePointer.Ray(_camera);
             if (!_plane.Raycast(ray, out float distance)) return;
 
             Vector3 world = ray.GetPoint(distance);
             Vector3 offset = world - _planeCenter;
             var unit = new Vector2(Vector3.Dot(offset, _planeRight), Vector3.Dot(offset, _planeUp)) / LetterScale;
-            if (Mathf.Abs(unit.x) > 0.75f || Mathf.Abs(unit.y) > 0.75f) return; // off the letter's slate
+            // Generous slate: on devices whose pointer mapping runs slightly
+            // large, stroke ends spill past the letter — record them anyway
+            // and let the best-fit grader sort placement out.
+            if (Mathf.Abs(unit.x) > 1.15f || Mathf.Abs(unit.y) > 1.15f) return; // truly off the slate
 
             if (!force && (unit - _lastInkUnit).sqrMagnitude < 0.0009f) return; // ~3 cm between ink dots
             _lastInkUnit = unit;
