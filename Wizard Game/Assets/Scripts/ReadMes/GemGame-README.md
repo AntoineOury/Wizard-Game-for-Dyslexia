@@ -38,9 +38,19 @@ PCG World. Each arrow is one mini-game.
    counts a tap that lands just beside the mortar. The hint asks the player to **say the letter's
    name out loud** ("double u", "ess", "bee").
 6. **Vial** — heard right, the mortar grinds, the letter puffs out of it, and
-   a letter-tinted **vial** arcs onto the potion shelf. It sits there for a
-   moment, then joins the shelf's stock (`VialInventory`, persisted), and the
-   scroll rolls up for the next letter.
+   a letter-tinted **vial** arcs onto the **vial rack** at the end of the
+   potion shelf, where it stays (`VialInventory`, persisted). The scroll
+   rolls up for the next letter.
+
+## The vial rack
+
+The made vials stand on the far end of the brewing game's second shelf: one
+bottle per letter owned, with "x3" over it when there are several. The rack
+mirrors `VialInventory`, so it is there again on every visit and a bottle
+disappears when the cauldron spends the last vial of its letter.
+`Vial Rack Share` on the **brewing** controller sets how much of that shelf
+the rack keeps (default 35%); the recipe bottles stay out of it. Many letters
+share the rack by standing a little smaller.
 
 The creature letters (`Priority Letters`, default S and W) come first while
 the player has no vials of them; after that letters are random, never the
@@ -76,8 +86,8 @@ One GameObject — **`Gem Mini-Game`** — carries `GemStencilController`, its
 own `LetterSpeaker` (26 clip slots, browser TTS, chime fallback — the same
 voice stack as the spell book) and a `VoiceLetterListener`. The Inspector
 points at the placed pieces: **table (1)** (the gem table) and the
-**mortar**. `Vial Shelf` can be left empty: it falls back to the brewing
-game's second shelf, then to anything named "shelf". Gems spawn from the Blue
+**mortar**. `Vial Shelf` is only used when the scene has no brewing game
+(it falls back to anything named "shelf"). Gems spawn from the Blue
 Olive crystal prefabs (one model per round = one color), the vial is the
 store's potion_01 model.
 
@@ -116,6 +126,7 @@ Every letter lands between 3 and 10 dots (L 3, W 5, O 8, G and Q 10).
 | `StencilScroll` | The parchment: unroll/roll-up, ink, vertex dots, `VerticesFor(letter)`. |
 | `StencilGem` | One gem: row bob, drag, snap hop, select sparkle, glow, fuse flight. |
 | `GlowingLetter` | The fused letter: float, carry in front of the camera, drop into the mortar. |
+| `VialRack` | The made vials standing on the shelf, rebuilt from `VialInventory`. |
 
 Plus `VialInventory` (in CreatureGame, next to `PaperInventory`), a vial
 badge in `BackpackUI`, the vial-spending lines in `BrewingGameController`,
@@ -124,8 +135,5 @@ potions' glow texture.
 
 ## Deliberate prototype edges
 
-- The vial joins the stock after a short stay on the shelf rather than
-  staying there as a model: the brewing game rebuilds its shelf bottles every
-  round, so a permanent vial rack is a next step if wanted.
 - A gem can only go on a dot, so a round can't be "wrong" — the learning is
   in finding the vertices and in the say-it step.

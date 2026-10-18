@@ -91,6 +91,7 @@ The cauldron's letter echo on each pour uses the same voice.
 | --- | --- |
 | Starting/Max Length, Brews Per Length Up | how fast recipes grow |
 | Decoy Count | extra wrong-letter potions on the shelves |
+| Vial Rack Share | far end of the second shelf kept free for the gem game's vial rack (0 = none) |
 | Gap Between Letters | breathing room in the spoken sequence |
 | Auto Play Radius | how close the player must be for the book to self-read new recipes, and to see the wake-up hint (0 = tap only) |
 | Interact Range | max distance for tapping potions/the book |

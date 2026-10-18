@@ -33,7 +33,7 @@ namespace OtherwiseLabs.GemGame
         public Transform gemTable;
         [Tooltip("The mortar on the other table: drop the glowing letter in here.")]
         public Transform mortar;
-        [Tooltip("Shelf the finished vial flies to. Empty = the brewing game's shelf, or any object named \"shelf\".")]
+        [Tooltip("Shelf for the vial rack when there is no brewing game. With one, the rack takes the end of its second shelf (see Vial Rack Share there).")]
         public Transform vialShelf;
         [Tooltip("The voice that says the letter (shared speaker component).")]
         public LetterSpeaker speaker;
@@ -87,6 +87,7 @@ namespace OtherwiseLabs.GemGame
         readonly List<StencilGem> _gems = new List<StencilGem>();
         StencilGem[] _occupant = new StencilGem[0];
         GlowingLetter _glowing;
+        VialRack _rack;
         Vector3 _mortarMouth;
 
         // Input
@@ -134,12 +135,23 @@ namespace OtherwiseLabs.GemGame
             Bounds mortarBounds = BoundsOf(mortar);
             _mortarMouth = new Vector3(mortarBounds.center.x, mortarBounds.max.y, mortarBounds.center.z);
 
+            // Not parented to this object: the LetterSpeaker on it moves this
+            // transform to wherever it speaks, which would carry the scroll along.
             _scroll = new GameObject("Stencil Scroll").AddComponent<StencilScroll>();
-            _scroll.transform.SetParent(transform, true);
             _scroll.Setup(this);
+            StartCoroutine(SetupRack());
 
             BuildOverlay();
             StartCoroutine(NextRound(1f));
+        }
+
+        /// <summary>A frame late, so the brewing game has found its shelves first.</summary>
+        IEnumerator SetupRack()
+        {
+            yield return null;
+            if (vialShelf == null) vialShelf = FindByName("shelf");
+            _rack = new GameObject("Vial Rack").AddComponent<VialRack>();
+            _rack.Setup(vialPrefab, vialShelf);
         }
 
         void OnDestroy()
@@ -513,7 +525,6 @@ namespace OtherwiseLabs.GemGame
             yield return LetterPuff();
 
             yield return VialToShelf();
-            VialInventory.Add(_letter);
             Toast($"A {_letter} vial is on the shelf!  ({_letter} vials: {VialInventory.Count(_letter)})  Brew with it at the cauldron.");
 
             yield return _scroll.RollUp(0.6f);
@@ -558,47 +569,9 @@ namespace OtherwiseLabs.GemGame
 
         IEnumerator VialToShelf()
         {
-            GameObject vial = vialPrefab != null ? Instantiate(vialPrefab) : GameObject.CreatePrimitive(PrimitiveType.Capsule);
-            vial.name = $"Vial {_letter}";
-            foreach (Collider collider in vial.GetComponentsInChildren<Collider>())
-                Destroy(collider);
-
-            // Normalize and tint like the brewing shelves do.
-            var renderers = vial.GetComponentsInChildren<Renderer>();
-            float height = 0.28f;
-            if (renderers.Length > 0)
-            {
-                Bounds bounds = renderers[0].bounds;
-                for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
-                if (bounds.size.y > 0.001f) vial.transform.localScale *= height / bounds.size.y;
-                Color soft = Color.Lerp(Color.white, _accent, 0.45f);
-                var block = new MaterialPropertyBlock();
-                foreach (Renderer renderer in renderers)
-                {
-                    renderer.GetPropertyBlock(block);
-                    block.SetColor("_BaseColor", soft);
-                    block.SetColor("_Color", soft);
-                    renderer.SetPropertyBlock(block);
-                }
-            }
-            float scale = vial.transform.localScale.x;
-
-            var labelGo = new GameObject("Letter");
-            labelGo.transform.SetParent(vial.transform, false);
-            labelGo.transform.position = vial.transform.position + Vector3.up * (height + 0.12f);
-            labelGo.transform.localScale = Vector3.one / Mathf.Max(scale, 0.0001f);
-            var label = labelGo.AddComponent<TextMeshPro>();
-            label.text = _letter.ToString();
-            label.fontSize = 1.6f;
-            label.fontStyle = FontStyles.Bold;
-            label.alignment = TextAlignmentOptions.Center;
-            label.color = Color.Lerp(_accent, Color.white, 0.2f);
-            label.outlineWidth = 0.22f;
-            label.rectTransform.sizeDelta = new Vector2(1f, 0.6f);
-            labelGo.AddComponent<BillboardLabel>();
-
+            GameObject vial = VialRack.BuildVial(vialPrefab, _letter, 0.24f);
             Vector3 start = _mortarMouth;
-            Vector3 end = ShelfLandingPoint();
+            Vector3 end = _rack.SlotFor(_letter);
             Vector3 apex = Vector3.Lerp(start, end, 0.5f) + Vector3.up * Mathf.Max(1f, Vector3.Distance(start, end) * 0.35f);
             for (float t = 0f; t < 1.4f; t += Time.deltaTime)
             {
@@ -607,39 +580,13 @@ namespace OtherwiseLabs.GemGame
                 vial.transform.Rotate(0f, 240f * Time.deltaTime, 0f, Space.World);
                 yield return null;
             }
-            vial.transform.position = end;
-            vial.transform.rotation = Quaternion.identity;
 
-            // Linger on the shelf so the player sees where it went, then join
-            // the shelf's stock (the brewing game draws from VialInventory).
-            yield return new WaitForSeconds(2.4f);
-            for (float t = 0f; t < 0.35f; t += Time.deltaTime)
-            {
-                vial.transform.localScale = Vector3.one * (scale * (1f - t / 0.35f));
-                yield return null;
-            }
+            // Landed: the rack (which mirrors VialInventory) now stands this
+            // vial on the shelf for good, so the flying copy can go.
+            VialInventory.Add(_letter);
             Destroy(vial);
         }
 
-        Vector3 ShelfLandingPoint()
-        {
-            if (vialShelf == null)
-            {
-                // Resolved late: the brewing game finds its shelves in its own Start.
-                var brewing = FindObjectOfType<BrewingGameController>();
-                if (brewing != null) vialShelf = brewing.shelfB != null ? brewing.shelfB : brewing.shelfA;
-                if (vialShelf == null) vialShelf = FindByName("shelf");
-            }
-            if (vialShelf == null) return _mortarMouth + Vector3.up * 0.4f;
-            Bounds bounds = BoundsOf(vialShelf);
-            bool alongX = bounds.size.x >= bounds.size.z;
-            float u = Mathf.Lerp(-0.6f, 0.6f, (float)_rng.NextDouble());
-            Vector3 pos = bounds.center;
-            if (alongX) pos.x += bounds.extents.x * u;
-            else pos.z += bounds.extents.z * u;
-            pos.y = bounds.max.y + 0.02f;
-            return pos;
-        }
 
         // ------------------------------------------------------------------
         // Input (same raycast recipe as the brewing game, TruePointer for the browser)

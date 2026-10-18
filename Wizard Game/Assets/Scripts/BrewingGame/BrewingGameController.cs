@@ -47,6 +47,8 @@ namespace OtherwiseLabs.BrewingGame
         public bool tintPotions = true;
         [Tooltip("Extra potions with letters that are NOT in the word.")]
         [Range(0, 5)] public int decoyCount = 2;
+        [Tooltip("Share of the second shelf kept free for the vial rack (the vials made at the gem table). 0 = no rack.")]
+        [Range(0f, 0.6f)] public float vialRackShare = 0.35f;
 
         [Header("Recipes")]
         [Tooltip("Word length of the first brews.")]
@@ -239,8 +241,8 @@ namespace OtherwiseLabs.BrewingGame
 
             _layout.Clear();
             var slots = new List<Vector3>();
-            CollectShelfSlots(shelfA, letters.Count, slots);
-            if (shelfB != null) CollectShelfSlots(shelfB, letters.Count, slots);
+            CollectShelfSlots(shelfA, letters.Count, slots, ShelfEnd(shelfA));
+            if (shelfB != null) CollectShelfSlots(shelfB, letters.Count, slots, ShelfEnd(shelfB));
             // Interleave across shelves by nearest count split
             int needed = letters.Count;
             if (slots.Count < needed)                        // degenerate shelves: line them up anyway
@@ -251,23 +253,57 @@ namespace OtherwiseLabs.BrewingGame
                 _layout.Add((letters[i], slots[i]));
         }
 
-        void CollectShelfSlots(Transform shelf, int total, List<Vector3> slots)
+        const float ShelfSpan = 0.76f;
+
+        /// <summary>The shelf whose far end holds the vial rack.</summary>
+        Transform RackShelf => shelfB != null ? shelfB : shelfA;
+
+        /// <summary>How far along a shelf (-1..1 of its half-length) the recipe bottles may go.</summary>
+        float ShelfEnd(Transform shelf) =>
+            shelf == RackShelf && vialRackShare > 0f ? ShelfSpan - 2f * ShelfSpan * vialRackShare : ShelfSpan;
+
+        /// <summary>
+        /// The line along the top of the rack shelf's reserved end, where the
+        /// gem game stands its vials. False when there is no rack.
+        /// </summary>
+        public bool TryGetVialRack(out Vector3 start, out Vector3 end)
         {
-            if (shelf == null || slots.Count >= total) return;
+            start = end = Vector3.zero;
+            Transform shelf = RackShelf;
+            if (shelf == null || vialRackShare <= 0f) return false;
+            Bounds bounds = ShelfBounds(shelf);
+            Vector3 along = bounds.size.x >= bounds.size.z
+                ? Vector3.right * bounds.extents.x
+                : Vector3.forward * bounds.extents.z;
+            Vector3 top = new Vector3(bounds.center.x, bounds.max.y + 0.01f, bounds.center.z);
+            start = top + along * (ShelfEnd(shelf) + 0.12f);
+            end = top + along * (ShelfSpan + 0.12f);
+            return true;
+        }
+
+        public static Bounds ShelfBounds(Transform shelf)
+        {
             var renderers = shelf.GetComponentsInChildren<Renderer>();
-            if (renderers.Length == 0) return;
+            if (renderers.Length == 0) return new Bounds(shelf.position, Vector3.one);
             Bounds bounds = renderers[0].bounds;
             for (int i = 1; i < renderers.Length; i++) bounds.Encapsulate(renderers[i].bounds);
+            return bounds;
+        }
+
+        void CollectShelfSlots(Transform shelf, int total, List<Vector3> slots, float end)
+        {
+            if (shelf == null || slots.Count >= total) return;
+            if (shelf.GetComponentsInChildren<Renderer>().Length == 0) return;
+            Bounds bounds = ShelfBounds(shelf);
 
             bool alongX = bounds.size.x >= bounds.size.z;
             int here = Mathf.Min(total - slots.Count, Mathf.Max(1, (total + 1) / 2));
             for (int i = 0; i < here; i++)
             {
                 float u = here == 1 ? 0.5f : i / (float)(here - 1);
-                float span = 0.76f;
                 Vector3 pos = bounds.center;
-                if (alongX) pos.x = Mathf.Lerp(bounds.center.x - bounds.extents.x * span, bounds.center.x + bounds.extents.x * span, u);
-                else pos.z = Mathf.Lerp(bounds.center.z - bounds.extents.z * span, bounds.center.z + bounds.extents.z * span, u);
+                if (alongX) pos.x = Mathf.Lerp(bounds.center.x - bounds.extents.x * ShelfSpan, bounds.center.x + bounds.extents.x * end, u);
+                else pos.z = Mathf.Lerp(bounds.center.z - bounds.extents.z * ShelfSpan, bounds.center.z + bounds.extents.z * end, u);
                 pos.y = bounds.max.y + 0.12f;
                 slots.Add(pos);
             }
