@@ -647,10 +647,12 @@ namespace OtherwiseLabs.GemGame
         void Update()
         {
             UpdateHintVisibility();
-            if (_phase == Phase.Saying && _status != null)
-                _status.text = voice.IsSupported ? voice.StatusReport : "";
-            else if (_status != null && _status.text.Length > 0)
-                _status.text = "";
+            // A fresh TMP label's text is null, not "", until something is written to it.
+            if (_status != null)
+            {
+                string status = _phase == Phase.Saying && voice.IsSupported ? voice.StatusReport : "";
+                if (_status.text != status) _status.text = status;
+            }
 
             bool worldInput = _phase == Phase.Placing || _phase == Phase.LetterReady || _phase == Phase.Carrying;
             if (!worldInput)
