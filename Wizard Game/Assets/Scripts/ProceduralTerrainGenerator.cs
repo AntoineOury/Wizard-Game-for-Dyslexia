@@ -567,6 +567,37 @@ namespace OtherwiseLabs.TerrainTools
             return biomes[best];
         }
 
+        /// <summary>
+        /// World height of the water surface at a world position, or
+        /// negative infinity when this terrain shows no water sheet. Lets
+        /// runtime placement (Letter Lens vantage points) keep things on dry
+        /// land, since the water sheet itself has no collider to raycast.
+        /// </summary>
+        public float WaterSurfaceAt(Vector3 worldPosition)
+        {
+            Transform water = transform.Find(WaterRootName);
+            if (!waterEnabled || water == null || !water.gameObject.activeInHierarchy) return float.NegativeInfinity;
+            EnsureSamplingState();
+
+            Vector3 local = transform.InverseTransformPoint(worldPosition);
+            Vector2 sample = LocalToSample(local.x, local.z);
+            float surface = SampleWaterSurfaceHeight(sample.x, sample.y);
+            return transform.TransformPoint(new Vector3(local.x, surface, local.z)).y;
+        }
+
+        /// <summary>World-space XZ rectangle the terrain covers (rotation ignored).</summary>
+        public Rect WorldFootprint
+        {
+            get
+            {
+                Vector2 size = SafeSize;
+                Vector3 scale = transform.lossyScale;
+                var worldSize = new Vector2(size.x * scale.x, size.y * scale.z);
+                Vector3 center = transform.position;
+                return new Rect(center.x - worldSize.x * 0.5f, center.z - worldSize.y * 0.5f, worldSize.x, worldSize.y);
+            }
+        }
+
         // ------------------------------------------------------------------
         // Heightmap
         // ------------------------------------------------------------------

@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 096d29718a174900a7774225b7b4cc5a, type: 3}
+  m_Name: LetterLensPalette
+  m_EditorClassIdentifier: 
+  bushProps:
+  - {fileID: 1031654717077781723, guid: 33610b12665a8ba4ba227a51bf5ff3c2, type: 3}
+  - {fileID: 2357403118300381098, guid: 4c2012bc51015e8438152a82f7d7dc32, type: 3}
+  - {fileID: 5060596682829054874, guid: 1ceaf06647257394f8d75a1759c6be00, type: 3}
+  - {fileID: 6514988474726489682, guid: f8b92e99d9eca054e95b618e5ed82ea9, type: 3}
+  - {fileID: 5121261594680611611, guid: 8f71c65da202a1548a8734589db5f6fa, type: 3}
+  - {fileID: 1970564158491392, guid: 8e8f8660f45621a4a804df622b985183, type: 3}
+  - {fileID: 1600038145722832, guid: f36916143c7509543b1b8d40091baa24, type: 3}
+  - {fileID: 1957529895149934, guid: 5c11b6a454fa5fd458d541957f1de507, type: 3}
+  - {fileID: 7390660841207776048, guid: 3006b37c2f6a43142b48b677fae87675, type: 3}
+  - {fileID: 1511507616981724927, guid: 34c93d37325171e4888e900f49b018c0, type: 3}
+  - {fileID: 3261026594684234294, guid: 68f1d639a7f385749a1ba633c90b3634, type: 3}
+  - {fileID: 1304413462209204940, guid: 3226077b1e4998f46bb66247cfd79071, type: 3}
+  - {fileID: 966607810235432403, guid: 182031c50348a0e4a89dc44a5e31cbb8, type: 3}
+  - {fileID: 966607810235432403, guid: fa623827a6c28474ba23c94bce1bd35c, type: 3}
+  houseProps:
+  - {fileID: 1562119382739742, guid: c07f24e35f07ce74ba43afa35d48adf7, type: 3}
+  - {fileID: 1220206043906976, guid: 86263e8355f96ba4ab9fdf4e96c2090f, type: 3}
+  - {fileID: 1128399435428950, guid: 94a3318e328358d4095f16b054b14180, type: 3}
+  - {fileID: 1970564158491392, guid: 8e8f8660f45621a4a804df622b985183, type: 3}
+  - {fileID: 1600038145722832, guid: f36916143c7509543b1b8d40091baa24, type: 3}
+  - {fileID: 1957529895149934, guid: 5c11b6a454fa5fd458d541957f1de507, type: 3}
+  - {fileID: 1561497455732876, guid: 3c3b0773e182ad847a706394ac5af117, type: 3}
+  - {fileID: 1743297649790160, guid: 9839330e3d5bae14a934399cb98a74ee, type: 3}
+  - {fileID: 1043896297628826, guid: 5a21074ccac8b1e40a90e2b16e16afa4, type: 3}
+  - {fileID: 1844832195497820, guid: ed5f82224b99b30438c4330a2dca3429, type: 3}
+  - {fileID: 5385305736409967822, guid: 4fa87cea36a1ce641948a1c0d439d482, type: 3}
+  - {fileID: 2518132312620273559, guid: 4b8540869f253f1459db64e938875bfb, type: 3}
+  - {fileID: 2518132312620273559, guid: e8c074485bc10e242bfd6f1e369beeba, type: 3}
+  - {fileID: 2518132312620273559, guid: 8382c5c37aea9204d953860e1e9945e6, type: 3}
+  - {fileID: 2518132312620273559, guid: bdf3432634cdb7c4cafaaa70752de85c, type: 3}
+  - {fileID: 953974733151321803, guid: f74d2a0e9fc56c143a4cf9e05bc22cd0, type: 3}
+  - {fileID: 8807224832533773649, guid: 0b14a417cadcf4a4eab1a78b0ad533fb, type: 3}
+  buildingProps:
+  - {fileID: 1562119382739742, guid: c07f24e35f07ce74ba43afa35d48adf7, type: 3}
+  - {fileID: 1220206043906976, guid: 86263e8355f96ba4ab9fdf4e96c2090f, type: 3}
+  - {fileID: 1128399435428950, guid: 94a3318e328358d4095f16b054b14180, type: 3}
+  - {fileID: 953974733151321803, guid: f74d2a0e9fc56c143a4cf9e05bc22cd0, type: 3}
+  - {fileID: 8807224832533773649, guid: 0b14a417cadcf4a4eab1a78b0ad533fb, type: 3}
+  - {fileID: 2518132312620273559, guid: 4b8540869f253f1459db64e938875bfb, type: 3}
+  - {fileID: 2518132312620273559, guid: e8c074485bc10e242bfd6f1e369beeba, type: 3}
+  - {fileID: 2518132312620273559, guid: 8382c5c37aea9204d953860e1e9945e6, type: 3}
+  - {fileID: 2518132312620273559, guid: bdf3432634cdb7c4cafaaa70752de85c, type: 3}
+  - {fileID: 1043896297628826, guid: 5a21074ccac8b1e40a90e2b16e16afa4, type: 3}

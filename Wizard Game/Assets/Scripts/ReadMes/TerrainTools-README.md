@@ -264,6 +264,11 @@ and lakes sit level with their local terrain rules. Chunks whose lowest point
 is above the waterline skip the surface entirely. Material auto-creates from
 `OtherwiseLabs/Terrain Water`, or assign your own.
 
+The finite `ProceduralTerrainGenerator` exposes `WaterSurfaceAt(worldPosition)`
+(negative infinity when no water shows) and `WorldFootprint` (the XZ rect it
+covers). The water sheet has no collider, so runtime placement asks these
+instead — Letter Lens uses them to keep its vantage points on dry land.
+
 ### Grass (GPU instanced)
 
 Add the **Terrain Grass Renderer** component (anywhere; it auto-finds the
