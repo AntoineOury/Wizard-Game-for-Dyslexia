@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using OtherwiseLabs.CreatureGame;
 using OtherwiseLabs.TerrainTools;
@@ -120,6 +119,7 @@ namespace OtherwiseLabs.LetterLens
         Transform _propRoot;
         Transform _ring;
         float _ringRevealDistance;
+        float _popUntil;
 
         void Start()
         {
@@ -269,81 +269,31 @@ namespace OtherwiseLabs.LetterLens
 
         void Update()
         {
-            if (!IsBuilt || _ring == null) return;
-            Camera camera = Camera.main;
-            bool show = !IsFound && camera != null
-                && (camera.transform.position - EyePoint).sqrMagnitude < _ringRevealDistance * _ringRevealDistance;
-            if (_ring.gameObject.activeSelf != show) _ring.gameObject.SetActive(show);
+            if (!IsBuilt) return;
+            if (_popUntil > 0f)
+            {
+                // Found: every dot swells and settles — about its own pivot, so the letter stays whole.
+                float remaining = _popUntil - Time.time;
+                float t = 1f - Mathf.Clamp01(remaining / 0.8f);
+                float scale = 1f + Mathf.Sin(t * Mathf.PI) * 0.45f;
+                foreach (Transform dot in _dots)
+                    if (dot != null) dot.localScale = Vector3.one * scale;
+                if (remaining <= 0f) _popUntil = 0f;
+            }
+
+            if (_ring != null)
+            {
+                Camera camera = Camera.main;
+                bool show = !IsFound && camera != null
+                    && (camera.transform.position - EyePoint).sqrMagnitude < _ringRevealDistance * _ringRevealDistance;
+                if (_ring.gameObject.activeSelf != show) _ring.gameObject.SetActive(show);
+            }
         }
 
-        /// <summary>
-        /// Caught: the letter's pieces leave the world. They hop, then fly one
-        /// after another — in stroke order, so the letter unravels the way it
-        /// is written — into the player's bag (just below the view), shrinking
-        /// as they go. The whole object is destroyed when the last one lands.
-        /// </summary>
-        public void Collect(Transform bag)
+        public void MarkFound()
         {
-            if (IsFound) return;
             IsFound = true;
-            StartCoroutine(CollectRoutine(bag));
-        }
-
-        /// <summary>True once every piece has flown into the bag (just before this object goes away).</summary>
-        public bool IsCollected { get; private set; }
-
-        IEnumerator CollectRoutine(Transform bag)
-        {
-            if (_ring != null) _ring.gameObject.SetActive(false);
-            foreach (Collider collider in GetComponentsInChildren<Collider>()) collider.enabled = false;
-
-            const float Hop = 0.3f, Flight = 0.8f;
-            int count = _dots.Count;
-            float stagger = count > 0 ? Mathf.Min(0.035f, 1.2f / count) : 0f;
-            var starts = new Vector3[count];
-            var hops = new float[count];
-            for (int i = 0; i < count; i++)
-            {
-                if (_dots[i] == null) continue;
-                starts[i] = _dots[i].position;
-                float distance = Vector3.Distance(starts[i], EyePoint);
-                hops[i] = 0.2f + distance * 0.04f;
-            }
-
-            float begin = Time.time;
-            while (true)
-            {
-                Vector3 target = bag != null ? bag.position + bag.forward * 1.2f - bag.up * 0.7f : EyePoint;
-                bool flying = false;
-                for (int i = 0; i < count; i++)
-                {
-                    Transform dot = _dots[i];
-                    if (dot == null || !dot.gameObject.activeSelf) continue;
-                    float elapsed = Time.time - begin - i * stagger;
-                    flying = true;
-                    if (elapsed < 0f) continue;
-
-                    if (elapsed < Hop)
-                    {
-                        float h = elapsed / Hop;
-                        dot.position = starts[i] + Vector3.up * (hops[i] * Mathf.Sin(h * Mathf.PI * 0.5f));
-                        dot.localScale = Vector3.one * (1f + 0.25f * Mathf.Sin(h * Mathf.PI));
-                        continue;
-                    }
-
-                    float f = (elapsed - Hop) / Flight;
-                    if (f >= 1f) { dot.gameObject.SetActive(false); continue; }
-                    float eased = f * f * (3f - 2f * f);
-                    Vector3 from = starts[i] + Vector3.up * hops[i];
-                    dot.position = Vector3.Lerp(from, target, eased) + Vector3.up * (Mathf.Sin(f * Mathf.PI) * hops[i] * 2f);
-                    dot.localScale = Vector3.one * Mathf.Lerp(1f, 0.02f, eased);
-                }
-                if (!flying) break;
-                yield return null;
-            }
-
-            IsCollected = true;
-            Destroy(gameObject);
+            _popUntil = Time.time + 0.8f;
         }
 
         // ------------------------------------------------------------------

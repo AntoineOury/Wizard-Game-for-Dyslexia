@@ -84,9 +84,7 @@ Minecraft-style grid with one slot per letter A-Z. Letters backed by brewed
 papers glow with a count badge; letters with nothing collected sit greyed
 out. Tap any slot and the line below explains it — the words behind a
 stocked letter, or "brew a word with X at the Alchemist Store" for an
-empty one. Counts persist between sessions (`PaperInventory`). The same
-slots also show letter vials (light-blue, top-left, `VialInventory`) and
-letters caught in Letter Lens (green, bottom-left, `LetterInventory`). It works
+empty one. Counts persist between sessions (`PaperInventory`). It works
 **the same in every scene with zero authoring** — `BackpackUI` bootstraps
 itself on play, survives scene changes, and hides its button in scenes
 without a player (the main menu). Gameplay pauses through the usual
