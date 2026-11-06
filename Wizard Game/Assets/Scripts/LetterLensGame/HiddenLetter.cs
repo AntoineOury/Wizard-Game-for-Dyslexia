@@ -7,38 +7,38 @@ namespace OtherwiseLabs.LetterLens
 {
     public enum LetterSize
     {
-        Bush = 0,      // about a meter tall, a few steps away
-        House = 1,     // about 5 m tall
-        Building = 2,  // about 14 m tall, far off
+        Bush = 0,      // a few steps away: pebbles, mushrooms, little plants
+        House = 1,     // across a dip: rocks, stumps, bushes, small trees
+        Building = 2,  // across a valley from a hilltop: boulders and trees
     }
 
     /// <summary>
     /// One letter hidden in the world by forced perspective. Its dots are
-    /// ordinary props (mushrooms, rocks, crystals...) scattered at DIFFERENT
-    /// distances along the sight rays from one vantage point, each scaled so
-    /// it looks the same size from there. From that one spot they line up
-    /// into the letter; a few steps away the near dots slide past the far
-    /// ones and the letter falls apart into loose scenery.
+    /// ordinary scenery — rocks, mushrooms, plants, stumps, trees — standing
+    /// on the ground at DIFFERENT distances along the sight rays from one
+    /// vantage point. Each object is sized so its top lands exactly on its
+    /// ray: a pebble where the ray meets the ground, a bush a little nearer,
+    /// a tree nearer still whose canopy reaches up into the ray. From the
+    /// vantage they line up into the letter; a few steps away near tops slide
+    /// past far ones and the letter falls apart into an ordinary meadow.
     ///
-    /// This object's transform IS the vantage: position = the eye point the
-    /// player must look from, forward = roughly toward the letter. Spawned
-    /// letters are placed by LetterLensGame; a hand-placed one (drop this
-    /// component on an empty at eye height, facing where the letter should
-    /// stand) builds itself on Start.
+    /// Nothing floats, so every sight ray must come down onto the ground:
+    /// letters lie on low ground seen from a rise, or on a slope facing the
+    /// viewer. Spawned letters find such spots themselves (LetterLensGame).
     ///
-    /// Dots whose sight ray reaches the ground before their chosen distance
-    /// rest on the ground there; the rest float and turn slowly in place,
-    /// which keeps them exactly on their rays.
+    /// This object's transform IS the vantage: position = the eye point,
+    /// forward = the sight line through the letter's middle (tilted down at
+    /// the ground). A hand-placed one (empty at eye height, aimed at the spot)
+    /// builds itself on Start.
     /// </summary>
     public class HiddenLetter : MonoBehaviour
     {
         struct SizePreset
         {
-            public float height;       // world height of the letter's unit box, at its center distance
-            public float distance;     // eye to letter center, along the ground
-            public float nearFactor;   // dot depth range, as fractions of the center distance
-            public float farFactor;
-            public float ringRadius;   // vantage ring on the ground
+            public float angularHeight; // radians the letter spans from the vantage
+            public float dotDiameter;   // apparent dot size, in letter units
+            public float dotSpacing;    // between dots, in letter units
+            public float ringRadius;    // vantage ring on the ground
         }
 
         static SizePreset Preset(LetterSize size)
@@ -46,16 +46,48 @@ namespace OtherwiseLabs.LetterLens
             switch (size)
             {
                 case LetterSize.Bush:
-                    return new SizePreset { height = 1.2f, distance = 5.5f, nearFactor = 0.7f, farFactor = 1.45f, ringRadius = 0.45f };
+                    return new SizePreset { angularHeight = 0.30f, dotDiameter = 0.12f, dotSpacing = 0.1f, ringRadius = 0.45f };
                 case LetterSize.House:
-                    return new SizePreset { height = 5f, distance = 17f, nearFactor = 0.6f, farFactor = 1.5f, ringRadius = 0.8f };
+                    return new SizePreset { angularHeight = 0.24f, dotDiameter = 0.15f, dotSpacing = 0.12f, ringRadius = 0.8f };
                 default:
-                    return new SizePreset { height = 14f, distance = 42f, nearFactor = 0.5f, farFactor = 1.6f, ringRadius = 1.3f };
+                    return new SizePreset { angularHeight = 0.22f, dotDiameter = 0.2f, dotSpacing = 0.16f, ringRadius = 1.3f };
             }
         }
 
-        const float DotSpacing = 0.1f;    // between dots, in letter units (letter height = 1)
-        const float DotDiameter = 0.12f;  // apparent dot size, in letter units — slight overlap reads as a line
+        /// <summary>Where along the middle sight line the letter's ground sits, per size (meters).</summary>
+        public static Vector2 DistanceRange(LetterSize size)
+        {
+            switch (size)
+            {
+                case LetterSize.Bush: return new Vector2(3f, 7f);
+                case LetterSize.House: return new Vector2(12f, 28f);
+                default: return new Vector2(35f, 85f);
+            }
+        }
+
+        /// <summary>Angular height a letter of this size spans from its vantage (radians).</summary>
+        public static float AngularHeight(LetterSize size) => Preset(size).angularHeight;
+
+        /// <summary>The farthest any of its sight rays may travel before meeting the ground.</summary>
+        public static float MaxReach(LetterSize size) => DistanceRange(size).y * 2.5f;
+
+        /// <summary>
+        /// The sight ray through a point of the letter (unit box, -0.5..0.5)
+        /// for a vantage looking along <paramref name="forward"/>.
+        /// </summary>
+        public static Vector3 SightRay(Vector3 forward, Vector2 unit, LetterSize size)
+        {
+            Basis(forward, out Vector3 right, out Vector3 up);
+            float k = Mathf.Tan(Preset(size).angularHeight * 0.5f) * 2f; // letter units -> tangent-plane units
+            return (forward + right * (unit.x * k) + up * (unit.y * k)).normalized;
+        }
+
+        static void Basis(Vector3 forward, out Vector3 right, out Vector3 up)
+        {
+            right = Vector3.Cross(Vector3.up, forward);
+            right = right.sqrMagnitude < 1e-6f ? Vector3.right : right.normalized;
+            up = Vector3.Cross(forward, right);
+        }
 
         public char letter = 'A';
         public LetterSize size = LetterSize.House;
@@ -75,15 +107,14 @@ namespace OtherwiseLabs.LetterLens
         /// <summary>Where the eye must be for the dots to line up.</summary>
         public Vector3 EyePoint => transform.position;
 
-        /// <summary>Letter center in the world (on the vantage's center sight line).</summary>
+        /// <summary>A point in the middle of the letter as seen from the vantage (on its middle sight line).</summary>
         public Vector3 Center { get; private set; }
 
-        /// <summary>Distance from the vantage to the letter's center.</summary>
+        /// <summary>Distance from the vantage to where the middle sight line meets the ground.</summary>
         public float CenterDistance { get; private set; }
 
         readonly List<Transform> _dots = new List<Transform>();
         readonly List<Vector2> _units = new List<Vector2>();
-        readonly List<float> _spin = new List<float>();   // deg/s; 0 = grounded, stays still
         Vector3 _fwd, _right, _up;
         Transform _propRoot;
         Transform _ring;
@@ -106,47 +137,27 @@ namespace OtherwiseLabs.LetterLens
             SizePreset preset = Preset(size);
 
             Vector3 eye = transform.position;
-            Vector3 flatForward = Vector3.ProjectOnPlane(transform.forward, Vector3.up);
-            if (flatForward.sqrMagnitude < 1e-4f) flatForward = Vector3.forward;
-            flatForward.Normalize();
+            _fwd = transform.forward;
+            Basis(_fwd, out _right, out _up);
 
-            // The letter stands on the ground at its center distance.
-            Vector3 foot = eye + flatForward * preset.distance;
-            float groundY = TryGroundY(foot.x, foot.z, out float y) ? y : eye.y - 1.6f;
-            Center = new Vector3(foot.x, groundY + preset.height * 0.55f, foot.z);
-
-            Vector3 toCenter = Center - eye;
-            CenterDistance = toCenter.magnitude;
-            _fwd = toCenter / CenterDistance;
-            _right = Vector3.Cross(Vector3.up, _fwd).normalized;
-            _up = Vector3.Cross(_fwd, _right);
-            float k = preset.height / CenterDistance; // letter units -> tangent-plane units
+            float reach = MaxReach(size);
+            CenterDistance = RaycastGround(new Ray(eye, _fwd), reach, out float centerHit) ? centerHit : DistanceRange(size).x;
+            Center = eye + _fwd * (CenterDistance * 0.8f);
 
             _propRoot = new GameObject($"Letter {letter} props").transform;
             _propRoot.SetParent(transform, true);
 
-            List<GameObject> props = PickProps(rng);
+            List<LensProp> props = UsableProps();
+            float dotAngle = preset.dotDiameter * preset.angularHeight;  // apparent dot size, radians
 
-            foreach (Vector2 unit in LetterShapes.SamplePath(letter, DotSpacing))
+            foreach (Vector2 unit in LetterShapes.SamplePath(letter, preset.dotSpacing))
             {
-                Vector3 dir = (_fwd + _right * (unit.x * k) + _up * (unit.y * k)).normalized;
-                float planeDistance = CenterDistance / Vector3.Dot(dir, _fwd);
-                float depth = planeDistance * Mathf.Lerp(preset.nearFactor, preset.farFactor, (float)rng.NextDouble());
-                float diameter = DotDiameter * preset.height * depth / CenterDistance;
+                Vector3 dir = SightRay(_fwd, unit, size);
+                if (!RaycastGround(new Ray(eye, dir), reach, out float groundHit)) continue; // sky: nothing can stand there
 
-                bool grounded = false;
-                if (RaycastGround(new Ray(eye, dir), depth, out float hitDistance))
-                {
-                    depth = SettleOnGround(eye, dir, hitDistance, diameter);
-                    diameter = DotDiameter * preset.height * depth / CenterDistance;
-                    grounded = true;
-                }
-
-                GameObject prefab = props.Count > 0 ? props[rng.Next(props.Count)] : null;
-                Transform dot = LensPropFactory.Create(prefab, eye + dir * depth, diameter, (float)rng.NextDouble() * 360f, _propRoot);
+                if (!TryPlaceDot(eye, dir, groundHit, dotAngle, props, rng, out Transform dot)) continue;
                 _dots.Add(dot);
                 _units.Add(unit);
-                _spin.Add(grounded ? 0f : (8f + (float)rng.NextDouble() * 14f) * (rng.Next(2) == 0 ? 1f : -1f));
             }
 
             if (showVantageRing) BuildRing(eye, preset.ringRadius);
@@ -154,44 +165,76 @@ namespace OtherwiseLabs.LetterLens
         }
 
         /// <summary>
-        /// A couple of prop kinds per letter, so each letter has a character
-        /// (a mushroom W, a crystal A) instead of a random jumble.
+        /// Picks a distance along the ray and a prop whose top lands on the
+        /// ray there, at about the dot's apparent size, at a height that prop
+        /// could naturally have. Random distances are what make the letter
+        /// fall apart from anywhere else; the height ranges are what keep the
+        /// scene believable (tall things near, low things where the ray
+        /// touches down). Gives up on a dot rather than place something odd.
         /// </summary>
-        List<GameObject> PickProps(System.Random rng)
+        bool TryPlaceDot(Vector3 eye, Vector3 dir, float groundHit, float dotAngle, List<LensProp> props,
+                         System.Random rng, out Transform dot)
         {
-            var picked = new List<GameObject>();
-            LetterLensPalette palette = LetterLensPalette.Load();
-            if (palette == null) return picked;
+            dot = null;
+            if (props.Count == 0) props = FallbackProps;
 
-            var pool = new List<GameObject>();
-            foreach (GameObject prefab in palette.PropsFor(size))
-                if (prefab != null) pool.Add(prefab);
-            int kinds = Mathf.Min(pool.Count, 2);
-            for (int i = 0; i < kinds; i++)
+            for (int pass = 0; pass < 2; pass++)
             {
-                int index = rng.Next(pool.Count);
-                picked.Add(pool[index]);
-                pool.RemoveAt(index);
+                // First pass: the dot's size. Second: a looser fit, so a few
+                // awkward rays still get a dot instead of a gap.
+                float minSize = pass == 0 ? 0.6f : 0.4f;
+                float maxSize = pass == 0 ? 2.4f : 3.5f;
+                for (int attempt = 0; attempt < 24; attempt++)
+                {
+                    float along = 1f - 0.7f * Mathf.Pow((float)rng.NextDouble(), 1.3f);
+                    float t = groundHit * along;
+                    Vector3 point = eye + dir * t;
+                    if (!TryGroundY(point.x, point.z, out float groundY)) continue;
+                    float rise = point.y - groundY;
+                    if (rise < 0.02f) continue; // the ray is at the ground: nothing's top can be here
+
+                    // Every prop that could naturally have its top right here.
+                    _fits.Clear();
+                    _fitScales.Clear();
+                    foreach (LensProp prop in props)
+                    {
+                        LensPropFactory.Metrics metrics = LensPropFactory.Measure(prop.prefab);
+                        if (!metrics.Valid) continue;
+                        float scale = rise / metrics.headCenter;
+                        float height = metrics.height * scale;
+                        if (height < prop.minHeight || height > prop.maxHeight) continue;
+                        float apparent = metrics.headWidth * scale / t;
+                        if (apparent < dotAngle * minSize || apparent > dotAngle * maxSize) continue;
+                        _fits.Add(prop);
+                        _fitScales.Add(scale);
+                    }
+                    if (_fits.Count == 0) continue;
+
+                    int pick = rng.Next(_fits.Count);
+                    dot = LensPropFactory.CreateStanding(_fits[pick].prefab, point, groundY, _fitScales[pick],
+                                                         (float)rng.NextDouble() * 360f, _propRoot);
+                    if (dot != null) return true;
+                }
             }
-            return picked;
+            return false;
         }
 
-        /// <summary>
-        /// Walks back toward the eye from where the sight ray meets the ground
-        /// until the dot clears it, so a resting dot is not half buried.
-        /// </summary>
-        static float SettleOnGround(Vector3 eye, Vector3 dir, float hitDistance, float diameter)
+        static readonly List<LensProp> _fits = new List<LensProp>();
+        static readonly List<float> _fitScales = new List<float>();
+
+        static readonly List<LensProp> FallbackProps = new List<LensProp>
         {
-            float clearance = diameter * 0.3f;
-            float step = Mathf.Max(0.02f, diameter * 0.2f);
-            float depth = hitDistance;
-            for (int i = 0; i < 20; i++)
-            {
-                Vector3 point = eye + dir * depth;
-                if (!TryGroundY(point.x, point.z, out float ground) || point.y - ground >= clearance) break;
-                depth -= step;
-            }
-            return Mathf.Max(depth, hitDistance * 0.5f);
+            new LensProp { prefab = null, minHeight = 0.05f, maxHeight = 6f },
+        };
+
+        List<LensProp> UsableProps()
+        {
+            var usable = new List<LensProp>();
+            LetterLensPalette palette = LetterLensPalette.Load();
+            if (palette == null || palette.props == null) return usable;
+            foreach (LensProp prop in palette.props)
+                if (prop != null && prop.prefab != null && prop.maxHeight > prop.minHeight) usable.Add(prop);
+            return usable;
         }
 
         void BuildRing(Vector3 eye, float radius)
@@ -227,11 +270,6 @@ namespace OtherwiseLabs.LetterLens
         void Update()
         {
             if (!IsBuilt) return;
-            float dt = Time.deltaTime;
-            for (int i = 0; i < _dots.Count; i++)
-                if (_spin[i] != 0f && _dots[i] != null)
-                    _dots[i].Rotate(0f, _spin[i] * dt, 0f, Space.World);
-
             if (_popUntil > 0f)
             {
                 // Found: every dot swells and settles — about its own pivot, so the letter stays whole.
@@ -389,7 +427,7 @@ namespace OtherwiseLabs.LetterLens
         {
             Gizmos.color = new Color(1f, 0.85f, 0.3f);
             Gizmos.DrawWireSphere(transform.position, 0.25f);
-            Gizmos.DrawRay(transform.position, transform.forward * Preset(size).distance);
+            Gizmos.DrawRay(transform.position, transform.forward * DistanceRange(size).y);
         }
     }
 }

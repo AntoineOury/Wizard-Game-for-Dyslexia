@@ -1,41 +1,42 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
 namespace OtherwiseLabs.LetterLens
 {
     /// <summary>
-    /// Which props a hidden letter can be built from, one list per letter
-    /// size. Any prefab works: the factory measures it, scales it to the dot
-    /// size the letter needs at that distance, strips its colliders and moves
-    /// built-in "Standard" materials onto URP Lit — so add or swap props here
-    /// freely without resizing them first.
+    /// One kind of thing a letter can be made of, and the range of real-world
+    /// heights it may be scaled to. The range is what keeps placement
+    /// natural: a dot that needs a 9 m tall object gets a tree, never a 9 m
+    /// mushroom.
+    /// </summary>
+    [Serializable]
+    public class LensProp
+    {
+        public GameObject prefab;
+        [Tooltip("Smallest believable height in meters, base to top.")]
+        [Min(0.02f)] public float minHeight = 0.2f;
+        [Tooltip("Largest believable height in meters, base to top.")]
+        [Min(0.05f)] public float maxHeight = 2f;
+    }
+
+    /// <summary>
+    /// What hidden letters are built from. Every prop STANDS on the ground —
+    /// nothing floats — and its top (a mushroom cap, a rock's crown, a tree's
+    /// canopy) is what forms the dot. Low dots become rocks, mushrooms and
+    /// plants; dots higher above the ground become stumps, bushes and trees.
     ///
-    /// The game loads the copy at Resources/LetterLensPalette. Empty slots and
-    /// an empty list are fine: missing props fall back to plain stones.
+    /// Any prefab works: the factory measures it, scales it within its
+    /// height range, strips colliders from small props and moves built-in
+    /// "Standard" materials onto URP Lit. The game loads the copy at
+    /// Resources/LetterLensPalette. Missing entries are skipped.
     /// </summary>
     [CreateAssetMenu(menuName = "Otherwise Labs/Letter Lens Palette", fileName = "LetterLensPalette")]
     public class LetterLensPalette : ScriptableObject
     {
         public const string ResourcePath = "LetterLensPalette";
 
-        [Tooltip("Props for bush-sized letters (about a meter tall, a few steps away): mushrooms, pebbles, small gems.")]
-        public List<GameObject> bushProps = new List<GameObject>();
-
-        [Tooltip("Props for house-sized letters (about 5 m tall): rocks, stumps, barrels, crystal clusters.")]
-        public List<GameObject> houseProps = new List<GameObject>();
-
-        [Tooltip("Props for building-sized letters (about 14 m tall, far away): boulders, big crystal clusters.")]
-        public List<GameObject> buildingProps = new List<GameObject>();
-
-        public IReadOnlyList<GameObject> PropsFor(LetterSize size)
-        {
-            switch (size)
-            {
-                case LetterSize.Bush: return bushProps;
-                case LetterSize.House: return houseProps;
-                default: return buildingProps;
-            }
-        }
+        public List<LensProp> props = new List<LensProp>();
 
         static LetterLensPalette _loaded;
         static bool _triedLoad;

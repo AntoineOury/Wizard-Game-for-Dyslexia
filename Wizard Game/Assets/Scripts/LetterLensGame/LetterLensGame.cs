@@ -225,18 +225,27 @@ namespace OtherwiseLabs.LetterLens
                 if (c >= 'A' && c <= 'Z' && !pool.Contains(c)) pool.Add(c);
         }
 
+        /// <summary>
+        /// Looks for a standpoint whose view of the letter comes down onto
+        /// dry ground everywhere — nothing in the letter may need to stand in
+        /// the sky — at this size's distance. Small letters fit almost
+        /// anywhere (the meadow at your feet); house and building letters
+        /// need a rise or hilltop looking out over lower ground, or a slope
+        /// facing the viewer, which the search finds by trying spots.
+        /// </summary>
         bool TryPlace(LetterSize size, char letter, Rect area, ProceduralTerrainGenerator generator, System.Random rng, bool nearPlayer)
         {
-            float distance = size == LetterSize.Bush ? 5.5f : size == LetterSize.House ? 17f : 42f;
-            float spacing = Mathf.Max(20f, distance * 1.2f);
+            Vector2 range = HiddenLetter.DistanceRange(size);
+            float reach = HiddenLetter.MaxReach(size);
+            float spacing = Mathf.Max(20f, range.y * 1.2f);
 
-            for (int attempt = 0; attempt < 80; attempt++)
+            for (int attempt = 0; attempt < 160; attempt++)
             {
                 Vector2 xz;
                 if (nearPlayer)
                 {
                     float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                    float radius = Mathf.Lerp(9f, 22f, (float)rng.NextDouble());
+                    float radius = Mathf.Lerp(6f, 18f, (float)rng.NextDouble());
                     xz = new Vector2(_player.position.x + Mathf.Cos(angle) * radius, _player.position.z + Mathf.Sin(angle) * radius);
                 }
                 else
@@ -245,22 +254,22 @@ namespace OtherwiseLabs.LetterLens
                                      Mathf.Lerp(area.yMin, area.yMax, (float)rng.NextDouble()));
                 }
 
-                float yaw = (float)rng.NextDouble() * 360f;
-                Vector3 flat = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
-                Vector2 footXZ = xz + new Vector2(flat.x, flat.z) * distance;
-                if (!area.Contains(footXZ) && !nearPlayer) continue;
-
                 if (!DryGround(xz, generator, out float groundY)) continue;
-                if (!DryGround(footXZ, generator, out _)) continue;
                 if (!Gentle(xz, groundY)) continue;
 
+                float yaw = (float)rng.NextDouble() * 360f;
+                Vector3 flat = Quaternion.Euler(0f, yaw, 0f) * Vector3.forward;
                 var eye = new Vector3(xz.x, groundY + _eyeAboveFeet, xz.y);
-                var foot = new Vector3(footXZ.x, 0f, footXZ.y);
-                if (TooClose(eye, foot, spacing)) continue;
-                if (!ClearView(eye, foot, distance)) continue;
+                float target = Mathf.Lerp(range.x, range.y, (float)rng.NextDouble());
+                if (!AimAt(eye, flat, target, reach, out Vector3 forward)) continue;
+
+                Vector3 center = eye + forward * (target * 0.8f);
+                if (TooClose(eye, center, spacing)) continue;
+                if (!WholeLetterLands(eye, forward, size, reach, area, generator, nearPlayer)) continue;
+                if (!ClearView(eye, forward, HitDistance(eye, forward, reach))) continue;
 
                 var go = new GameObject($"Hidden Letter {letter}");
-                go.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(flat));
+                go.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(forward));
                 go.transform.SetParent(transform, true);
                 var hidden = go.AddComponent<HiddenLetter>();
                 hidden.letter = letter;
@@ -272,6 +281,50 @@ namespace OtherwiseLabs.LetterLens
                 return true;
             }
             return false;
+        }
+
+        /// <summary>
+        /// Tilts the view (heading <paramref name="flat"/>) until its middle
+        /// sight line meets the ground about <paramref name="target"/> away.
+        /// Bisection on pitch: looking further down always lands nearer.
+        /// </summary>
+        static bool AimAt(Vector3 eye, Vector3 flat, float target, float reach, out Vector3 forward)
+        {
+            float low = -1.3f, high = 0.35f; // radians
+            for (int i = 0; i < 16; i++)
+            {
+                float mid = (low + high) * 0.5f;
+                float hit = HitDistance(eye, Pitched(flat, mid), reach);
+                if (hit < target) low = mid; else high = mid;
+            }
+            forward = Pitched(flat, low);
+            float landed = HitDistance(eye, forward, reach);
+            return Mathf.Abs(landed - target) < target * 0.25f;
+        }
+
+        static Vector3 Pitched(Vector3 flat, float pitch) => (flat * Mathf.Cos(pitch) + Vector3.up * Mathf.Sin(pitch)).normalized;
+
+        static float HitDistance(Vector3 eye, Vector3 direction, float reach)
+            => HiddenLetter.RaycastGround(new Ray(eye, direction), reach, out float distance) ? distance : float.PositiveInfinity;
+
+        /// <summary>Every edge of the letter's view must come down on dry ground in range, not at the player's feet.</summary>
+        static bool WholeLetterLands(Vector3 eye, Vector3 forward, LetterSize size, float reach, Rect area,
+                                     ProceduralTerrainGenerator generator, bool nearPlayer)
+        {
+            for (int ix = -1; ix <= 1; ix++)
+            {
+                for (int iy = -1; iy <= 1; iy++)
+                {
+                    Vector3 direction = HiddenLetter.SightRay(forward, new Vector2(ix * 0.5f, iy * 0.5f), size);
+                    float hit = HitDistance(eye, direction, reach);
+                    if (float.IsInfinity(hit) || hit < 1.5f) return false;
+                    Vector3 point = eye + direction * hit;
+                    var pointXZ = new Vector2(point.x, point.z);
+                    if (!nearPlayer && !area.Contains(pointXZ)) return false;
+                    if (!DryGround(pointXZ, generator, out _)) return false;
+                }
+            }
+            return true;
         }
 
         static bool DryGround(Vector2 xz, ProceduralTerrainGenerator generator, out float groundY)
@@ -293,13 +346,13 @@ namespace OtherwiseLabs.LetterLens
             return true;
         }
 
-        bool TooClose(Vector3 eye, Vector3 foot, float spacing)
+        bool TooClose(Vector3 eye, Vector3 center, float spacing)
         {
             float sqr = spacing * spacing;
             foreach (HiddenLetter other in _letters)
             {
                 if (other == null) continue;
-                if (FlatSqr(other.EyePoint, eye) < sqr || FlatSqr(other.Center, foot) < sqr || FlatSqr(other.Center, eye) < sqr * 0.5f)
+                if (FlatSqr(other.EyePoint, eye) < sqr || FlatSqr(other.Center, center) < sqr || FlatSqr(other.Center, eye) < sqr * 0.5f)
                     return true;
             }
             if (_player != null && FlatSqr(_player.position, eye) < 9f) return true; // never spawn on top of the player
@@ -312,14 +365,10 @@ namespace OtherwiseLabs.LetterLens
             return dx * dx + dz * dz;
         }
 
-        /// <summary>Hills, trees or houses between the vantage and the letter would hide it.</summary>
-        bool ClearView(Vector3 eye, Vector3 foot, float distance)
+        /// <summary>Trees, houses or a nearer letter's trees between the vantage and the letter would hide it.</summary>
+        bool ClearView(Vector3 eye, Vector3 forward, float distance)
         {
-            if (!HiddenLetter.TryGroundY(foot.x, foot.z, out float footY)) return false;
-            var center = new Vector3(foot.x, footY + 0.5f * (distance / 4f), foot.z);
-            Vector3 toCenter = center - eye;
-            float length = toCenter.magnitude;
-            foreach (RaycastHit hit in Physics.RaycastAll(eye, toCenter / length, length * 0.95f, ~0, QueryTriggerInteraction.Ignore))
+            foreach (RaycastHit hit in Physics.RaycastAll(eye, forward, distance * 0.9f, ~0, QueryTriggerInteraction.Ignore))
             {
                 if (_player != null && PlayerRig.IsSelfCollider(hit.collider, _player)) continue;
                 return false;

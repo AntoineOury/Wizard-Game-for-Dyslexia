@@ -4,58 +4,101 @@ using UnityEngine;
 namespace OtherwiseLabs.LetterLens
 {
     /// <summary>
-    /// Turns any prefab into one "dot" of a hidden letter: instantiated under
-    /// a pivot that sits exactly on the dot's sight ray, scaled so its widest
-    /// side is the requested diameter, and centered on that pivot by its real
-    /// render bounds (prefab origins are usually at the feet, which would push
-    /// the dot off the letter). The pivot is what the alignment math reads,
-    /// and what a floating dot spins around, so spinning never drifts it.
+    /// Turns any prefab into one "dot" of a hidden letter: an object standing
+    /// upright on the ground, scaled so that its TOP (a mushroom cap, a rock's
+    /// crown, a tree's canopy) sits on the dot's sight ray. The returned pivot
+    /// is that exact point on the ray — what the alignment math reads — while
+    /// the body below it rests on the terrain like any other scenery.
     ///
-    /// Props are scenery, not obstacles: colliders are removed, so the
-    /// creature game's ground raycasts and the player both ignore them.
-    /// Built-in pipeline "Standard" materials (several third-party packs ship
-    /// them) would render pink in URP; they are converted to URP Lit once and
-    /// shared from a cache.
+    /// Small props lose their colliders so the player never trips on a
+    /// pebble; tall ones (trees, boulders) keep them, like the scene's own
+    /// trees. Built-in pipeline "Standard" materials (several third-party
+    /// packs ship them) would render pink in URP; they are converted to URP
+    /// Lit once and shared from a cache.
     /// </summary>
     public static class LensPropFactory
     {
+        /// <summary>A prefab's shape at scale 1, measured once from its render bounds.</summary>
+        public struct Metrics
+        {
+            public float height;       // base to top
+            public float headWidth;    // widest horizontal extent: the dot's size
+            public float headCenter;   // base to the middle of the top blob
+
+            public bool Valid => height > 1e-4f && headWidth > 1e-4f;
+        }
+
+        const float KeepCollidersAbove = 2.5f; // meters
+
         static readonly Dictionary<Material, Material> _converted = new Dictionary<Material, Material>();
+        static readonly Dictionary<GameObject, Metrics> _metrics = new Dictionary<GameObject, Metrics>();
         static Material _fallbackStone;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         static void ResetStatics()
         {
             _converted.Clear();
+            _metrics.Clear();
             _fallbackStone = null;
         }
 
-        public static Transform Create(GameObject prefab, Vector3 center, float diameter, float yaw, Transform parent)
+        /// <summary>
+        /// Height, width and where the "head" sits. The head is the top blob,
+        /// as wide as the object: a squat rock's head is the whole rock
+        /// (center at half height), a tree's head is its canopy.
+        /// </summary>
+        public static Metrics Measure(GameObject prefab)
+        {
+            if (prefab != null && _metrics.TryGetValue(prefab, out Metrics cached)) return cached;
+
+            GameObject body = prefab != null ? Object.Instantiate(prefab) : CreateFallbackStone();
+            body.transform.SetPositionAndRotation(new Vector3(0f, -10000f, 0f), Quaternion.identity);
+            var metrics = new Metrics();
+            if (TryGetBounds(body.GetComponentsInChildren<Renderer>(), out Bounds bounds))
+            {
+                metrics.height = bounds.size.y;
+                metrics.headWidth = Mathf.Max(bounds.size.x, bounds.size.z);
+                metrics.headCenter = metrics.height - Mathf.Min(metrics.headWidth, metrics.height) * 0.5f;
+            }
+            body.SetActive(false);
+            Object.Destroy(body);
+
+            if (prefab != null) _metrics[prefab] = metrics;
+            return metrics;
+        }
+
+        /// <summary>
+        /// Stands <paramref name="prefab"/> on the ground below
+        /// <paramref name="headPoint"/>, scaled by <paramref name="scale"/>
+        /// (chosen by the caller so the head lands on the point).
+        /// </summary>
+        public static Transform CreateStanding(GameObject prefab, Vector3 headPoint, float groundY, float scale, float yaw, Transform parent)
         {
             var pivot = new GameObject("Lens Prop").transform;
             pivot.SetParent(parent, false);
-            pivot.position = center;
+            pivot.position = headPoint;
 
             GameObject body = prefab != null ? Object.Instantiate(prefab) : CreateFallbackStone();
             body.name = prefab != null ? prefab.name : "Stone";
             body.transform.SetPositionAndRotation(Vector3.zero, Quaternion.Euler(0f, yaw, 0f));
+            body.transform.localScale *= scale;
 
-            StripColliders(body);
             Renderer[] renderers = body.GetComponentsInChildren<Renderer>();
             ConvertMaterials(renderers);
-
             if (!TryGetBounds(renderers, out Bounds bounds))
             {
                 Object.Destroy(body);
-                body = CreateFallbackStone();
-                renderers = body.GetComponentsInChildren<Renderer>();
-                TryGetBounds(renderers, out bounds);
+                Object.Destroy(pivot.gameObject);
+                return null;
             }
+            if (bounds.size.y < KeepCollidersAbove) StripColliders(body);
 
-            float extent = Mathf.Max(bounds.size.x, Mathf.Max(bounds.size.y, bounds.size.z));
-            float factor = extent > 1e-4f ? diameter / extent : 1f;
-            Vector3 offset = bounds.center - body.transform.position;
-            body.transform.localScale *= factor;
-            body.transform.position = center - offset * factor;
+            // Bottom-center of the bounds onto the ground, a hair sunk so
+            // uneven bases don't show daylight. Trunks stay vertical.
+            Vector3 bottom = new Vector3(bounds.center.x, bounds.min.y, bounds.center.z);
+            float sink = bounds.size.y * 0.03f;
+            Vector3 target = new Vector3(headPoint.x, groundY - sink, headPoint.z);
+            body.transform.position += target - bottom;
             body.transform.SetParent(pivot, true);
             return pivot;
         }
