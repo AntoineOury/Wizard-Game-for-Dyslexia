@@ -6,8 +6,8 @@ using UnityEngine.UI;
 namespace OtherwiseLabs.LetterLens
 {
     /// <summary>
-    /// Letter Lens screen layer, built in code: the hint line, the found
-    /// letters, a viewfinder frame while the view is locked, the ink of the
+    /// Letter Lens screen layer, built in code: the hint line, how many
+    /// escaped letters are left, a viewfinder frame while the view is locked, the ink of the
     /// trace, a big letter when one is found, and a Lock in / Step out button
     /// (always shown while locked; while walking only in touch mode, where
     /// there is no C key).
@@ -49,11 +49,11 @@ namespace OtherwiseLabs.LetterLens
             _hintBar.SetActive(!string.IsNullOrEmpty(text));
         }
 
-        public void SetFound(IReadOnlyList<char> letters)
+        public void SetRemaining(int remaining)
         {
             if (_foundLabel == null) return;
-            _foundLabel.text = letters.Count == 0 ? "" : "Letters found:  " + string.Join("  ", letters);
-            _foundLabel.transform.parent.gameObject.SetActive(letters.Count > 0);
+            _foundLabel.text = remaining > 0 ? $"Escaped letters left: {remaining}" : "Page tidy!";
+            _foundLabel.transform.parent.gameObject.SetActive(true);
         }
 
         public void ShowLockedIn(bool locked)
@@ -140,7 +140,8 @@ namespace OtherwiseLabs.LetterLens
             // Top, below the creature game's toast line.
             _hint = BuildBar(new Vector2(0.5f, 1f), new Vector2(0f, -120f), new Vector2(760f, 46f), 24f, out _hintBar);
             _hintBar.SetActive(false);
-            _foundLabel = BuildBar(new Vector2(1f, 1f), new Vector2(-14f, -14f), new Vector2(330f, 40f), 22f, out _);
+            // Top-left: the top-right corner belongs to the scene's Map/Store buttons.
+            _foundLabel = BuildBar(new Vector2(0f, 1f), new Vector2(14f, -14f), new Vector2(300f, 40f), 22f, out _);
             _foundLabel.transform.parent.gameObject.SetActive(false);
 
             _lockButton = MakeButton(_canvas.transform, "Lock in", new Vector2(150f, 60f), Accent, 26f, () => _game.ToggleLockIn());

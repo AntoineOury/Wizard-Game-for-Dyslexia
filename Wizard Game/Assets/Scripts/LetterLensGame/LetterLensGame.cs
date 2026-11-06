@@ -17,9 +17,12 @@ namespace OtherwiseLabs.LetterLens
     /// the letter they see right on the screen. A trace that matches a letter
     /// that really lines up from that view finds it.
     ///
-    /// Standalone on purpose: it does not feed the vial / paper economy yet.
-    /// Finding a letter raises <see cref="LetterFound"/>; what "receiving" a
-    /// letter means is a later step.
+    /// The story: the world is a book an evil spell scrambled, and its
+    /// letters escaped into the scenery. Catching one (a correct trace) makes
+    /// the pieces that formed it fly out of the world into the bag, so the
+    /// player tidies the page as they go. Caught letters are saved in
+    /// LetterInventory for other mini-games to spend, and
+    /// <see cref="LetterFound"/> is raised.
     ///
     /// What you see is what counts: alignment is measured from the live
     /// camera, so it works in third person too (first person is easier — the
@@ -89,6 +92,8 @@ namespace OtherwiseLabs.LetterLens
         Vector3 _lastInkDirection;
         float _celebrateUntil;
         float _nextHintCheck;
+        float _storyUntil;
+        HiddenLetter _collecting;
 
         // ------------------------------------------------------------------
         // Bootstrap
@@ -158,7 +163,28 @@ namespace OtherwiseLabs.LetterLens
                 _letters.Add(placed);
             }
             SpawnLetters();
-            _ui.SetFound(_found);
+            _ui.SetRemaining(Remaining);
+            if (Remaining > 0)
+                Tell("An evil spell made the book's letters escape! Find them hiding in the world.", 7f);
+        }
+
+        /// <summary>Escaped letters still hiding on this page.</summary>
+        public int Remaining
+        {
+            get
+            {
+                int count = 0;
+                foreach (HiddenLetter hidden in _letters)
+                    if (hidden != null && !hidden.IsFound) count++;
+                return count;
+            }
+        }
+
+        /// <summary>A story line on the hint bar that the walking hints leave alone for a while.</summary>
+        void Tell(string line, float seconds)
+        {
+            _ui.SetHint(line);
+            _storyUntil = Time.time + seconds;
         }
 
         /// <summary>
@@ -399,7 +425,12 @@ namespace OtherwiseLabs.LetterLens
                     break;
 
                 case Phase.Celebrating:
-                    if (Time.time >= _celebrateUntil) StepOut();
+                    if (Time.time >= _celebrateUntil && CollectionDone)
+                    {
+                        StepOut();
+                        if (Remaining == 0)
+                            Tell("This page is tidy again! Every escaped letter is back in your bag.", 8f);
+                    }
                     break;
             }
         }
@@ -569,25 +600,35 @@ namespace OtherwiseLabs.LetterLens
             return LetterShapes.ScoreTrace(units, letter);
         }
 
+        /// <summary>
+        /// Caught! The letter's pieces fly out of the world into the bag, and
+        /// one of that letter goes into the saved LetterInventory for other
+        /// mini-games to use. The view stays locked until the last piece lands.
+        /// </summary>
         void Found(HiddenLetter hidden)
         {
-            hidden.MarkFound();
+            _collecting = hidden;
+            hidden.Collect(_camera != null ? _camera.transform : null);
+            LetterInventory.Add(hidden.letter);
             _found.Add(hidden.letter);
-            _ui.SetFound(_found);
+            _ui.SetRemaining(Remaining);
             _ui.Celebrate(hidden.letter);
-            _ui.SetHint($"You found the letter {hidden.letter}!");
+            _ui.SetHint($"You caught the escaped {hidden.letter}! Into your bag it goes.");
             _phase = Phase.Celebrating;
-            _celebrateUntil = Time.time + 2f;
+            _celebrateUntil = Time.time + 1.6f;
             _stroking = false;
             LetterFound?.Invoke(hidden.letter);
         }
+
+        bool CollectionDone
+            => _collecting == null || _collecting.IsCollected || Time.time > _celebrateUntil + 6f;
 
         static bool Touch => PlayerControlScheme.Current == ControlSchemeKind.Touch;
         static string StepOutWords => Touch ? "Step out" : "Step out (C)";
 
         void UpdateWalkingHint()
         {
-            if (!alignmentHints || _camera == null || Time.time < _nextHintCheck) return;
+            if (!alignmentHints || _camera == null || Time.time < _nextHintCheck || Time.time < _storyUntil) return;
             _nextHintCheck = Time.time + 0.25f;
 
             Vector3 eye = _camera.transform.position;

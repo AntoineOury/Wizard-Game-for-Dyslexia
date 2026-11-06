@@ -12,9 +12,18 @@ letter that really lines up from that view finds it.
 *Letter recognition in the wild — spotting a letter shape among clutter,
 then forming it with the hand.*
 
-It does not feed the vial / paper economy yet. Finding a letter raises
-`LetterLensGame.LetterFound` (a `char`) and adds it to the "Letters found"
-line; what *receiving* a letter means is the next step.
+**The story:** the world is a book, and an evil spell made its words go wild
+and its letters escape into the scenery. The player tidies the page: every
+letter caught leaves the world, and its pieces fly into the bag. The
+top-left counter shows how many escaped letters are left; when it reaches
+zero, the page is tidy again.
+
+**Caught letters are kept.** Each catch adds one of that letter to
+`LetterInventory` (saved, letter → count, the same pattern as
+`VialInventory`), so other mini-games can spend them later with
+`LetterInventory.TryConsume('W')`. The backpack shows them as a green count
+in each slot's bottom-left corner and a "Letters" total.
+`LetterLensGame.LetterFound` (a `char`) is raised too.
 
 ## How it plays
 
@@ -47,8 +56,11 @@ line; what *receiving* a letter means is the next step.
    - the shape must pass the same grader as the creature capture
      (`LetterShapes.ScoreTrace`: on the path *and* covering it, forgiving
      of wobble, honest about b/d/p/q because it never flips or rotates).
-5. **Found** — the letter's props swell and settle, a big gold letter pops
-   on screen, it joins the "Letters found" list, and the view unlocks.
+5. **Caught**: a big gold letter pops on screen, and the rocks,
+   mushrooms and trees that formed it hop and fly one after another, in
+   the order the letter is written, into the bag just below the view,
+   shrinking as they go. They are gone from the world for good. The letter
+   is added to the inventory and the view unlocks when the last piece lands.
    Otherwise the hint says why: trace again, "almost lined up — take a tiny
    step", or "no letter lines up from here". **C** / **Step out** leaves at
    any time.
@@ -145,8 +157,9 @@ The terrain helpers it uses (`WaterSurfaceAt`, `WorldFootprint`) are on
 
 ## Not yet
 
-- What receiving a letter does (inventory, backpack, feeding other games).
-- Saving which letters were found.
+- Other mini-games spending caught letters (the inventory is ready).
+- Saving which letters on the page were caught: the counts in the bag are
+  saved, but every visit to the PCG World hides a fresh set of letters.
 - Occlusion: scattered trees can still stand in front of a letter after it
   is placed (the line of sight is only checked along the letter's middle),
   and a letter's own near trees can hide a few of its far dots.

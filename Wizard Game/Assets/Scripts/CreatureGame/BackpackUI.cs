@@ -32,6 +32,7 @@ namespace OtherwiseLabs.CreatureGame
         static readonly Color WindowColor = new Color(0.11f, 0.10f, 0.18f, 0.96f);
         static readonly Color Gold = new Color(1f, 0.87f, 0.45f, 1f);
         static readonly Color Paper = new Color(0.96f, 0.93f, 0.84f, 1f);
+        static readonly Color CaughtColor = new Color(0.6f, 0.95f, 0.55f, 1f); // caught letters (Letter Lens)
 
         Canvas _canvas;
         GameObject _floatingButton;
@@ -76,6 +77,7 @@ namespace OtherwiseLabs.CreatureGame
             SceneManager.sceneLoaded -= OnSceneLoaded;
             PaperInventory.Changed -= OnInventoryChanged;
             VialInventory.Changed -= OnInventoryChanged;
+            LetterInventory.Changed -= OnInventoryChanged;
             ReleaseUiMode();
         }
 
@@ -114,6 +116,7 @@ namespace OtherwiseLabs.CreatureGame
             Rebuild();
             PaperInventory.Changed += OnInventoryChanged;
             VialInventory.Changed += OnInventoryChanged;
+            LetterInventory.Changed += OnInventoryChanged;
             PlayerControlScheme.UiMode = true;
             _claimedUiMode = true;
         }
@@ -124,6 +127,7 @@ namespace OtherwiseLabs.CreatureGame
             _panel.SetActive(false);
             PaperInventory.Changed -= OnInventoryChanged;
             VialInventory.Changed -= OnInventoryChanged;
+            LetterInventory.Changed -= OnInventoryChanged;
             ReleaseUiMode();
         }
 
@@ -219,7 +223,8 @@ namespace OtherwiseLabs.CreatureGame
                 char letter = (char)('A' + i);
                 int papers = PaperInventory.CountForLetter(letter);
                 int vials = VialInventory.Count(letter);
-                bool hasAny = papers > 0 || vials > 0;
+                int caught = LetterInventory.Count(letter);
+                bool hasAny = papers > 0 || vials > 0 || caught > 0;
 
                 var slotGo = new GameObject($"Slot {letter}", typeof(RectTransform));
                 slotGo.transform.SetParent(_window, false);
@@ -255,10 +260,18 @@ namespace OtherwiseLabs.CreatureGame
                     vialBadge.rectTransform.offsetMin = new Vector2(4f, 0f);
                 }
 
+                if (caught > 0)
+                {
+                    TMP_Text letterBadge = MakeText(rect, caught.ToString(), 13f, CaughtColor, FontStyles.Bold);
+                    letterBadge.alignment = TextAlignmentOptions.BottomLeft;
+                    Stretch(letterBadge.rectTransform);
+                    letterBadge.rectTransform.offsetMin = new Vector2(4f, 0f);
+                }
+
                 _slots.Add(slotGo);
             }
 
-            _totalLabel.text = $"Papers: {PaperInventory.TotalCount}    Vials: {VialInventory.TotalCount}";
+            _totalLabel.text = $"Papers: {PaperInventory.TotalCount}    Vials: {VialInventory.TotalCount}    Letters: {LetterInventory.TotalCount}";
             RefreshDetail();
         }
 
@@ -272,7 +285,7 @@ namespace OtherwiseLabs.CreatureGame
         {
             if (_selectedLetter == '\0')
             {
-                _detailLabel.text = PaperInventory.TotalCount == 0
+                _detailLabel.text = PaperInventory.TotalCount == 0 && LetterInventory.TotalCount == 0
                     ? "Nothing collected yet — brew letter food at the Alchemist Store!"
                     : "Tap a square to see its words.";
                 return;
@@ -280,7 +293,8 @@ namespace OtherwiseLabs.CreatureGame
 
             var words = PaperInventory.WordsFor(_selectedLetter);
             int vialCount = VialInventory.Count(_selectedLetter);
-            if (words.Count == 0 && vialCount == 0)
+            int caughtCount = LetterInventory.Count(_selectedLetter);
+            if (words.Count == 0 && vialCount == 0 && caughtCount == 0)
             {
                 _detailLabel.text =
                     $"No {_selectedLetter} yet — make a {_selectedLetter} vial at the gem table, then brew it into a word at the cauldron!";
@@ -293,7 +307,7 @@ namespace OtherwiseLabs.CreatureGame
             string traps = words.Count > 0
                 ? $"{_selectedLetter} traps: {PaperInventory.CountForLetter(_selectedLetter)}  —  {string.Join(", ", parts)}"
                 : $"No {_selectedLetter} traps yet — brew a word with {_selectedLetter} at the cauldron.";
-            _detailLabel.text = $"{traps}\nVials of {_selectedLetter}: {vialCount}";
+            _detailLabel.text = $"{traps}\nVials of {_selectedLetter}: {vialCount}    Caught {_selectedLetter} letters: {caughtCount}";
         }
 
         // ------------------------------------------------------------------
