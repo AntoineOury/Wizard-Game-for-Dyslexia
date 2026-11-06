@@ -12,9 +12,18 @@ letter that really lines up from that view finds it.
 *Letter recognition in the wild — spotting a letter shape among clutter,
 then forming it with the hand.*
 
-It does not feed the vial / paper economy yet. Finding a letter raises
-`LetterLensGame.LetterFound` (a `char`) and adds it to the "Letters found"
-line; what *receiving* a letter means is the next step.
+**The story:** the world is a book, and an evil spell made its words go wild
+and its letters escape into the scenery. The player tidies the page: every
+letter caught leaves the world, and its pieces fly into the bag. The
+top-left counter shows how many escaped letters are left; when it reaches
+zero, the page is tidy again.
+
+**Caught letters are kept.** Each catch adds one of that letter to
+`LetterInventory` (saved, letter → count, the same pattern as
+`VialInventory`), so other mini-games can spend them later with
+`LetterInventory.TryConsume('W')`. The backpack shows them as a green count
+in each slot's bottom-left corner and a "Letters" total.
+`LetterLensGame.LetterFound` (a `char`) is raised too.
 
 ## How it plays
 
@@ -44,13 +53,30 @@ line; what *receiving* a letter means is the next step.
    - it must be **on** the letter (a good letter drawn elsewhere on screen
      does not count),
    - the letter must really **line up** from this view, and
-   - the shape must pass the same grader as the creature capture
-     (`LetterShapes.ScoreTrace`: on the path *and* covering it, forgiving
-     of wobble, honest about b/d/p/q because it never flips or rotates).
-5. **Found** — the letter's props swell and settle, a big gold letter pops
-   on screen, it joins the "Letters found" list, and the view unlocks.
-   Otherwise the hint says why: trace again, "almost lined up — take a tiny
-   step", or "no letter lines up from here". **C** / **Step out** leaves at
+   - the shape must be a well-formed letter on this letter's path (the same
+     grader as the creature capture, `LetterShapes.ScoreTrace`: on the path
+     *and* covering it, forgiving of wobble, honest about b/d/p/q because it
+     never flips or rotates), and
+   - it must look more like **this** letter than any other of the 26
+     (`LetterShapes.LooksMostLike`, average distance both ways, compared in
+     the letter's own on-screen placement). The first check alone let a
+     well-drawn wrong letter pass: an F over an E, an O over a Q, any
+     neat shape roughly where the letter is. `Recognition Margin` (0.1)
+     is how close a look-alike may come and still count as a tie.
+
+   Offline test with simulated traces of every letter (20 each, tested as
+   every one of the 26 targets): the right letter was accepted 99% of the
+   time for careful or normal tracing and 94% for very wobbly tracing. A
+   wrong letter was accepted 0.6% of the time (2% when very wobbly), down
+   from 68% with the first check alone. The leftover mix-ups are the true
+   look-alikes: O/Q, F/P, T/Y.
+5. **Caught**: a big gold letter pops on screen, and the rocks,
+   mushrooms and trees that formed it hop and fly one after another, in
+   the order the letter is written, into the bag just below the view,
+   shrinking as they go. They are gone from the world for good. The letter
+   is added to the inventory and the view unlocks when the last piece lands.
+   Otherwise the hint says why: "that looks like F", trace again, "almost
+   lined up — take a tiny step", or "no letter lines up from here". **C** / **Step out** leaves at
    any time.
 
 ## How the alignment works
@@ -89,10 +115,10 @@ so the body has to stand ahead of the ring.
 
 Nothing to wire: `LetterLensGame` bootstraps itself whenever the
 **PCG World** scene loads, waits for the player to land, then hides
-`Bush Letters` + `House Letters` + `Building Letters` letters (3 + 3 + 2) on
-dry, gentle ground inside the terrain, each with a clear line of sight. The
-first one is a bush letter whose spot is 6–18 m from the player, so the idea is
-discovered quickly. Letters are picked from `Alphabet` without repeats.
+`Bush Letters` + `House Letters` + `Building Letters` letters (10 + 8 + 4)
+on dry, gentle ground inside the terrain, each with a clear line of sight.
+The first `Near Player Letters` (3) are bush letters whose spots are 6–35 m
+from the player, so there is always one close by. Letters are picked from `Alphabet` without repeats.
 `Seed` 0 = a new layout every play.
 
 To tune it, add a `LetterLensGame` component to any object in the scene (a
@@ -145,8 +171,9 @@ The terrain helpers it uses (`WaterSurfaceAt`, `WorldFootprint`) are on
 
 ## Not yet
 
-- What receiving a letter does (inventory, backpack, feeding other games).
-- Saving which letters were found.
+- Other mini-games spending caught letters (the inventory is ready).
+- Saving which letters on the page were caught: the counts in the bag are
+  saved, but every visit to the PCG World hides a fresh set of letters.
 - Occlusion: scattered trees can still stand in front of a letter after it
   is placed (the line of sight is only checked along the letter's middle),
   and a letter's own near trees can hide a few of its far dots.

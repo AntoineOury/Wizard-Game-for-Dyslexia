@@ -17,9 +17,12 @@ namespace OtherwiseLabs.LetterLens
     /// the letter they see right on the screen. A trace that matches a letter
     /// that really lines up from that view finds it.
     ///
-    /// Standalone on purpose: it does not feed the vial / paper economy yet.
-    /// Finding a letter raises <see cref="LetterFound"/>; what "receiving" a
-    /// letter means is a later step.
+    /// The story: the world is a book an evil spell scrambled, and its
+    /// letters escaped into the scenery. Catching one (a correct trace) makes
+    /// the pieces that formed it fly out of the world into the bag, so the
+    /// player tidies the page as they go. Caught letters are saved in
+    /// LetterInventory for other mini-games to spend, and
+    /// <see cref="LetterFound"/> is raised.
     ///
     /// What you see is what counts: alignment is measured from the live
     /// camera, so it works in third person too (first person is easier — the
@@ -39,17 +42,17 @@ namespace OtherwiseLabs.LetterLens
         public static LetterLensGame Instance { get; private set; }
 
         [Header("Hidden letters")]
-        [Min(0)] public int bushLetters = 3;
-        [Min(0)] public int houseLetters = 3;
-        [Min(0)] public int buildingLetters = 2;
+        [Min(0)] public int bushLetters = 10;
+        [Min(0)] public int houseLetters = 8;
+        [Min(0)] public int buildingLetters = 4;
         [Tooltip("Letters to hide, picked without repeats until the list runs out.")]
         public string alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
         [Tooltip("0 = a new layout every play.")]
         public int seed;
         [Tooltip("Keep vantage points this far inside the terrain's edge.")]
         [Min(0f)] public float edgeMargin = 30f;
-        [Tooltip("The first letter is a small one near where the player starts, so the idea is discovered quickly.")]
-        public bool firstLetterNearPlayer = true;
+        [Tooltip("This many small letters are hidden within ~35 m of where the player starts, so there is always one close by.")]
+        [Min(0)] public int nearPlayerLetters = 3;
 
         [Header("Lock in and trace")]
         public KeyCode lockKey = KeyCode.C;
@@ -57,6 +60,8 @@ namespace OtherwiseLabs.LetterLens
         [Range(0.02f, 0.2f)] public float alignTolerance = 0.07f;
         [Tooltip("Trace score needed (same grader as the creature capture).")]
         [Range(0.2f, 0.95f)] public float traceAccuracyThreshold = 0.55f;
+        [Tooltip("The trace must look most like the hidden letter out of all 26. A tie within this fraction still counts (0.1 = 10%). Lower = stricter about look-alikes like E/F, O/Q, P/R.")]
+        [Range(0f, 0.3f)] public float recognitionMargin = 0.1f;
         [Tooltip("Idle time after a stroke before the trace is checked, so letters with several strokes can be finished.")]
         [Min(0.3f)] public float evaluateDelay = 1.4f;
         [Tooltip("Hint line when the player is close to lining a letter up.")]
@@ -89,6 +94,8 @@ namespace OtherwiseLabs.LetterLens
         Vector3 _lastInkDirection;
         float _celebrateUntil;
         float _nextHintCheck;
+        float _storyUntil;
+        HiddenLetter _collecting;
 
         // ------------------------------------------------------------------
         // Bootstrap
@@ -158,7 +165,26 @@ namespace OtherwiseLabs.LetterLens
                 _letters.Add(placed);
             }
             SpawnLetters();
-            _ui.SetFound(_found);
+            _ui.SetRemaining(Remaining);
+        }
+
+        /// <summary>Escaped letters still hiding on this page.</summary>
+        public int Remaining
+        {
+            get
+            {
+                int count = 0;
+                foreach (HiddenLetter hidden in _letters)
+                    if (hidden != null && !hidden.IsFound) count++;
+                return count;
+            }
+        }
+
+        /// <summary>A story line on the hint bar that the walking hints leave alone for a while.</summary>
+        void Tell(string line, float seconds)
+        {
+            _ui.SetHint(line);
+            _storyUntil = Time.time + seconds;
         }
 
         /// <summary>
@@ -213,7 +239,7 @@ namespace OtherwiseLabs.LetterLens
                 char letter = letterPool[pick];
                 letterPool.RemoveAt(pick);
 
-                bool nearPlayer = i == 0 && firstLetterNearPlayer && _player != null;
+                bool nearPlayer = i < nearPlayerLetters && _player != null;
                 if (!TryPlace(sizes[i], letter, area, generator, rng, nearPlayer) && nearPlayer)
                     TryPlace(sizes[i], letter, area, generator, rng, false);
             }
@@ -237,7 +263,7 @@ namespace OtherwiseLabs.LetterLens
         {
             Vector2 range = HiddenLetter.DistanceRange(size);
             float reach = HiddenLetter.MaxReach(size);
-            float spacing = Mathf.Max(20f, range.y * 1.2f);
+            float spacing = Mathf.Max(10f, range.y * 0.8f);
 
             for (int attempt = 0; attempt < 160; attempt++)
             {
@@ -245,7 +271,7 @@ namespace OtherwiseLabs.LetterLens
                 if (nearPlayer)
                 {
                     float angle = (float)rng.NextDouble() * Mathf.PI * 2f;
-                    float radius = Mathf.Lerp(6f, 18f, (float)rng.NextDouble());
+                    float radius = Mathf.Lerp(6f, 35f, (float)rng.NextDouble());
                     xz = new Vector2(_player.position.x + Mathf.Cos(angle) * radius, _player.position.z + Mathf.Sin(angle) * radius);
                 }
                 else
@@ -399,7 +425,12 @@ namespace OtherwiseLabs.LetterLens
                     break;
 
                 case Phase.Celebrating:
-                    if (Time.time >= _celebrateUntil) StepOut();
+                    if (Time.time >= _celebrateUntil && CollectionDone)
+                    {
+                        StepOut();
+                        if (Remaining == 0)
+                            Tell("This page is tidy again! Every escaped letter is back in your bag.", 8f);
+                    }
                     break;
             }
         }
@@ -505,6 +536,7 @@ namespace OtherwiseLabs.LetterLens
             HiddenLetter best = null;
             float bestScore = 0f;
             bool anyAligned = false, anyNear = false, alreadyFound = false;
+            char lookedLike = '\0';
 
             foreach (HiddenLetter hidden in _letters)
             {
@@ -519,8 +551,18 @@ namespace OtherwiseLabs.LetterLens
                     continue;
                 }
 
-                float score = ScoreAgainst(hidden.letter, offset, scale, forward, right, up);
+                // Two checks, both needed: the trace is a well-formed letter on
+                // this one's path (ScoreTrace), AND it looks more like this
+                // letter than any other (an F drawn over an E, or an O over a
+                // Q, is the wrong letter however neatly it is drawn).
+                List<Vector2> units = TraceInLetterUnits(offset, scale, forward, right, up);
+                float score = units != null ? LetterShapes.ScoreTrace(units, hidden.letter) : 0f;
                 if (score < traceAccuracyThreshold) { if (!hidden.IsFound) anyAligned = true; continue; }
+                if (!LetterShapes.LooksMostLike(units, hidden.letter, recognitionMargin, out char seen, fit: false))
+                {
+                    if (!hidden.IsFound) lookedLike = seen;
+                    continue;
+                }
                 if (hidden.IsFound) { alreadyFound = true; continue; }
                 if (score > bestScore) { bestScore = score; best = hidden; }
             }
@@ -529,7 +571,9 @@ namespace OtherwiseLabs.LetterLens
 
             _traceDirections.Clear();
             _ui.ClearInk();
-            if (alreadyFound)
+            if (lookedLike != '\0')
+                _ui.SetHint($"That looks like {lookedLike}. Look closely and trace the letter you see!");
+            else if (alreadyFound)
                 _ui.SetHint($"You already found that one! {StepOutWords} and look for another.");
             else if (anyAligned)
                 _ui.SetHint("Close! Trace the letter you see again, right over its shape.");
@@ -541,11 +585,11 @@ namespace OtherwiseLabs.LetterLens
 
         /// <summary>
         /// The trace, mapped into the letter's own units through the same fit
-        /// that measured the alignment, then graded by the shared letter
-        /// grader. It must also sit ON the letter: a well-formed trace drawn
-        /// somewhere else on the screen does not count.
+        /// that measured the alignment, or null when it is not ON the letter
+        /// (a well-formed letter drawn elsewhere on the screen does not count)
+        /// or too small to be a letter.
         /// </summary>
-        float ScoreAgainst(char letter, Vector2 offset, float scale, Vector3 forward, Vector3 right, Vector3 up)
+        List<Vector2> TraceInLetterUnits(Vector2 offset, float scale, Vector3 forward, Vector3 right, Vector3 up)
         {
             var units = new List<Vector2>(_traceDirections.Count);
             Vector2 min = new Vector2(float.MaxValue, float.MaxValue), max = -min;
@@ -559,35 +603,44 @@ namespace OtherwiseLabs.LetterLens
                 min = Vector2.Min(min, unit);
                 max = Vector2.Max(max, unit);
             }
-            if (units.Count < 8) return 0f;
+            if (units.Count < 8) return null;
 
             Vector2 center = (min + max) * 0.5f;
             Vector2 extent = max - min;
-            if (center.magnitude > 0.45f) return 0f;                 // traced somewhere else
-            if (Mathf.Max(extent.x, extent.y) < 0.35f) return 0f;    // a scribble, not a letter
-
-            return LetterShapes.ScoreTrace(units, letter);
+            if (center.magnitude > 0.45f) return null;                 // traced somewhere else
+            if (Mathf.Max(extent.x, extent.y) < 0.35f) return null;    // a scribble, not a letter
+            return units;
         }
 
+        /// <summary>
+        /// Caught! The letter's pieces fly out of the world into the bag, and
+        /// one of that letter goes into the saved LetterInventory for other
+        /// mini-games to use. The view stays locked until the last piece lands.
+        /// </summary>
         void Found(HiddenLetter hidden)
         {
-            hidden.MarkFound();
+            _collecting = hidden;
+            hidden.Collect(_camera != null ? _camera.transform : null);
+            LetterInventory.Add(hidden.letter);
             _found.Add(hidden.letter);
-            _ui.SetFound(_found);
+            _ui.SetRemaining(Remaining);
             _ui.Celebrate(hidden.letter);
-            _ui.SetHint($"You found the letter {hidden.letter}!");
+            _ui.SetHint($"You caught the escaped {hidden.letter}! Into your bag it goes.");
             _phase = Phase.Celebrating;
-            _celebrateUntil = Time.time + 2f;
+            _celebrateUntil = Time.time + 1.6f;
             _stroking = false;
             LetterFound?.Invoke(hidden.letter);
         }
+
+        bool CollectionDone
+            => _collecting == null || _collecting.IsCollected || Time.time > _celebrateUntil + 6f;
 
         static bool Touch => PlayerControlScheme.Current == ControlSchemeKind.Touch;
         static string StepOutWords => Touch ? "Step out" : "Step out (C)";
 
         void UpdateWalkingHint()
         {
-            if (!alignmentHints || _camera == null || Time.time < _nextHintCheck) return;
+            if (!alignmentHints || _camera == null || Time.time < _nextHintCheck || Time.time < _storyUntil) return;
             _nextHintCheck = Time.time + 0.25f;
 
             Vector3 eye = _camera.transform.position;

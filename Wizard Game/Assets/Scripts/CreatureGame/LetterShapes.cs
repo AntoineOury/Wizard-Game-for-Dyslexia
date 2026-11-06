@@ -76,6 +76,83 @@ namespace OtherwiseLabs.CreatureGame
         }
 
         /// <summary>
+        /// How far a trace sits from a letter on average, both ways (ink to
+        /// the letter's path, and the path to the ink), in unit-box units
+        /// after the same gentle fit ScoreTrace uses. Unlike ScoreTrace's
+        /// near/far count it keeps falling as a trace gets more exact, so it
+        /// can tell look-alikes apart: an E drawn carefully is nearer to E
+        /// than to B or F even when both "pass".
+        /// </summary>
+        public static float TraceDistance(IReadOnlyList<Vector2> drawnUnit, char letter, bool fit = true)
+        {
+            List<Vector2> template = SamplePath(letter, 0.04f);
+            IReadOnlyList<Vector2> drawn = fit ? FitToTemplate(drawnUnit, template) : drawnUnit;
+            if (drawn.Count == 0 || template.Count == 0) return float.PositiveInfinity;
+
+            float inkToPath = 0f;
+            for (int i = 0; i < drawn.Count; i++) inkToPath += Mathf.Sqrt(NearestSqr(drawn[i], template));
+            float pathToInk = 0f;
+            for (int i = 0; i < template.Count; i++) pathToInk += Mathf.Sqrt(NearestSqr(template[i], drawn));
+            return inkToPath / drawn.Count + pathToInk / template.Count;
+        }
+
+        /// <summary>
+        /// Which letter a trace looks most like: the A-Z letter with the
+        /// smallest TraceDistance. <paramref name="distance"/> is that letter's
+        /// distance.
+        /// </summary>
+        public static char Recognize(IReadOnlyList<Vector2> drawnUnit, out float distance, bool fit = true)
+        {
+            char best = 'A';
+            distance = float.PositiveInfinity;
+            for (char letter = 'A'; letter <= 'Z'; letter++)
+            {
+                float d = TraceDistance(drawnUnit, letter, fit);
+                if (d < distance) { distance = d; best = letter; }
+            }
+            return best;
+        }
+
+        /// <summary>
+        /// True when a trace looks at least as much like <paramref name="letter"/>
+        /// as like any other letter (within <paramref name="margin"/>, e.g. 0.1 =
+        /// 10% further is still a tie). <paramref name="closest"/> is the letter it
+        /// looks most like. Use with ScoreTrace: ScoreTrace says "well formed",
+        /// this says "and it is THIS letter" — on its own ScoreTrace lets an F
+        /// pass for an E or an O for a Q.
+        /// <paramref name="fit"/> false when the trace is already in the letter's
+        /// own placement (e.g. mapped from where the letter is on screen): the
+        /// letters' different proportions then help tell them apart.
+        /// </summary>
+        public static bool LooksMostLike(IReadOnlyList<Vector2> drawnUnit, char letter, float margin,
+                                         out char closest, bool fit = true)
+        {
+            letter = char.ToUpperInvariant(letter);
+            float target = TraceDistance(drawnUnit, letter, fit);
+            float bestOther = float.PositiveInfinity;
+            closest = letter;
+            for (char other = 'A'; other <= 'Z'; other++)
+            {
+                if (other == letter) continue;
+                float d = TraceDistance(drawnUnit, other, fit);
+                if (d < bestOther) { bestOther = d; if (d < target) closest = other; }
+            }
+            if (target <= bestOther) closest = letter;
+            return target <= bestOther * (1f + margin);
+        }
+
+        static float NearestSqr(Vector2 point, IReadOnlyList<Vector2> others)
+        {
+            float best = float.PositiveInfinity;
+            for (int i = 0; i < others.Count; i++)
+            {
+                float d = (others[i] - point).sqrMagnitude;
+                if (d < best) best = d;
+            }
+            return best;
+        }
+
+        /// <summary>
         /// Slides and gently rescales the drawn trace so its bounding box
         /// sits on the template's before grading. Letter FORMATION is what
         /// we grade: a well-shaped letter drawn a bit small, large or
