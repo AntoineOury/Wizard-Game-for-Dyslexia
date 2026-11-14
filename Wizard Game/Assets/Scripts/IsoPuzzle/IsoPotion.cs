@@ -3,10 +3,9 @@ using UnityEngine;
 namespace OtherwiseLabs.IsoPuzzle
 {
     /// <summary>
-    /// A healing potion sitting somewhere in a room. Tapping it drinks it on
-    /// the spot (one heart back). Potions cannot be carried: if hearts are
-    /// already full it stays where it is, and it vanishes with the room when
-    /// the player moves on.
+    /// The healing potion that sometimes drops as loot when a room is cleared.
+    /// It is used on the spot (one heart back); potions cannot be carried, so
+    /// with full hearts it fizzles away.
     /// </summary>
     public class IsoPotion : MonoBehaviour
     {
@@ -20,6 +19,8 @@ namespace OtherwiseLabs.IsoPuzzle
         Vector3 _startScale;
 
         public bool IsDrunk => _drunk;
+        /// <summary>When false the potion stops its idle bob, so a script can move it (the loot drop).</summary>
+        public bool Idle { get; set; } = true;
 
         public static IsoPotion Create(Transform parent, Vector3 groundPosition)
         {
@@ -69,6 +70,7 @@ namespace OtherwiseLabs.IsoPuzzle
                 return;
             }
 
+            if (!Idle) return;
             _phase += Time.deltaTime;
             transform.localPosition = _basePosition + Vector3.up * (Mathf.Sin(_phase * 2.2f) * 0.12f);
             transform.localRotation = Quaternion.Euler(0f, _phase * 40f, 0f);

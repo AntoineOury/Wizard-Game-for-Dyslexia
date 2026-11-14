@@ -9,20 +9,21 @@ namespace OtherwiseLabs.IsoPuzzle
     /// Iso Puzzle: a standalone roguelike perspective puzzle. One floating
     /// room at a time; a letter is hidden in each room as scattered
     /// ProBuilder shapes that only line up from one angle. Turn the room
-    /// until the letter appears, Snap a photo of it, then trace the letter on
-    /// the photo. Clear a room, a new random one rises in its place.
+    /// until the letter appears; the moment the player lets go close enough,
+    /// the view locks in, the photo is taken, and the player traces the
+    /// letter on it. Clear a room, a new random one rises in its place.
     ///
-    /// Three hearts. A Snap from the wrong angle or a failed trace costs one.
-    /// Some rooms hold a potion: tap it to win a heart back, but only in that
-    /// room (no inventory). Out of hearts ends the run; the score is how many
-    /// rooms were cleared.
+    /// Three hearts. A failed trace costs one. Clearing a room sometimes
+    /// drops a health potion as loot, used on the spot (no inventory, so with
+    /// full hearts it fizzles). Out of hearts ends the run; the score is how
+    /// many rooms were cleared.
     ///
     /// Everything (camera, light, UI, rooms) is created at run time, so the
     /// scene only needs one GameObject with this component.
     /// </summary>
     public class IsoPuzzleGame : MonoBehaviour
     {
-        enum State { Title, Exploring, Snapping, Tracing, Cleared, Transition, GameOver }
+        enum State { Title, Exploring, LockingIn, Tracing, Cleared, Transition, GameOver }
 
         [Header("Run")]
         [Tooltip("Fixed seed for repeatable runs while testing; 0 = a new run every time.")]
@@ -33,6 +34,8 @@ namespace OtherwiseLabs.IsoPuzzle
         public float startTolerance = 7f;
         [Tooltip("Tolerance never gets tighter than this, however deep the run.")]
         public float minTolerance = 4f;
+        [Tooltip("Letting go within this many times the tolerance locks the view onto the letter.")]
+        public float lockInFactor = 1.6f;
         [Tooltip("Rooms before the letter can also hide above or below (tipping the view up/down).")]
         public int flatRooms = 3;
 
@@ -42,10 +45,9 @@ namespace OtherwiseLabs.IsoPuzzle
         public float evaluateDelay = 1.4f;
 
         [Header("Mistakes")]
-        public bool wrongSnapCostsHeart = true;
         public bool failedTraceCostsHeart = true;
 
-        [Header("Potions")]
+        [Header("Potion loot (rolled after each cleared room)")]
         [Range(0f, 1f)] public float potionChance = 0.22f;
         [Range(0f, 1f)] public float potionChanceWhenHurt = 0.45f;
 
@@ -62,6 +64,7 @@ namespace OtherwiseLabs.IsoPuzzle
         int _hearts;
         int _roomsCleared;
         int _failedTraces;
+        bool _lockArmed;   // false right after "Turn again", until the view leaves the letter
         readonly Queue<char> _recentLetters = new Queue<char>();
 
         // Tracing.
@@ -78,12 +81,9 @@ namespace OtherwiseLabs.IsoPuzzle
         void Start()
         {
             _orbit = IsoOrbitCamera.Create();
-            _orbit.Tapped += OnTapped;
-            _orbit.Released += OnReleased;
 
             CreateLight();
             _hud = IsoHud.Create(transform);
-            _hud.SnapButton.onClick.AddListener(OnSnapPressed);
             _hud.RetakeButton.onClick.AddListener(OnRetakePressed);
             _hud.PlayButton.onClick.AddListener(StartRun);
             _hud.AgainButton.onClick.AddListener(StartRun);
@@ -98,7 +98,7 @@ namespace OtherwiseLabs.IsoPuzzle
             _hud.SetHearts(_hearts);
             _hud.SetScore(0);
             _hud.SetHint("");
-            _hud.SetPlayingChrome(false, false);
+            _hud.SetPlayingChrome(false);
             _hud.SetAlignment(0f, false, false);
             _hud.ShowTitle(true);
             _state = State.Title;
@@ -145,7 +145,7 @@ namespace OtherwiseLabs.IsoPuzzle
         {
             _state = State.Transition;
             _orbit.InputEnabled = false;
-            _hud.SetPlayingChrome(false, false);
+            _hud.SetPlayingChrome(false);
             _hud.SetAlignment(0f, false, false);
             _hud.ShowPhoto(null);
             _hud.SetHint("");
@@ -166,6 +166,7 @@ namespace OtherwiseLabs.IsoPuzzle
 
             _room = BuildRoom();
             _failedTraces = 0;
+            _lockArmed = true;
 
             // Start well away from the answer.
             float offset = Mathf.Lerp(80f, 170f, (float)_rng.NextDouble()) * (_rng.NextDouble() < 0.5 ? -1f : 1f);
@@ -189,26 +190,21 @@ namespace OtherwiseLabs.IsoPuzzle
 
             _state = State.Exploring;
             _orbit.InputEnabled = true;
-            _hud.SetPlayingChrome(true, false);
             _hud.SetHint(_roomsCleared == 0
                 ? "Drag to turn the room. Find the letter hiding in the shapes!"
                 : (_orbit.PitchLocked ? "A new room. Find its letter!" : "A new room. Drag up and down too, this letter may hide above or below."));
-            if (_room.Potion != null && _roomsCleared > 0 && _hearts < IsoHud.MaxHearts)
-                _hud.SetHint("There's a potion in this room. Tap it to get a heart back!");
         }
 
         IsoRoom BuildRoom()
         {
             bool flat = _roomsCleared < flatRooms;
             _orbit.PitchLocked = flat;
-            float chance = _hearts < IsoHud.MaxHearts ? potionChanceWhenHurt : potionChance;
             var recipe = new IsoRoomRecipe
             {
                 Letter = PickLetter(),
                 TargetYaw = (float)_rng.NextDouble() * 360f,
                 TargetPitch = flat ? IsoOrbitCamera.DefaultPitch : Mathf.Lerp(22f, 58f, (float)_rng.NextDouble()),
                 PropCount = Mathf.Min(5 + _roomsCleared * 2, 20),
-                WithPotion = _state != State.Title && _roomsCleared > 0 && _rng.NextDouble() < chance,
             };
             return IsoRoomBuilder.Build(recipe, _rng, transform);
         }
@@ -235,7 +231,7 @@ namespace OtherwiseLabs.IsoPuzzle
                     _orbit.SetView(_orbit.Yaw + Time.deltaTime * 12f, IsoOrbitCamera.DefaultPitch);
                     break;
                 case State.Exploring:
-                    UpdateAlignmentHud();
+                    UpdateExploring();
                     break;
                 case State.Tracing:
                     UpdateTracing();
@@ -243,84 +239,42 @@ namespace OtherwiseLabs.IsoPuzzle
             }
         }
 
-        void UpdateAlignmentHud()
+        float LockRadius => Tolerance * lockInFactor;
+
+        void UpdateExploring()
         {
             float error = _orbit.AngleTo(_room.TargetYaw, _room.TargetPitch);
             float closeness = Mathf.Clamp01(1f - error / 35f);
-            _hud.SetAlignment(closeness, error <= Tolerance, true);
-        }
+            _hud.SetAlignment(closeness, error <= LockRadius, true);
 
-        // ------------------------------------------------------------------
-        // Turning the room
-        // ------------------------------------------------------------------
-
-        void OnReleased()
-        {
-            if (_state != State.Exploring) return;
-            // Snap assist: let go near the answer and the room clicks into place.
-            float error = _orbit.AngleTo(_room.TargetYaw, _room.TargetPitch);
-            if (error <= Tolerance * 1.6f && error > 0.05f)
+            if (!_lockArmed)
             {
-                _orbit.EaseTo(_room.TargetYaw, _room.TargetPitch, 0.3f);
-                _hud.SetHint("Something lines up... press Snap!");
-            }
-        }
-
-        void OnTapped(Vector2 viewport)
-        {
-            if (_state != State.Exploring || _room.Potion == null || _room.Potion.IsDrunk) return;
-            Ray ray = _orbit.Camera.ViewportPointToRay(new Vector3(viewport.x, viewport.y, 0f));
-            if (!Physics.Raycast(ray, out RaycastHit hit, 200f)) return;
-            if (hit.collider.GetComponentInParent<IsoPotion>() != _room.Potion) return;
-
-            if (_hearts >= IsoHud.MaxHearts)
-            {
-                _hud.SetHint("Your hearts are full. Potions can't be saved, so come back if you get hurt!");
+                if (error > LockRadius * 1.5f) _lockArmed = true;
                 return;
             }
-            _room.Potion.Drink();
-            _room.Potion = null;
-            _hearts++;
-            _hud.SetHearts(_hearts);
-            _hud.Flash(new Color(1f, 0.55f, 0.7f), 0.45f);
-            _hud.SetHint("Glug! One heart back.");
+            // Light lock-in: once the player lets go close enough, the room
+            // clicks onto the exact view and the photo is taken by itself.
+            if (!_orbit.IsHeld && !_orbit.IsEasing && error <= LockRadius)
+                LockIn();
         }
 
         // ------------------------------------------------------------------
-        // Snap
+        // Lock in and take the photo
         // ------------------------------------------------------------------
 
-        void OnSnapPressed()
+        void LockIn()
         {
-            if (_state != State.Exploring) return;
-            float error = _orbit.AngleTo(_room.TargetYaw, _room.TargetPitch);
-            _orbit.CancelPress();
-
-            if (error > Tolerance)
-            {
-                _hud.Flash(Color.white, 0.5f);
-                if (wrongSnapCostsHeart)
-                {
-                    _hud.SetHint(error < Tolerance * 3f
-                        ? "So close! Nothing lines up yet. Turn a tiny bit more."
-                        : "Nothing lines up from here. Keep turning the room.");
-                    LoseHeart();
-                }
-                else
-                {
-                    _hud.SetHint("Nothing lines up from here. Keep turning the room.");
-                }
-                return;
-            }
-
-            _state = State.Snapping;
+            _state = State.LockingIn;
             _orbit.InputEnabled = false;
-            _orbit.EaseTo(_room.TargetYaw, _room.TargetPitch, 0.18f, () => StartCoroutine(TakePhoto()));
+            _orbit.CancelPress();
+            _hud.SetAlignment(1f, true, true);
+            _hud.SetHint("It lines up!");
+            _orbit.EaseTo(_room.TargetYaw, _room.TargetPitch, 0.3f, () => StartCoroutine(TakePhoto()));
         }
 
         IEnumerator TakePhoto()
         {
-            yield return null; // let the camera settle on the exact view first
+            yield return new WaitForSeconds(0.15f); // a beat on the locked view, then click
             Camera cam = _orbit.Camera;
 
             if (_photo == null || _photo.width != Screen.width || _photo.height != Screen.height)
@@ -328,13 +282,10 @@ namespace OtherwiseLabs.IsoPuzzle
                 if (_photo != null) _photo.Release();
                 _photo = new RenderTexture(Mathf.Max(16, Screen.width), Mathf.Max(16, Screen.height), 24);
             }
-            // Hide the potion from the picture; it is not part of the letter.
-            if (_room.Potion != null) _room.Potion.gameObject.SetActive(false);
             RenderTexture previous = cam.targetTexture;
             cam.targetTexture = _photo;
             cam.Render();
             cam.targetTexture = previous;
-            if (_room.Potion != null) _room.Potion.gameObject.SetActive(true);
 
             // Map viewport positions on the photo to the letter's unit box.
             Vector3 c = cam.WorldToViewportPoint(_room.LetterCenter);
@@ -345,7 +296,7 @@ namespace OtherwiseLabs.IsoPuzzle
             _hud.Flash(Color.white, 1f);
             _hud.ShowPhoto(_photo);
             _hud.SetAlignment(0f, false, false);
-            _hud.SetPlayingChrome(false, true);
+            _hud.SetPlayingChrome(true);
             _hud.SetHint("Got it! Now trace the letter on the photo.");
             if (_failedTraces > 0) ShowGuide();
             _drawn.Clear();
@@ -358,8 +309,9 @@ namespace OtherwiseLabs.IsoPuzzle
         {
             if (_state != State.Tracing) return;
             _hud.ShowPhoto(null);
-            _hud.SetPlayingChrome(true, false);
-            _hud.SetHint("Turn the room, then Snap again when you're ready.");
+            _hud.SetPlayingChrome(false);
+            _hud.SetHint("Turn the room away, then line it up again when you're ready.");
+            _lockArmed = false;
             _state = State.Exploring;
             _orbit.InputEnabled = true;
         }
@@ -443,10 +395,80 @@ namespace OtherwiseLabs.IsoPuzzle
             _roomsCleared++;
             _hud.SetScore(_roomsCleared);
             _hud.Flash(new Color(1f, 0.85f, 0.35f), 0.6f);
-            _hud.SetPlayingChrome(false, false);
+            _hud.SetPlayingChrome(false);
+            _hud.SetAlignment(0f, false, false);
             _hud.SetHint($"Yes! That's the letter {_room.Letter}!");
-            yield return new WaitForSeconds(1.6f);
+            yield return new WaitForSeconds(1.3f);
+
+            // Back to the live room (same view) so the loot can pop out of it.
+            _hud.ShowPhoto(null);
+            float chance = _hearts < IsoHud.MaxHearts ? potionChanceWhenHurt : potionChance;
+            if (_rng.NextDouble() < chance)
+                yield return LootDrop();
+
+            yield return new WaitForSeconds(0.3f);
             StartCoroutine(SwapRoom());
+        }
+
+        /// <summary>
+        /// The potion pops out of the solved letter, hangs for a moment, then
+        /// flies into the hearts (+1). Potions can't be kept, so with full
+        /// hearts it fizzles away instead.
+        /// </summary>
+        IEnumerator LootDrop()
+        {
+            Camera cam = _orbit.Camera;
+            IsoPotion potion = IsoPotion.Create(transform, Vector3.zero);
+            potion.Idle = false;
+            Transform t = potion.transform;
+            Vector3 start = _room.LetterCenter;
+            Vector3 top = start + Vector3.up * 0.9f;
+            const float size = 1.6f;
+            _hud.SetHint("Loot drop! A health potion!");
+
+            for (float k = 0f; k < 1f; k += Time.deltaTime / 0.5f)
+            {
+                float pop = 1f + Mathf.Sin(k * Mathf.PI) * 0.35f; // overshoot
+                t.position = Vector3.Lerp(start, top, Mathf.SmoothStep(0f, 1f, k));
+                t.localScale = Vector3.one * (size * Mathf.Clamp01(k * 1.6f) * pop);
+                t.rotation = Quaternion.Euler(0f, k * 360f, 0f);
+                yield return null;
+            }
+            t.position = top;
+            t.localScale = Vector3.one * size;
+
+            for (float k = 0f; k < 0.6f; k += Time.deltaTime)
+            {
+                t.position = top + Vector3.up * (Mathf.Sin(k * 6f) * 0.12f);
+                t.Rotate(0f, 120f * Time.deltaTime, 0f, Space.World);
+                yield return null;
+            }
+
+            if (_hearts >= IsoHud.MaxHearts)
+            {
+                _hud.SetHint("Your hearts are full, and potions can't be saved. It fizzles away.");
+                potion.Drink();
+                yield return new WaitForSeconds(1.2f);
+                yield break;
+            }
+
+            // Fly to the heart row in the top-left corner.
+            Vector2 hv = _hud.HeartsViewport;
+            Vector3 target = cam.ViewportToWorldPoint(new Vector3(hv.x, hv.y, cam.nearClipPlane + 5f));
+            Vector3 from = t.position;
+            for (float k = 0f; k < 1f; k += Time.deltaTime / 0.55f)
+            {
+                float e = k * k;
+                t.position = Vector3.Lerp(from, target, e);
+                t.localScale = Vector3.one * Mathf.Lerp(size, size * 0.35f, e);
+                yield return null;
+            }
+            Destroy(potion.gameObject);
+            _hearts = Mathf.Min(IsoHud.MaxHearts, _hearts + 1);
+            _hud.SetHearts(_hearts);
+            _hud.Flash(new Color(1f, 0.55f, 0.7f), 0.45f);
+            _hud.SetHint("Glug! One heart back.");
+            yield return new WaitForSeconds(0.8f);
         }
 
         void LoseHeart()
@@ -462,7 +484,7 @@ namespace OtherwiseLabs.IsoPuzzle
         {
             _state = State.GameOver;
             _orbit.InputEnabled = false;
-            _hud.SetPlayingChrome(false, false);
+            _hud.SetPlayingChrome(false);
             _hud.SetAlignment(0f, false, false);
             int best = Mathf.Max(_roomsCleared, PlayerPrefs.GetInt(BestKey, 0));
             PlayerPrefs.SetInt(BestKey, best);

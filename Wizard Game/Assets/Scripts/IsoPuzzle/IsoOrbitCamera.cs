@@ -32,6 +32,8 @@ namespace OtherwiseLabs.IsoPuzzle
         public bool PitchLocked { get; set; } = true;
         public bool IsDragging => _dragging && _dragMoved;
         public bool IsEasing => _easing;
+        /// <summary>The player is pressing, dragging, or holding a turn key. A room still coasting from a flick counts as let go.</summary>
+        public bool IsHeld => _pressed || _keysHeld;
         public Vector3 Focus { get; set; } = new Vector3(0f, 2.4f, 0f);
 
         /// <summary>A press-and-release that barely moved. Argument: viewport position.</summary>

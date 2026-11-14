@@ -14,7 +14,6 @@ namespace OtherwiseLabs.IsoPuzzle
         public Vector3 LetterCenter;   // world point the letter is centred on, seen from the target view
         public float LetterHeight;     // world height of the letter's unit box
         public Color Background;
-        public IsoPotion Potion;       // null when this room has none
     }
 
     /// <summary>Per-room difficulty knobs, picked by the game from how many rooms are cleared.</summary>
@@ -24,7 +23,6 @@ namespace OtherwiseLabs.IsoPuzzle
         public float TargetYaw;
         public float TargetPitch;
         public int PropCount;
-        public bool WithPotion;
     }
 
     /// <summary>
@@ -101,9 +99,6 @@ namespace OtherwiseLabs.IsoPuzzle
 
             Rect letterRect = BuildLetter(room, root, palette, rng, right, up, forward);
             BuildProps(recipe.PropCount, root, palette, rng, room.LetterCenter, right, up, letterRect);
-
-            if (recipe.WithPotion)
-                room.Potion = IsoPotion.Create(root, PotionSpot(rng, room.LetterCenter, right, up, letterRect));
 
             return room;
         }
@@ -332,19 +327,6 @@ namespace OtherwiseLabs.IsoPuzzle
             go.name = "Prop " + go.name;
             go.transform.localRotation = Quaternion.Euler(0f, yaw, 0f) * go.transform.localRotation;
             return go;
-        }
-
-        static Vector3 PotionSpot(System.Random rng, Vector3 letterCenter, Vector3 right, Vector3 up, Rect letterRect)
-        {
-            for (int i = 0; i < 40; i++)
-            {
-                var p = new Vector3(Mathf.Lerp(-VolumeHalf, VolumeHalf, (float)rng.NextDouble()), 0f,
-                                    Mathf.Lerp(-VolumeHalf, VolumeHalf, (float)rng.NextDouble()));
-                Vector3 offset = p + Vector3.up * 0.5f - letterCenter;
-                Vector2 s = new Vector2(Vector3.Dot(offset, right), Vector3.Dot(offset, up));
-                if (!letterRect.Contains(s)) return p;
-            }
-            return new Vector3(VolumeHalf, 0f, VolumeHalf);
         }
 
         static Color Hex(string hex) => ColorUtility.TryParseHtmlString(hex, out Color c) ? c : Color.magenta;

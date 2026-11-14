@@ -7,9 +7,9 @@ namespace OtherwiseLabs.IsoPuzzle
     /// <summary>
     /// The Iso Puzzle's screen layer, built in code so the scene needs no
     /// prefabs: hearts (top left), rooms cleared (top right), the hint line
-    /// and the Snap button (bottom), viewfinder corners that warm up as the
-    /// view nears the letter, the photo/tracing layer, a camera flash, and
-    /// the title and game-over cards.
+    /// (bottom), viewfinder corners that warm up as the view nears the letter
+    /// and turn gold as it locks in, the photo/tracing layer, a camera flash,
+    /// the loot banner, and the title and game-over cards.
     /// </summary>
     public class IsoHud : MonoBehaviour
     {
@@ -21,7 +21,6 @@ namespace OtherwiseLabs.IsoPuzzle
         static readonly Color Gold = new Color(1f, 0.78f, 0.25f);
 
         public RectTransform CanvasRect { get; private set; }
-        public Button SnapButton { get; private set; }
         public Button RetakeButton { get; private set; }
         public Button PlayButton { get; private set; }
         public Button AgainButton { get; private set; }
@@ -34,7 +33,7 @@ namespace OtherwiseLabs.IsoPuzzle
         Font _font;
         Sprite _heart, _circle;
         Image[] _hearts;
-        Text _score, _hint, _gameOverText, _snapLabel;
+        Text _score, _hint, _gameOverText;
         Image _flash;
         float _flashAlpha;
         Color _flashColor;
@@ -134,13 +133,10 @@ namespace OtherwiseLabs.IsoPuzzle
             // Hint line.
             var hintBack = Panel(transform, "Hint", new Color(1f, 1f, 1f, 0.82f));
             hintBack.anchorMin = hintBack.anchorMax = hintBack.pivot = new Vector2(0.5f, 0f);
-            hintBack.anchoredPosition = new Vector2(0f, 220f);
+            hintBack.anchoredPosition = new Vector2(0f, 60f);
             hintBack.sizeDelta = new Vector2(1100f, 76f);
             _hint = Label(hintBack, "Text", "", 32, TextAnchor.MiddleCenter, Ink);
             Stretch(_hint.rectTransform);
-
-            // Snap button.
-            SnapButton = RoundButton(transform, "Snap", new Vector2(0.5f, 0f), new Vector2(0f, 105f), 150f, out _snapLabel);
 
             // Retake button (only while tracing).
             RetakeButton = PillButton(transform, "Turn again", new Vector2(1f, 0f), new Vector2(-180f, 70f));
@@ -156,7 +152,7 @@ namespace OtherwiseLabs.IsoPuzzle
             _titleCard = Card("Title", out RectTransform titleBody);
             Label(titleBody, "Heading", "Iso Puzzle", 76, TextAnchor.UpperCenter, Ink, new Vector2(0f, -40f), new Vector2(900f, 110f));
             Label(titleBody, "Body",
-                  "Every room hides one letter.\n\nDrag to turn the room. When the shapes line up into a letter, press Snap to take its picture, then trace the letter on the photo.\n\nA wrong snap or a wrong trace costs a heart. Tap a potion to get one back, but drink it in its room: potions can't be saved.",
+                  "Every room hides one letter.\n\nDrag to turn the room. When the shapes line up into a letter, the view locks in and takes its picture. Then trace the letter on the photo.\n\nA wrong trace costs a heart. Clearing a room sometimes drops a potion that gives one back, but potions can't be saved for later.",
                   30, TextAnchor.UpperCenter, Ink, new Vector2(0f, -160f), new Vector2(820f, 330f));
             PlayButton = PillButton(titleBody, "Play", new Vector2(0.5f, 0f), new Vector2(0f, 70f));
 
@@ -212,7 +208,6 @@ namespace OtherwiseLabs.IsoPuzzle
                 corner.enabled = visible;
                 corner.color = c;
             }
-            _snapLabel.color = aligned ? Gold : Color.white;
         }
 
         public void Flash(Color color, float strength = 1f)
@@ -261,10 +256,17 @@ namespace OtherwiseLabs.IsoPuzzle
 
         public void HideGameOver() => _gameOverCard.SetActive(false);
 
-        public void SetPlayingChrome(bool snapVisible, bool retakeVisible)
+        public void SetPlayingChrome(bool retakeVisible) => RetakeButton.gameObject.SetActive(retakeVisible);
+
+        /// <summary>Viewport position (0..1) of the heart row, where a loot potion flies to.</summary>
+        public Vector2 HeartsViewport
         {
-            SnapButton.gameObject.SetActive(snapVisible);
-            RetakeButton.gameObject.SetActive(retakeVisible);
+            get
+            {
+                Vector2 size = CanvasRect.rect.size;
+                Vector2 local = new Vector2(70f + 120f, -70f - 33f); // middle of the heart row, from the top-left corner
+                return new Vector2(local.x / Mathf.Max(1f, size.x), 1f + local.y / Mathf.Max(1f, size.y));
+            }
         }
 
         // ------------------------------------------------------------------
@@ -279,20 +281,6 @@ namespace OtherwiseLabs.IsoPuzzle
             body.anchorMin = body.anchorMax = body.pivot = new Vector2(0.5f, 0.5f);
             body.sizeDelta = new Vector2(960f, 680f);
             return dim.gameObject;
-        }
-
-        Button RoundButton(Transform parent, string label, Vector2 anchor, Vector2 position, float size, out Text text)
-        {
-            var rt = Panel(parent, label + " Button", new Color(0.24f, 0.2f, 0.4f, 0.95f));
-            rt.GetComponent<Image>().sprite = _circle;
-            rt.anchorMin = rt.anchorMax = anchor;
-            rt.pivot = new Vector2(0.5f, 0.5f);
-            rt.anchoredPosition = position + new Vector2(0f, size * 0.5f);
-            rt.sizeDelta = new Vector2(size, size);
-            var button = rt.gameObject.AddComponent<Button>();
-            text = Label(rt, "Label", label, 40, TextAnchor.MiddleCenter, Color.white);
-            Stretch(text.rectTransform);
-            return button;
         }
 
         Button PillButton(Transform parent, string label, Vector2 anchor, Vector2 position)
