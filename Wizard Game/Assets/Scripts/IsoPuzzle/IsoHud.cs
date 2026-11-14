@@ -8,7 +8,7 @@ namespace OtherwiseLabs.IsoPuzzle
     /// The Iso Puzzle's screen layer, built in code so the scene needs no
     /// prefabs: hearts (top left), rooms cleared (top right), the hint line
     /// (bottom), viewfinder corners that warm up as the view nears the letter
-    /// and turn gold as it locks in, the photo/tracing layer, a camera flash,
+    /// and turn gold as it locks in, the tracing layer, a colour wash for hits and heals,
     /// the loot banner, and the title and game-over cards.
     /// </summary>
     public class IsoHud : MonoBehaviour
@@ -25,9 +25,7 @@ namespace OtherwiseLabs.IsoPuzzle
         public Button PlayButton { get; private set; }
         public Button AgainButton { get; private set; }
 
-        /// <summary>Full-screen photo the player traces on.</summary>
-        public RawImage Photo { get; private set; }
-        /// <summary>Parent for ink and guide dots, laid over the photo, same rect as the screen.</summary>
+        /// <summary>Parent for ink and guide dots, laid over the live view, same rect as the screen.</summary>
         public RectTransform TraceLayer { get; private set; }
 
         Font _font;
@@ -38,7 +36,7 @@ namespace OtherwiseLabs.IsoPuzzle
         float _flashAlpha;
         Color _flashColor;
         Image[] _corners;
-        GameObject _photoRoot, _titleCard, _gameOverCard;
+        GameObject _traceRoot, _titleCard, _gameOverCard;
         float _shake;
         RectTransform _heartRow;
 
@@ -74,19 +72,12 @@ namespace OtherwiseLabs.IsoPuzzle
             _heart = MakeHeartSprite();
             _circle = MakeCircleSprite();
 
-            // Photo + tracing layer (under the HUD chrome).
-            _photoRoot = new GameObject("Photo");
-            _photoRoot.transform.SetParent(transform, false);
-            Stretch(_photoRoot.AddComponent<RectTransform>());
-            Photo = _photoRoot.AddComponent<RawImage>();
-            Photo.raycastTarget = false;
-            var frame = Panel(_photoRoot.transform, "Frame", new Color(1f, 1f, 1f, 0f));
-            Stretch(frame);
-            AddOutline(frame, 18f, Color.white);
-            TraceLayer = new GameObject("Trace Layer").AddComponent<RectTransform>();
-            TraceLayer.SetParent(_photoRoot.transform, false);
+            // Tracing layer (under the HUD chrome), drawn straight over the live view.
+            _traceRoot = new GameObject("Trace Layer");
+            _traceRoot.transform.SetParent(transform, false);
+            TraceLayer = _traceRoot.AddComponent<RectTransform>();
             Stretch(TraceLayer);
-            _photoRoot.SetActive(false);
+            _traceRoot.SetActive(false);
 
             // Viewfinder corners.
             _corners = new Image[8];
@@ -152,7 +143,7 @@ namespace OtherwiseLabs.IsoPuzzle
             _titleCard = Card("Title", out RectTransform titleBody);
             Label(titleBody, "Heading", "Iso Puzzle", 76, TextAnchor.UpperCenter, Ink, new Vector2(0f, -40f), new Vector2(900f, 110f));
             Label(titleBody, "Body",
-                  "Every room hides one letter.\n\nDrag to turn the room. When the shapes line up into a letter, the view locks in and takes its picture. Then trace the letter on the photo.\n\nA wrong trace costs a heart. Clearing a room sometimes drops a potion that gives one back, but potions can't be saved for later.",
+                  "Every room hides one letter.\n\nDrag to turn the room. When the shapes line up into a letter, the view locks in. Then trace the letter right over the shapes.\n\nA wrong trace costs a heart. Clearing a room sometimes drops a potion: tap it to get a heart back. Potions can't be saved for later.",
                   30, TextAnchor.UpperCenter, Ink, new Vector2(0f, -160f), new Vector2(820f, 330f));
             PlayButton = PillButton(titleBody, "Play", new Vector2(0.5f, 0f), new Vector2(0f, 70f));
 
@@ -217,10 +208,10 @@ namespace OtherwiseLabs.IsoPuzzle
             _flash.color = new Color(color.r, color.g, color.b, strength);
         }
 
-        public void ShowPhoto(Texture texture)
+        /// <summary>Shows or hides the ink layer; either way it starts empty.</summary>
+        public void ShowTracing(bool show)
         {
-            Photo.texture = texture;
-            _photoRoot.SetActive(texture != null);
+            _traceRoot.SetActive(show);
             ClearTrace();
         }
 
@@ -334,22 +325,6 @@ namespace OtherwiseLabs.IsoPuzzle
             rt.anchorMin = Vector2.zero;
             rt.anchorMax = Vector2.one;
             rt.offsetMin = rt.offsetMax = Vector2.zero;
-        }
-
-        void AddOutline(RectTransform frame, float width, Color color)
-        {
-            for (int side = 0; side < 4; side++)
-            {
-                var edge = Panel(frame, "Edge", color);
-                edge.GetComponent<Image>().raycastTarget = false;
-                bool horizontal = side < 2;
-                edge.anchorMin = horizontal ? new Vector2(0f, side) : new Vector2(side - 2, 0f);
-                edge.anchorMax = horizontal ? new Vector2(1f, side) : new Vector2(side - 2, 1f);
-                edge.pivot = horizontal ? new Vector2(0.5f, side) : new Vector2(side - 2, 0.5f);
-                edge.anchoredPosition = Vector2.zero;
-                edge.sizeDelta = horizontal ? new Vector2(0f, width) : new Vector2(width, 0f);
-            }
-            frame.GetComponent<Image>().raycastTarget = false;
         }
 
         static Sprite MakeHeartSprite()

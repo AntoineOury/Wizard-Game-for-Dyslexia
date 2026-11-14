@@ -14,6 +14,7 @@ namespace OtherwiseLabs.IsoPuzzle
         public Vector3 LetterCenter;   // world point the letter is centred on, seen from the target view
         public float LetterHeight;     // world height of the letter's unit box
         public Color Background;
+        public readonly List<GameObject> LetterPieces = new List<GameObject>();   // pieces and joints that form the letter
     }
 
     /// <summary>Per-room difficulty knobs, picked by the game from how many rooms are cleared.</summary>
@@ -181,6 +182,7 @@ namespace OtherwiseLabs.IsoPuzzle
                         var go = IsoShapes.Bar(kind, center, along, forward, length, StrokeThickness,
                                                letterMaterials[pieceIndex++ % 2], root);
                         go.name = $"Letter {room.Letter} piece";
+                        room.LetterPieces.Add(go);
                     }
                 }
 
@@ -195,6 +197,7 @@ namespace OtherwiseLabs.IsoPuzzle
                     var joint = IsoShapes.Ball(StrokeThickness * 0.62f, letterMaterials[pieceIndex++ % 2], root);
                     joint.transform.position = PushAlongView(onPlane, forward, rng, 0.35f);
                     joint.name = $"Letter {room.Letter} joint";
+                    room.LetterPieces.Add(joint);
                 }
             }
 

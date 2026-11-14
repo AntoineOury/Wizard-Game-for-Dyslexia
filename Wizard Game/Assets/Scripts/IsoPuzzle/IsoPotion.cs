@@ -4,8 +4,8 @@ namespace OtherwiseLabs.IsoPuzzle
 {
     /// <summary>
     /// The healing potion that sometimes drops as loot when a room is cleared.
-    /// It is used on the spot (one heart back); potions cannot be carried, so
-    /// with full hearts it fizzles away.
+    /// The player taps it to pick it up and it is used on the spot (one heart
+    /// back); potions cannot be carried, so with full hearts it fizzles away.
     /// </summary>
     public class IsoPotion : MonoBehaviour
     {
@@ -21,6 +21,13 @@ namespace OtherwiseLabs.IsoPuzzle
         public bool IsDrunk => _drunk;
         /// <summary>When false the potion stops its idle bob, so a script can move it (the loot drop).</summary>
         public bool Idle { get; set; } = true;
+
+        /// <summary>Starts the idle bob around a new resting spot (local position).</summary>
+        public void Rest(Vector3 localPosition)
+        {
+            _basePosition = localPosition;
+            Idle = true;
+        }
 
         public static IsoPotion Create(Transform parent, Vector3 groundPosition)
         {

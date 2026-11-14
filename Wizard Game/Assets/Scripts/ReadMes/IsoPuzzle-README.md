@@ -4,7 +4,7 @@ A roguelike perspective puzzle, separate from the main wizard game. There is
 no avatar, no inventory, and no link to the other mini-games' save data. The
 player turns a small isometric room until scattered shapes line up into a
 letter (the Viewfinder / Monument Valley "aha" moment). The view locks in and
-takes a photo by itself, then the player traces the letter on the photo.
+the player traces the letter right over the shapes.
 
 Lives on its own branch, `thread_iso_puzzle`.
 
@@ -18,11 +18,11 @@ Lives on its own branch, `thread_iso_puzzle`.
    and turn gold once it is close enough to lock.
 4. **Lock in.** Let go (or release the key) while the corners are gold, or
    let a flick coast through the spot, and the room clicks onto the exact
-   view. The camera flashes and the view freezes into a photo. There is no
-   button to press, and a near miss costs nothing.
-5. **Trace** the letter on the photo with a finger or the mouse. The grade
-   comes 1.4 s after the last stroke, so letters with several strokes have
-   time to finish.
+   view. A "Trace the letter!" prompt appears. There is no photo, no flash
+   and no button, and a near miss costs nothing.
+5. **Trace** the letter over the shapes on the live view, with a finger or
+   the mouse. The grade comes 1.4 s after the last stroke, so letters with
+   several strokes have time to finish.
    - **Pass:** "That's the letter B!" and rooms cleared +1. Then a loot roll
      (step 6), and the room sinks away while a new random one rises.
    - **Fail:** you **lose a heart**, the ink clears, and blue guide dots show
@@ -30,9 +30,11 @@ Lives on its own branch, `thread_iso_puzzle`.
    - **Turn again** goes back to turning the room for free. Turn away from
      the letter first; it won't lock again until the view has left it.
 6. **Potion loot.** After a cleared room, a health potion sometimes drops
-   (22% of the time, or 45% when you're hurt). It pops out of the solved
-   letter and flies into your hearts (+1). Potions can't be saved, so with
-   full hearts it fizzles away.
+   (22% of the time, or 45% when you're hurt). The traced letter's pieces
+   shrink away, the potion falls onto the floor where the letter was, and
+   the game waits for the player to **tap/click it**. The room can still be
+   turned meanwhile. Picked up, it flies into the hearts (+1). Potions can't
+   be saved, so with full hearts it fizzles away when tapped.
 7. **Out of hearts:** the game-over card shows rooms cleared and your best run
    (stored in PlayerPrefs under `IsoPuzzle.BestRooms`). Press **Play again**.
 
@@ -81,17 +83,17 @@ Every solid is generated at run time with ProBuilder's `ShapeGenerator`
 
 | Script | Job |
 |---|---|
-| `IsoPuzzleGame` | Run flow: hearts, score, lock-in, photo, tracing, potion loot, game over |
+| `IsoPuzzleGame` | Run flow: hearts, score, lock-in, tracing, potion loot, game over |
 | `IsoRoomBuilder` | Builds a room: platform, hidden letter, decoys, palette |
 | `IsoShapes` | ProBuilder shape wrappers and shared URP materials |
 | `IsoOrbitCamera` | Orthographic orbit camera; drag, keys, flick, lock-in easing |
-| `IsoHud` | All UI, built in code (hearts, score, hint, viewfinder, photo, cards) |
-| `IsoPotion` | The loot potion model and its fizzle animation |
+| `IsoHud` | All UI, built in code (hearts, score, hint, viewfinder corners, ink layer, cards) |
+| `IsoPotion` | The loot potion model, its idle bob and fizzle animation |
 | `IsoPointer` | Browser-accurate pointer position (via `Plugins/WebGL/WebPointer.jslib`) |
 
 ## Browser input
 
-Turning and tracing both read the pointer through
+Turning, tracing and tapping the potion all read the pointer through
 `IsoPointer`, which uses the same `WebPointer.jslib` bridge as the main
 game's `TruePointer`. That keeps ink under the finger on scaled browser
 displays. UI buttons use the normal EventSystem.

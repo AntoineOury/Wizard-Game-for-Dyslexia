@@ -10,20 +10,21 @@ namespace OtherwiseLabs.IsoPuzzle
     /// room at a time; a letter is hidden in each room as scattered
     /// ProBuilder shapes that only line up from one angle. Turn the room
     /// until the letter appears; the moment the player lets go close enough,
-    /// the view locks in, the photo is taken, and the player traces the
-    /// letter on it. Clear a room, a new random one rises in its place.
+    /// the view locks in and the player traces the letter right over the
+    /// shapes. Clear a room, a new random one rises in its place.
     ///
     /// Three hearts. A failed trace costs one. Clearing a room sometimes
-    /// drops a health potion as loot, used on the spot (no inventory, so with
-    /// full hearts it fizzles). Out of hearts ends the run; the score is how
-    /// many rooms were cleared.
+    /// drops a health potion as loot: the letter vanishes, the potion falls
+    /// onto the floor, and the player taps it to pick it up. It is used on
+    /// the spot (no inventory, so with full hearts it fizzles). Out of hearts
+    /// ends the run; the score is how many rooms were cleared.
     ///
     /// Everything (camera, light, UI, rooms) is created at run time, so the
     /// scene only needs one GameObject with this component.
     /// </summary>
     public class IsoPuzzleGame : MonoBehaviour
     {
-        enum State { Title, Exploring, LockingIn, Tracing, Cleared, Transition, GameOver }
+        enum State { Title, Exploring, LockingIn, Tracing, Cleared, Loot, Transition, GameOver }
 
         [Header("Run")]
         [Tooltip("Fixed seed for repeatable runs while testing; 0 = a new run every time.")]
@@ -68,8 +69,7 @@ namespace OtherwiseLabs.IsoPuzzle
         readonly Queue<char> _recentLetters = new Queue<char>();
 
         // Tracing.
-        RenderTexture _photo;
-        Vector2 _letterViewport;       // where the letter's centre sits in the photo (0..1)
+        Vector2 _letterViewport;       // where the letter's centre sits on screen (0..1)
         Vector2 _unitPerViewport;      // viewport delta -> letter unit-box delta
         readonly List<Vector2> _drawn = new List<Vector2>();
         Vector2 _lastInk;
@@ -81,6 +81,7 @@ namespace OtherwiseLabs.IsoPuzzle
         void Start()
         {
             _orbit = IsoOrbitCamera.Create();
+            _orbit.Tapped += OnTapped;
 
             CreateLight();
             _hud = IsoHud.Create(transform);
@@ -147,7 +148,7 @@ namespace OtherwiseLabs.IsoPuzzle
             _orbit.InputEnabled = false;
             _hud.SetPlayingChrome(false);
             _hud.SetAlignment(0f, false, false);
-            _hud.ShowPhoto(null);
+            _hud.ShowTracing(false);
             _hud.SetHint("");
 
             // Old room sinks away.
@@ -253,13 +254,13 @@ namespace OtherwiseLabs.IsoPuzzle
                 return;
             }
             // Light lock-in: once the player lets go close enough, the room
-            // clicks onto the exact view and the photo is taken by itself.
+            // clicks onto the exact view and tracing starts by itself.
             if (!_orbit.IsHeld && !_orbit.IsEasing && error <= LockRadius)
                 LockIn();
         }
 
         // ------------------------------------------------------------------
-        // Lock in and take the photo
+        // Lock in, then trace
         // ------------------------------------------------------------------
 
         void LockIn()
@@ -269,35 +270,24 @@ namespace OtherwiseLabs.IsoPuzzle
             _orbit.CancelPress();
             _hud.SetAlignment(1f, true, true);
             _hud.SetHint("It lines up!");
-            _orbit.EaseTo(_room.TargetYaw, _room.TargetPitch, 0.3f, () => StartCoroutine(TakePhoto()));
+            _orbit.EaseTo(_room.TargetYaw, _room.TargetPitch, 0.3f, () => StartCoroutine(BeginTracing()));
         }
 
-        IEnumerator TakePhoto()
+        IEnumerator BeginTracing()
         {
-            yield return new WaitForSeconds(0.15f); // a beat on the locked view, then click
+            yield return new WaitForSeconds(0.15f); // a beat on the locked view
             Camera cam = _orbit.Camera;
 
-            if (_photo == null || _photo.width != Screen.width || _photo.height != Screen.height)
-            {
-                if (_photo != null) _photo.Release();
-                _photo = new RenderTexture(Mathf.Max(16, Screen.width), Mathf.Max(16, Screen.height), 24);
-            }
-            RenderTexture previous = cam.targetTexture;
-            cam.targetTexture = _photo;
-            cam.Render();
-            cam.targetTexture = previous;
-
-            // Map viewport positions on the photo to the letter's unit box.
+            // Map screen (viewport) positions to the letter's unit box.
             Vector3 c = cam.WorldToViewportPoint(_room.LetterCenter);
             _letterViewport = new Vector2(c.x, c.y);
             float viewHeight = cam.orthographicSize * 2f;
             _unitPerViewport = new Vector2(viewHeight * cam.aspect / _room.LetterHeight, viewHeight / _room.LetterHeight);
 
-            _hud.Flash(Color.white, 1f);
-            _hud.ShowPhoto(_photo);
-            _hud.SetAlignment(0f, false, false);
+            _hud.ShowTracing(true);
+            _hud.SetAlignment(1f, true, true);
             _hud.SetPlayingChrome(true);
-            _hud.SetHint("Got it! Now trace the letter on the photo.");
+            _hud.SetHint("Trace the letter!");
             if (_failedTraces > 0) ShowGuide();
             _drawn.Clear();
             _stroking = false;
@@ -308,7 +298,7 @@ namespace OtherwiseLabs.IsoPuzzle
         void OnRetakePressed()
         {
             if (_state != State.Tracing) return;
-            _hud.ShowPhoto(null);
+            _hud.ShowTracing(false);
             _hud.SetPlayingChrome(false);
             _hud.SetHint("Turn the room away, then line it up again when you're ready.");
             _lockArmed = false;
@@ -317,7 +307,7 @@ namespace OtherwiseLabs.IsoPuzzle
         }
 
         // ------------------------------------------------------------------
-        // Tracing on the photo
+        // Tracing over the locked view
         // ------------------------------------------------------------------
 
         void UpdateTracing()
@@ -394,14 +384,12 @@ namespace OtherwiseLabs.IsoPuzzle
             _state = State.Cleared;
             _roomsCleared++;
             _hud.SetScore(_roomsCleared);
-            _hud.Flash(new Color(1f, 0.85f, 0.35f), 0.6f);
             _hud.SetPlayingChrome(false);
             _hud.SetAlignment(0f, false, false);
             _hud.SetHint($"Yes! That's the letter {_room.Letter}!");
-            yield return new WaitForSeconds(1.3f);
+            yield return new WaitForSeconds(1.1f);
+            _hud.ShowTracing(false);
 
-            // Back to the live room (same view) so the loot can pop out of it.
-            _hud.ShowPhoto(null);
             float chance = _hearts < IsoHud.MaxHearts ? potionChanceWhenHurt : potionChance;
             if (_rng.NextDouble() < chance)
                 yield return LootDrop();
@@ -410,49 +398,80 @@ namespace OtherwiseLabs.IsoPuzzle
             StartCoroutine(SwapRoom());
         }
 
+        // ------------------------------------------------------------------
+        // Potion loot
+        // ------------------------------------------------------------------
+
+        const float PotionSize = 1.4f;
+        IsoPotion _loot;
+        bool _lootTapped;
+
         /// <summary>
-        /// The potion pops out of the solved letter, hangs for a moment, then
-        /// flies into the hearts (+1). Potions can't be kept, so with full
-        /// hearts it fizzles away instead.
+        /// The traced letter melts away, a potion drops out of where it was
+        /// and lands on the floor, and the room waits for the player to tap
+        /// it. Picked up, it flies into the hearts (+1). Potions can't be
+        /// kept, so with full hearts it fizzles away instead.
         /// </summary>
         IEnumerator LootDrop()
         {
-            Camera cam = _orbit.Camera;
-            IsoPotion potion = IsoPotion.Create(transform, Vector3.zero);
-            potion.Idle = false;
-            Transform t = potion.transform;
-            Vector3 start = _room.LetterCenter;
-            Vector3 top = start + Vector3.up * 0.9f;
-            const float size = 1.6f;
-            _hud.SetHint("Loot drop! A health potion!");
-
-            for (float k = 0f; k < 1f; k += Time.deltaTime / 0.5f)
+            // 1. The letter disappears.
+            var pieces = new List<Transform>();
+            foreach (GameObject piece in _room.LetterPieces)
+                if (piece != null) pieces.Add(piece.transform);
+            var scales = new List<Vector3>();
+            foreach (Transform piece in pieces) scales.Add(piece.localScale);
+            for (float k = 0f; k < 1f; k += Time.deltaTime / 0.45f)
             {
-                float pop = 1f + Mathf.Sin(k * Mathf.PI) * 0.35f; // overshoot
-                t.position = Vector3.Lerp(start, top, Mathf.SmoothStep(0f, 1f, k));
-                t.localScale = Vector3.one * (size * Mathf.Clamp01(k * 1.6f) * pop);
-                t.rotation = Quaternion.Euler(0f, k * 360f, 0f);
+                float shrink = 1f - k * k;
+                for (int i = 0; i < pieces.Count; i++)
+                    if (pieces[i] != null) pieces[i].localScale = scales[i] * shrink;
                 yield return null;
             }
-            t.position = top;
-            t.localScale = Vector3.one * size;
+            foreach (Transform piece in pieces)
+                if (piece != null) Destroy(piece.gameObject);
+            _room.LetterPieces.Clear();
 
-            for (float k = 0f; k < 0.6f; k += Time.deltaTime)
+            // 2. The potion drops to the floor with a little bounce.
+            _loot = IsoPotion.Create(transform, Vector3.zero);
+            _loot.Idle = false;
+            Transform t = _loot.transform;
+            t.localScale = Vector3.one * PotionSize;
+            Vector3 top = _room.LetterCenter;
+            Vector3 rest = new Vector3(top.x, 0.62f, top.z);
+            for (float k = 0f; k < 1f; k += Time.deltaTime / 0.65f)
             {
-                t.position = top + Vector3.up * (Mathf.Sin(k * 6f) * 0.12f);
-                t.Rotate(0f, 120f * Time.deltaTime, 0f, Space.World);
+                // Fall (ease-in), then one small bounce in the last third.
+                float y = k < 0.66f
+                    ? Mathf.Lerp(top.y, rest.y, Mathf.Pow(k / 0.66f, 2f))
+                    : rest.y + Mathf.Sin((k - 0.66f) / 0.34f * Mathf.PI) * 0.35f;
+                t.position = new Vector3(rest.x, y, rest.z);
+                t.Rotate(0f, 240f * Time.deltaTime, 0f, Space.World);
                 yield return null;
             }
+            t.position = rest;
+            _loot.Rest(t.localPosition);
 
+            // 3. Wait for the tap. The room can still be turned to look at it.
+            _lootTapped = false;
+            _state = State.Loot;
+            _orbit.InputEnabled = true;
+            _hud.SetHint("Loot! Tap the potion to pick it up.");
+            while (!_lootTapped) yield return null;
+            _orbit.InputEnabled = false;
+            _state = State.Cleared;
+
+            // 4. Use it on the spot.
+            _loot.Idle = false;
             if (_hearts >= IsoHud.MaxHearts)
             {
                 _hud.SetHint("Your hearts are full, and potions can't be saved. It fizzles away.");
-                potion.Drink();
+                _loot.Drink();
+                _loot = null;
                 yield return new WaitForSeconds(1.2f);
                 yield break;
             }
 
-            // Fly to the heart row in the top-left corner.
+            Camera cam = _orbit.Camera;
             Vector2 hv = _hud.HeartsViewport;
             Vector3 target = cam.ViewportToWorldPoint(new Vector3(hv.x, hv.y, cam.nearClipPlane + 5f));
             Vector3 from = t.position;
@@ -460,15 +479,24 @@ namespace OtherwiseLabs.IsoPuzzle
             {
                 float e = k * k;
                 t.position = Vector3.Lerp(from, target, e);
-                t.localScale = Vector3.one * Mathf.Lerp(size, size * 0.35f, e);
+                t.localScale = Vector3.one * Mathf.Lerp(PotionSize, PotionSize * 0.35f, e);
                 yield return null;
             }
-            Destroy(potion.gameObject);
+            Destroy(_loot.gameObject);
+            _loot = null;
             _hearts = Mathf.Min(IsoHud.MaxHearts, _hearts + 1);
             _hud.SetHearts(_hearts);
             _hud.Flash(new Color(1f, 0.55f, 0.7f), 0.45f);
             _hud.SetHint("Glug! One heart back.");
             yield return new WaitForSeconds(0.8f);
+        }
+
+        void OnTapped(Vector2 viewport)
+        {
+            if (_state != State.Loot || _loot == null) return;
+            Ray ray = _orbit.Camera.ViewportPointToRay(new Vector3(viewport.x, viewport.y, 0f));
+            if (Physics.Raycast(ray, out RaycastHit hit, 200f) && hit.collider.GetComponentInParent<IsoPotion>() == _loot)
+                _lootTapped = true;
         }
 
         void LoseHeart()
@@ -490,14 +518,10 @@ namespace OtherwiseLabs.IsoPuzzle
             PlayerPrefs.SetInt(BestKey, best);
             PlayerPrefs.Save();
             yield return new WaitForSeconds(1.1f);
-            _hud.ShowPhoto(null);
+            _hud.ShowTracing(false);
             _hud.SetHint("");
             _hud.ShowGameOver(_roomsCleared, best);
         }
 
-        void OnDestroy()
-        {
-            if (_photo != null) _photo.Release();
-        }
     }
 }
