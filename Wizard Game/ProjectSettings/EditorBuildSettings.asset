@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Alchemist Store.unity
     guid: 5d21c7f4a9e64b23b7f01c68e4a2d915
+  - enabled: 1
+    path: Assets/Scenes/Iso Puzzle.unity
+    guid: f942a05413e546649d804e9edd28a335
   m_configObjects: {}
